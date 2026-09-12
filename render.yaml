@@ -1,0 +1,34 @@
+services:
+  # Backend API (FastAPI)
+  - type: web
+    name: trading212-bot-api
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        fromDatabase:
+          name: trading212_db
+          property: connection_string
+      - key: T212_ENVIRONMENT
+        value: demo
+      - key: FASTAPI_ENV
+        value: production
+      - key: FASTAPI_DEBUG
+        value: false
+    healthCheckPath: /health
+
+  # Frontend (React - Static)
+  - type: web
+    name: trading212-bot-frontend
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: npm run serve
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://trading212-bot-api.onrender.com/api

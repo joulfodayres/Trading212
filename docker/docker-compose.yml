@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - FASTAPI_ENV=development
+      - FASTAPI_DEBUG=True
+      - FASTAPI_PORT=8000
+    volumes:
+      - ./backend:/app
+    env_file:
+      - backend/.env
+    networks:
+      - trading212
+
+networks:
+  trading212:
+    driver: bridge

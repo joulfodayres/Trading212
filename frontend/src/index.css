@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+.sidebar {
+  @apply w-64 bg-white shadow-lg;
+}
+
+.main-content {
+  @apply flex-1 overflow-auto;
+}
