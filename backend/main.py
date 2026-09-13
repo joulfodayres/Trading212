@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import logging
 from config.settings import settings
 from routes.auth import router as auth_router
+from routes.isins import router as isins_router
 
 # Configurar logging
 logging.basicConfig(
@@ -82,7 +83,8 @@ async def shutdown_event():
 
 # ===== IMPORTAR ROUTERS =====
 app.include_router(auth_router)
-# from routes import isins, config, positions, orders
+app.include_router(isins_router)
+# from routes import config, positions, orders
 
 
 if __name__ == "__main__":
