@@ -13,25 +13,211 @@
 
 ---
 
+## 🎯 FASE 1B: Design & UI/UX (Trading 212 Style)
+
+### **Feature 1.1: Redesign Visual com estilo Trading 212**
+- **Priority:** P1 (Crítico - Foundation)
+- **Effort:** 4
+- **Status:** [ ]
+- **Descrição:** Redesenhar toda a UI com estilo visual Trading 212 (dark theme profissional, cores vibrantes, dados financeiros bem estruturados)
+- **Subtasks:**
+  - [ ] Frontend: Criar design system com cores Trading 212
+    - [ ] Cor primária: Verde escuro (`#00C853` ou similar)
+    - [ ] Cor secundária: Laranja/Amarelo (`#FF9800`)
+    - [ ] Fundo: Muito escuro (`#0A0E27` ou `#1A1F3A`)
+    - [ ] Neutrals: Grays para texto (`#E0E0E0`, `#A0A0A0`)
+  - [ ] Frontend: Criar CSS utilities avançadas (Tailwind config customizado)
+  - [ ] Frontend: Componentes reutilizáveis:
+    - [ ] Card com gradiente e sombras suaves
+    - [ ] Badge status (green, red, orange)
+    - [ ] Button com hover/active states profissionais
+    - [ ] Input/Select com focus states
+    - [ ] Tabela com striping, hover, sorting visual
+  - [ ] Frontend: Login Page (redesign)
+    - [ ] Background com gradiente escuro
+    - [ ] Form centered com shadow/glassmorphism
+    - [ ] Logo Trading 212 Bot
+    - [ ] Inputs com icon
+    - [ ] Botão com loading state
+    - [ ] Link de "Esqueceu password?"
+  - [ ] Frontend: Dashboard (redesign)
+    - [ ] Sidebar dark com hover effects
+    - [ ] Header com logo + user menu + logout
+    - [ ] Main content area com padding generoso
+    - [ ] Cards KPI no topo (saldo, P&L, etc)
+    - [ ] Tabela ISINs com design profissional
+  - [ ] Frontend: Tabela ISINs (redesign)
+    - [ ] Header com sorting indicators (↑↓)
+    - [ ] Rows com hover background
+    - [ ] Columns: ISIN, Ticker, Nome, Preço, P&L (red/green), Automação (toggle), Ações
+    - [ ] P&L column: color-coded (verde se +, vermelho se -)
+    - [ ] Automação: toggle switch com animation
+    - [ ] **Ações: APENAS toggle de automação (sem edit, sem delete)**
+    - [ ] Status indicators: pulse animation se activo
+  - [ ] Frontend: Forms (redesign)
+    - [ ] Modal backgrounds com blur
+    - [ ] Form labels elegantes
+    - [ ] Input focus states com border color
+    - [ ] Validation messages em vermelho
+    - [ ] Success messages em verde
+    - [ ] Submit/Cancel buttons lado a lado
+  - [ ] Frontend: Notificações (Toast)
+    - [ ] Toast com position fixed top-right
+    - [ ] Icons (check, error, warning, info)
+    - [ ] Auto-dismiss após 5s
+    - [ ] Manual close button
+    - [ ] Color-coded background (verde success, vermelho error)
+  - [ ] Frontend: Animações suaves
+    - [ ] Transitions 200-300ms (inputs, buttons, modals)
+    - [ ] Skeleton loaders enquanto carregam dados
+    - [ ] Fade-in animations
+    - [ ] Toggle switch animation
+  - [ ] Frontend: Responsive design
+    - [ ] Mobile: sidebar collapse em hamburger menu
+    - [ ] Mobile: tabela horizontal scroll se necessário
+    - [ ] Tablet: layout adaptado
+  - [ ] Frontend: Testes visuais
+    - [ ] Testar contraste (WCAG AA)
+    - [ ] Testar em mobile/tablet
+    - [ ] Testar cores no modo dark
+
+- **Dependências:** Nenhuma (foundation)
+- **Arquivos modificados:**
+  - `frontend/src/index.css` (custom CSS + Tailwind config)
+  - `frontend/tailwind.config.ts` (colors, spacing customized)
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/pages/DashboardPage.tsx`
+  - `frontend/src/components/Sidebar.tsx`
+  - `frontend/src/components/ISINTable.tsx`
+  - `frontend/src/components/[new components]` (Button, Card, Badge, Toast, etc)
+
+- **Notas Técnicas:**
+  - Usar Tailwind CSS com custom config
+  - Considerar Shadcn/ui para componentes prontos (opcional)
+  - Manter acessibilidade (alt text, aria labels)
+  - Design mobile-first
+  - Cores deve ser WCAG AA contraste
+  - Usar Lucide React para icons
+
+- **Referência Visual:**
+  - Trading 212 website: https://trading212.com
+  - Color scheme: Dark theme com acentos verde/laranja
+  - Typography: Sans-serif profissional (Inter, Roboto, ou similar)
+  - Spacing: 8px grid (8, 16, 24, 32, etc)
+
+---
+
 ## 🎯 FASE 2: Autenticação Real
 
-### **Feature 2.1: Login/Register com Supabase Auth**
+### **Feature 2.1: Login Real com Supabase Auth ⭐ PRIORITY**
 - **Priority:** P1 (Crítico)
 - **Effort:** 3
 - **Status:** [ ]
-- **Descrição:** Implementar autenticação real com Supabase Auth no backend e frontend
+- **Descrição:** Implementar autenticação real (não stub) com Supabase Auth. Utilizador consegue fazer login com credenciais reais e aceder ao dashboard.
 - **Subtasks:**
-  - [ ] Backend: Criar endpoints `/auth/register` e `/auth/login`
-  - [ ] Backend: Validar JWT tokens do Supabase
-  - [ ] Backend: Criar endpoint `/auth/logout`
-  - [ ] Backend: Middleware para verificar JWT em todas as rotas
-  - [ ] Frontend: Conectar login page ao backend real
-  - [ ] Frontend: Guardar JWT no localStorage
-  - [ ] Frontend: Adicionar JWT aos headers de requests
-  - [ ] Frontend: Implementar logout real
-  - [ ] Testes: Verificar autenticação end-to-end
-- **Dependências:** Nenhuma
-- **Notas:** Usar Supabase Auth oficial, JWT via header `Authorization: Bearer <token>`
+  
+  **Backend:**
+  - [ ] POST `/auth/login` - Fazer login com email/password
+    - [ ] Chamar Supabase Auth API com credenciais
+    - [ ] Retornar JWT token se sucesso
+    - [ ] Retornar erro 401 se credenciais inválidas
+    - [ ] Response: `{access_token, user: {id, email}}`
+  - [ ] POST `/auth/register` - Criar nova conta
+    - [ ] Validar email (formato correto)
+    - [ ] Validar password (mínimo 8 caracteres)
+    - [ ] Chamar Supabase Auth API
+    - [ ] Guardar user em `users` table
+    - [ ] Retornar JWT token
+  - [ ] POST `/auth/logout` - Logout
+    - [ ] Invalidar JWT (RevokeToken)
+    - [ ] Retornar 200 OK
+  - [ ] GET `/auth/me` - Verificar utilizador autenticado
+    - [ ] Verificar JWT token válido
+    - [ ] Retornar user info: `{id, email, is_admin}`
+    - [ ] Retornar 401 se token inválido/expirado
+  - [ ] Middleware de autenticação
+    - [ ] Verifica header `Authorization: Bearer <token>`
+    - [ ] Valida JWT com Supabase
+    - [ ] Injeta `current_user` em todos os endpoints protegidos
+    - [ ] Retorna 401 se token ausente/inválido
+  - [ ] Error handling
+    - [ ] 400: Validação falhou (email inválido, password fraca)
+    - [ ] 401: Credenciais inválidas ou token expirado
+    - [ ] 409: Email já existe (register)
+  
+  **Frontend:**
+  - [ ] LoginPage.tsx - Form de login FUNCIONAL
+    - [ ] Input email (required, type=email)
+    - [ ] Input password (required, type=password)
+    - [ ] Botão "Entrar" (submit)
+    - [ ] Loading state enquanto faz login
+    - [ ] Erro visual se falhar (ex: credenciais inválidas)
+    - [ ] Link "Criar conta" que leva a register page
+    - [ ] Form validation antes de submit
+  - [ ] RegisterPage.tsx - Form de registo FUNCIONAL
+    - [ ] Input email (required, type=email)
+    - [ ] Input password (required, 8+ chars)
+    - [ ] Input confirm password (match com password)
+    - [ ] Botão "Criar conta"
+    - [ ] Loading state
+    - [ ] Errors visuais por campo
+    - [ ] Link "Voltar a login"
+    - [ ] Password strength indicator (fraca/média/forte)
+  - [ ] Auth API client (api/auth.ts)
+    - [ ] `login(email, password)` → chama POST /auth/login
+    - [ ] `register(email, password)` → chama POST /auth/register
+    - [ ] `logout()` → chama POST /auth/logout
+    - [ ] `getMe()` → chama GET /auth/me
+    - [ ] Error handling (throw exceptions)
+  - [ ] Auth Store (Zustand)
+    - [ ] State: `{user, token, isLoading, error}`
+    - [ ] Action: `login(email, password)`
+    - [ ] Action: `register(email, password)`
+    - [ ] Action: `logout()`
+    - [ ] Action: `checkAuth()` (verifica se sessão ainda válida)
+    - [ ] Persist token em localStorage
+    - [ ] Auto-restore token on app load
+  - [ ] Protected Routes
+    - [ ] Se não tem token → redirect a /login
+    - [ ] Se token expirado → logout automático
+    - [ ] Testar com página protegida (/dashboard)
+  - [ ] JWT no localStorage
+    - [ ] Guardar token após login
+    - [ ] Adicionar token a cada request (header Authorization)
+    - [ ] Apagar token após logout
+  - [ ] Testes end-to-end
+    - [ ] Criar conta com email novo
+    - [ ] Login com email/password corretos
+    - [ ] Falhar login com password incorreto
+    - [ ] Falhar login com email não-existe
+    - [ ] Logout funciona
+    - [ ] Token expirado → auto logout
+    - [ ] Refresco página → mantém sessão (localStorage)
+
+- **Dependências:** Feature 1.1 (UI redesign para visual profissional)
+- **Critério de Aceitação:**
+  - ✅ Consegue fazer login com `teste@trading212.com` (ou outro real)
+  - ✅ Token JWT guardado no localStorage
+  - ✅ Token enviado em Authorization header
+  - ✅ Dashboard só acessível após login
+  - ✅ Logout limpa token e redireciona a /login
+  - ✅ Refresh página mantém sessão (token recuperado do localStorage)
+  - ✅ Erro claro se credenciais erradas
+  - ✅ Registo funciona (criar novo user)
+
+- **Notas Técnicas:**
+  - Supabase Auth usa JWT padrão (pode verificar em jwt.io)
+  - Token expira em 24h (configurável)
+  - Refresh token pode ser usado para renovar (opcional por enquanto)
+  - Password min 8 chars (Supabase default)
+  - Email validation com regex padrão
+  
+- **Utilizador de Teste:**
+  ```
+  Email: teste@trading212.com
+  Password: teste123
+  (será criado no Supabase via dashboard ou via este endpoint)
+  ```
 
 ### **Feature 2.2: User Management (Admin)**
 - **Priority:** P2
@@ -144,6 +330,103 @@
   - [ ] Backend: GET `/api/isins/{id}/trades` - Trades do ISIN
 - **Dependências:** Feature 3.1
 - **Notas:** Mostrar máximo de info disponível
+
+---
+
+## 🎯 FASE 3B: Configuração
+
+### **Feature 3B.0: Sync Automático ISINs da Carteira T212** ⭐ NEW
+- **Priority:** P1 (Crítico)
+- **Effort:** 3
+- **Status:** [ ]
+- **Descrição:** Sync automático de ISINs da carteira T212 na primeira carga da dashboard. Todos os ISINs sincronizados começam com automação OFF por default.
+- **Subtasks:**
+  
+  **Backend:**
+  - [ ] GET `/api/isins/sync-from-trading212`
+    - [ ] Chamar T212 API `/equity/positions`
+    - [ ] Parsear resposta (cada posição = 1 ISIN)
+    - [ ] Para cada ISIN:
+      - [ ] Verificar se já existe em `isins` table (user_id + isin)
+      - [ ] Se não existe: criar novo registo com `automation_enabled = FALSE`
+      - [ ] Se existe: atualizar quantity e price_at (não mudar automation_enabled)
+    - [ ] Retornar lista de ISINs sincronizados
+    - [ ] Retornar 401 se credenciais T212 não configuradas
+    - [ ] Retornar 400 se config não existe
+  - [ ] Extrair dados T212 posições
+    - [ ] Chamar `/equity/positions`
+    - [ ] Parsear resposta JSON
+    - [ ] Extrair: ticker, isin, quantity, average_price, current_price, currency
+  
+  **Frontend:**
+  - [ ] DashboardPage.tsx - Sync automático on mount
+    - [ ] Verificar se é primeira carga (flag em localStorage: `last_sync_date`)
+    - [ ] Se primeira carga (sem flag ou flag antiga > 24h):
+      - [ ] Mostrar loading skeleton na tabela
+      - [ ] Chamar `/api/isins/sync-from-trading212`
+      - [ ] Guardar timestamp de sync em localStorage
+      - [ ] Atualizar tabela com resultados
+      - [ ] Mostrar toast "Carteira sincronizada com sucesso"
+    - [ ] Se não é primeira carga:
+      - [ ] Carregar ISINs normalmente do GET `/api/isins`
+  - [ ] Botão "Sincronizar Carteira" MANUAL (sempre disponível)
+    - [ ] Localizado perto do título "Meus ISINs"
+    - [ ] Permite forçar sync mesmo se já fez hoje
+    - [ ] Loading spinner enquanto sincroniza
+    - [ ] Toast success se completou
+    - [ ] Toast error se falhou
+    - [ ] Atualizar tabela de ISINs após sucesso
+  - [ ] Verificar estado de automação
+    - [ ] Tabela mostra toggle "OFF" para todos os ISINs sincronizados
+    - [ ] User pode ativar manualmente clicando no toggle
+
+  **BD:**
+  - [ ] Campo `automation_enabled` sempre inicializa como FALSE
+  - [ ] Quando sync, não muda automation_enabled se ISIN já existe
+  - [ ] Campo `last_synced_at` (TIMESTAMP) opcional para tracking
+
+  **Testes:**
+  - [ ] Primeira carga: sync automático
+  - [ ] Segunda carga (mesma sessão): não faz sync de novo
+  - [ ] Segunda carga (novo dia): faz sync de novo
+  - [ ] Todos os ISINs sincronizados têm automation OFF
+  - [ ] Botão manual sincroniza sempre
+  - [ ] Sync com conta DEMO
+  - [ ] ISINs duplicatas não ocorrem
+  - [ ] Atualizar preços e quantities em syncs subsequentes
+
+- **Dependências:** Feature 3B.1 (credenciais T212 configuradas), Feature 2.1 (auth)
+- **Notas Técnicas:**
+  - Endpoint T212: `GET /equity/positions`
+  - Response esperada:
+    ```json
+    [
+      {
+        "ticker": "VOO",
+        "isin": "US9220427424",
+        "quantity": 147.75,
+        "average_price": 16.37,
+        "current_price": 16.45,
+        "pnl": 12.34,
+        "pnl_percent": 0.75
+      }
+    ]
+    ```
+  - Rate limit: 1 req/1s (respeitar!)
+  - User pode sincronizar várias vezes (não duplica)
+  - Flag `last_sync_date` em localStorage (formato ISO datetime)
+  - Se sync falha (ex: credenciais erradas), mostra erro e não muda BD
+
+- **Critério de Aceitação:**
+  - ✅ Primeira carga da dashboard → sync automático
+  - ✅ Tabela preenchida com ISINs reais
+  - ✅ Todos com toggle automação OFF
+  - ✅ Segunda carga (hoje) → sem sync automático
+  - ✅ Botão "Sincronizar Carteira" funciona manualmente
+  - ✅ Sync seguinte (amanhã) → faz sync de novo
+  - ✅ Cada ISIN mostra ticker, nome, preço, quantidade
+  - ✅ Se já existe ISIN, atualiza preço/quantidade (não duplica)
+  - ✅ Toast mostra sucesso/erro
 
 ---
 
@@ -641,6 +924,7 @@
 
 ### **P1 - CRÍTICO (MVP essencial)**
 ```
+Feature 1.1: Redesign UI/UX com estilo Trading 212 ⭐ FOUNDATION
 Feature 2.1: Login/Register com Supabase Auth
 Feature 3.1: GET /isins
 Feature 3.2: POST /isins (add ISIN)

@@ -2,14 +2,365 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Trading 212 Bot - Global Styles */
+
+* {
+  @apply transition-colors duration-200;
+}
+
+html, body, #root {
+  @apply h-full w-full;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-t212-dark text-t212-primary font-sans;
+  background: linear-gradient(135deg, #0A0E27 0%, #1A1F3A 100%);
 }
 
+/* ========== COMPONENTS ========== */
+
+/* Cards */
+.card {
+  @apply bg-t212-card border border-t212-border rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-200;
+}
+
+.card-hover {
+  @apply hover:bg-t212-hover cursor-pointer;
+}
+
+/* Buttons */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 justify-center;
+}
+
+.btn-primary {
+  @apply bg-t212-primary text-gray-900 hover:bg-t212-primary-light active:bg-t212-primary-dark shadow-md hover:shadow-lg;
+}
+
+.btn-secondary {
+  @apply bg-t212-secondary text-white hover:bg-t212-secondary-light active:bg-t212-secondary-dark shadow-md hover:shadow-lg;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-t212-primary border border-t212-primary hover:bg-t212-primary hover:text-gray-900;
+}
+
+.btn-danger {
+  @apply bg-t212-error text-white hover:opacity-90 active:opacity-75;
+}
+
+.btn-sm {
+  @apply px-3 py-1 text-sm;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-lg;
+}
+
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.btn-loading {
+  @apply opacity-70 cursor-wait;
+}
+
+/* Inputs */
+.input {
+  @apply w-full px-4 py-2 bg-t212-hover border border-t212-border rounded-lg text-t212-primary placeholder-t212-muted focus:outline-none focus:border-t212-primary focus:ring-2 focus:ring-t212-primary focus:ring-opacity-20 transition-all duration-200;
+}
+
+.input:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.badge-success {
+  @apply bg-t212-success bg-opacity-20 text-t212-success;
+}
+
+.badge-warning {
+  @apply bg-t212-warning bg-opacity-20 text-t212-warning;
+}
+
+.badge-error {
+  @apply bg-t212-error bg-opacity-20 text-t212-error;
+}
+
+.badge-info {
+  @apply bg-t212-info bg-opacity-20 text-t212-info;
+}
+
+/* Tables */
+.table-container {
+  @apply overflow-x-auto;
+}
+
+.table {
+  @apply w-full text-sm;
+}
+
+.table thead {
+  @apply bg-t212-hover border-b border-t212-border;
+}
+
+.table th {
+  @apply px-6 py-3 text-left text-t212-secondary font-semibold;
+}
+
+.table tbody tr {
+  @apply border-b border-t212-border hover:bg-t212-hover transition-colors duration-150;
+}
+
+.table td {
+  @apply px-6 py-4 text-t212-primary;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  @apply relative inline-flex h-8 w-14 items-center rounded-full bg-t212-hover cursor-pointer transition-colors duration-300;
+}
+
+.toggle-switch.on {
+  @apply bg-t212-primary;
+}
+
+.toggle-switch input {
+  @apply hidden;
+}
+
+.toggle-slider {
+  @apply absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform duration-300 shadow-md;
+}
+
+.toggle-switch.on .toggle-slider {
+  @apply translate-x-7;
+}
+
+/* Toast Notifications */
+.toast-container {
+  @apply fixed top-4 right-4 z-50 flex flex-col gap-2;
+}
+
+.toast {
+  @apply min-w-80 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in text-white;
+}
+
+.toast-success {
+  @apply bg-t212-success;
+}
+
+.toast-error {
+  @apply bg-t212-error;
+}
+
+.toast-warning {
+  @apply bg-t212-warning;
+}
+
+.toast-info {
+  @apply bg-t212-info;
+}
+
+.toast-close {
+  @apply ml-auto cursor-pointer hover:opacity-80;
+}
+
+/* Loading Skeleton */
+.skeleton {
+  @apply bg-t212-hover rounded animate-pulse;
+}
+
+/* Modals */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 flex items-center justify-center animate-fade-in;
+}
+
+.modal {
+  @apply bg-t212-card rounded-xl shadow-xl p-8 max-w-md w-full mx-4 animate-slide-in;
+}
+
+.modal-header {
+  @apply text-2xl font-bold text-t212-primary mb-2;
+}
+
+.modal-body {
+  @apply text-t212-secondary mb-6;
+}
+
+.modal-footer {
+  @apply flex gap-4 justify-end;
+}
+
+/* Sidebar */
 .sidebar {
-  @apply w-64 bg-white shadow-lg;
+  @apply w-64 bg-t212-card border-r border-t212-border shadow-lg;
 }
 
+.sidebar-nav {
+  @apply flex flex-col;
+}
+
+.sidebar-item {
+  @apply px-6 py-3 text-t212-secondary hover:bg-t212-hover hover:text-t212-primary cursor-pointer transition-all duration-200 flex items-center gap-3;
+}
+
+.sidebar-item.active {
+  @apply bg-t212-primary bg-opacity-10 text-t212-primary border-l-4 border-t212-primary pl-5;
+}
+
+/* Main Content */
 .main-content {
-  @apply flex-1 overflow-auto;
+  @apply flex-1 overflow-auto bg-gradient-to-b from-t212-dark to-t212-bg-card;
+}
+
+.page-header {
+  @apply text-3xl font-bold text-t212-primary mb-8;
+}
+
+.page-container {
+  @apply p-8 max-w-7xl mx-auto;
+}
+
+/* Header */
+.header {
+  @apply bg-t212-card border-b border-t212-border shadow-md px-8 py-4 flex items-center justify-between;
+}
+
+.header-logo {
+  @apply text-2xl font-bold text-t212-primary flex items-center gap-2;
+}
+
+.header-user {
+  @apply flex items-center gap-4;
+}
+
+/* Status Indicators */
+.status-pulse {
+  @apply inline-flex h-3 w-3 rounded-full bg-t212-primary animate-pulse;
+}
+
+.status-active {
+  @apply h-3 w-3 rounded-full bg-t212-success;
+}
+
+.status-inactive {
+  @apply h-3 w-3 rounded-full bg-t212-muted;
+}
+
+/* Forms */
+.form-group {
+  @apply mb-6;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-t212-primary mb-2;
+}
+
+.form-error {
+  @apply text-t212-error text-sm mt-1;
+}
+
+.form-success {
+  @apply text-t212-success text-sm mt-1;
+}
+
+/* KPI Cards */
+.kpi-card {
+  @apply card flex flex-col gap-2;
+}
+
+.kpi-label {
+  @apply text-t212-secondary text-sm;
+}
+
+.kpi-value {
+  @apply text-3xl font-bold text-t212-primary;
+}
+
+.kpi-change {
+  @apply text-sm font-semibold;
+}
+
+.kpi-positive {
+  @apply text-t212-success;
+}
+
+.kpi-negative {
+  @apply text-t212-error;
+}
+
+/* Trading Colors */
+.price-positive {
+  @apply text-t212-success font-semibold;
+}
+
+.price-negative {
+  @apply text-t212-error font-semibold;
+}
+
+.price-neutral {
+  @apply text-t212-secondary;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    @apply absolute left-0 top-0 h-full -translate-x-full transition-transform duration-300 z-50;
+  }
+
+  .sidebar.open {
+    @apply translate-x-0;
+  }
+
+  .page-container {
+    @apply p-4;
+  }
+
+  .header {
+    @apply px-4 py-3;
+  }
+
+  .toast {
+    @apply min-w-72 text-sm;
+  }
+
+  .modal {
+    @apply max-w-sm;
+  }
+
+  .table {
+    @apply text-xs;
+  }
+
+  .table th,
+  .table td {
+    @apply px-3 py-2;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    @apply w-full;
+  }
+
+  .page-container {
+    @apply p-3;
+  }
+
+  .toast {
+    @apply min-w-64 bottom-4 right-2 left-2;
+  }
+
+  .modal {
+    @apply max-w-xs;
+  }
+
+  .kpi-value {
+    @apply text-2xl;
+  }
 }
