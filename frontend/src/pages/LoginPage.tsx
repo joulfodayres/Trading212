@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Mail, Lock, LogIn } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -9,28 +9,53 @@ import { useToast } from '../components/ui/Toast'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate()
-  const { login } = useAuthStore()
+  const { login, isLoading, error, clearError } = useAuthStore()
   const toast = useToast()
+
+  useEffect(() => {
+    // Limpar erro quando o utilizador começar a digitar
+    if (error) {
+      clearError()
+      setEmailError('')
+      setPasswordError('')
+    }
+  }, [email, password])
+
+  const validateForm = () => {
+    let isValid = true
+    setEmailError('')
+    setPasswordError('')
+
+    if (!email || !email.includes('@')) {
+      setEmailError('Email inválido')
+      isValid = false
+    }
+
+    if (!password || password.length < 6) {
+      setPasswordError('Password deve ter mínimo 6 caracteres')
+      isValid = false
+    }
+
+    return isValid
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    setLoading(true)
+
+    if (!validateForm()) {
+      return
+    }
+
     try {
       await login(email, password)
-      localStorage.setItem('token', 'dummy-token')
       toast.success('Login realizado com sucesso!')
       navigate('/dashboard')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao fazer login'
-      setError(message)
       toast.error(message)
-      console.error('Login error:', err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -66,9 +91,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
-              icon={<Mail size={16} />}
+              error={emailError}
               required
-              error={error ? 'Email ou senha inválidos' : ''}
             />
 
             <Input
@@ -77,8 +101,8 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              error={passwordError}
               required
-              error={error ? 'Email ou senha inválidos' : ''}
             />
 
             {error && (
@@ -91,9 +115,10 @@ export default function LoginPage() {
               type="submit"
               variant="primary"
               size="lg"
-              isLoading={loading}
+              isLoading={isLoading}
               className="w-full mt-6"
               icon={<LogIn size={18} />}
+              disabled={isLoading}
             >
               Entrar
             </Button>
@@ -111,10 +136,10 @@ export default function LoginPage() {
             <div className="p-3 rounded-lg bg-t212-primary bg-opacity-10 border border-t212-primary border-opacity-20">
               <p className="text-t212-primary text-xs font-medium mb-2">Demo Account:</p>
               <p className="text-t212-secondary text-xs">
-                Email: <span className="text-t212-text-primary">teste@trading212.com</span>
+                Email: <span className="text-t212-text-primary font-mono">teste@trading212.com</span>
               </p>
               <p className="text-t212-secondary text-xs">
-                Senha: <span className="text-t212-text-primary">teste123</span>
+                Senha: <span className="text-t212-text-primary font-mono">teste123</span>
               </p>
             </div>
           </div>

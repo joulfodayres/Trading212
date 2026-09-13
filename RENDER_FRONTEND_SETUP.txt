@@ -1,0 +1,92 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║              🚀 RENDER DEPLOYMENT - Frontend React                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+✅ Backend: https://trading212-4ojx.onrender.com
+📋 Agora vamos fazer deploy do Frontend React
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 1: Abre Render Dashboard (mesma conta)
+  URL: https://dashboard.render.com
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 2: Criar novo Web Service para Frontend
+  Clica: "New +" (botão azul canto superior direito)
+  Seleciona: "Web Service"
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 3: Conectar GitHub
+  Clica: "Connect Repository"
+  (Já deverás ter autorizado, então apenas seleciona)
+  Seleciona: joulfodayres/Trading212
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 4: Configurar Serviço
+
+  Name: trading212-bot-frontend
+
+  Runtime: Node
+
+  Region: Frankfurt (mesmo do backend, se possível)
+
+  Branch: main
+
+  Build Command:
+    cd frontend && npm install && npm run build
+
+  Start Command:
+    cd frontend && npm run serve
+
+  Plan: Free
+
+  Auto-Deploy: Yes
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 5: Environment Variables
+
+  Adiciona 1 variável:
+
+  ┌──────────────────────────────────────────────────────────┐
+  │ VITE_API_URL                                             │
+  │ https://trading212-4ojx.onrender.com/api                 │
+  └──────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 6: Deploy
+
+  Clica: "Deploy"
+
+  ⏳ Aguarda 10-15 minutos (React build é mais demorado que Python)
+
+  ✅ Quando vires "Your service is live" em verde, está pronto!
+
+════════════════════════════════════════════════════════════════════════════
+
+PASSO 7: Testar Frontend
+
+  URL será algo como:
+  https://trading212-bot-frontend.onrender.com
+
+  Deverás ver:
+  - Login page
+  - Campo email
+  - Campo password
+  - Botão "Entrar"
+
+  Clica "Entrar" (qualquer email/password funciona por enquanto)
+  Deverás ver o Dashboard com a tabela de ISINs
+
+════════════════════════════════════════════════════════════════════════════
+
+PRONTO?
+
+  Quando o frontend estiver online (vês "Your service is live"),
+  diz-me a URL!
+
+════════════════════════════════════════════════════════════════════════════
