@@ -9,6 +9,7 @@ import logging
 from config.settings import settings
 from routes.auth import router as auth_router
 from routes.isins import router as isins_router
+from routes.config import router as config_router
 
 # Configurar logging
 logging.basicConfig(
@@ -84,7 +85,8 @@ async def shutdown_event():
 # ===== IMPORTAR ROUTERS =====
 app.include_router(auth_router)
 app.include_router(isins_router)
-# from routes import config, positions, orders
+app.include_router(config_router)
+# from routes import positions, orders
 
 
 if __name__ == "__main__":

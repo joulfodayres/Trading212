@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import ISINTable from '../components/ISINTable'
+import ConfigPage from './ConfigPage'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 
 export default function DashboardPage() {
@@ -73,16 +74,7 @@ export default function DashboardPage() {
           )}
 
           {activeView === 'config' && (
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configuração de Trading 212</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-t212-secondary">Em construção...</p>
-                </CardContent>
-              </Card>
-            </div>
+            <ConfigPage />
           )}
 
           {activeView === 'history' && (
