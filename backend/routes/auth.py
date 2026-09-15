@@ -15,8 +15,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# Inicializar cliente Supabase
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+# Inicializar cliente Supabase (lazy - apenas quando necessário)
+_supabase_client = None
+
+def get_supabase() -> Client:
+    """Obter cliente Supabase (lazy initialization)"""
+    global _supabase_client
+    if _supabase_client is None:
+        try:
+            _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+            logger.info("Supabase client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Supabase client: {e}")
+            raise
+    return _supabase_client
 
 # Configurar password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -208,6 +220,7 @@ async def login(request: LoginRequest):
         logger.info(f"🔐 Tentativa de login: {request.email}")
 
         # Autenticar com Supabase Auth
+        supabase = get_supabase()
         response = supabase.auth.sign_in_with_password({
             "email": request.email,
             "password": request.password
@@ -281,6 +294,7 @@ async def register(request: RegisterRequest):
             )
 
         # Criar conta em Supabase Auth
+        supabase = get_supabase()
         response = supabase.auth.sign_up({
             "email": request.email,
             "password": request.password
