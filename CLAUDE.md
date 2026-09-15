@@ -357,25 +357,30 @@ Posições: 2 abertas
 
 ### **Supabase**
 ```
-URL: https://gocvyhizqggqaxryuplu.supabase.co
-Anon Key: sb_publishable_283LZ_pvCLRaxYLaikfA7w_h4oSLVCW
-JWT Secret: sb_secret_3qW7HsDKdwd69hmob1NHrQ_Tn--S4a4
+URL: https://[project-url].supabase.co
+Anon Key: [anon-key-from-supabase]
+JWT Secret: [jwt-secret-from-supabase]
+
+Note: Credentials are stored in .env (not committed to git)
 ```
 
 ### **Trading 212 (DEMO)**
 ```
-API Key: 40512867ZyijwBGwduNcUlkHinVZrCXhzxAqU
-API Secret: iEQfVWUq3un1rGbM3ruzUWZweTRZYVLah-c8EFnCXW0
+API Key: [api-key-from-t212-dashboard]
+API Secret: [api-secret-from-t212-dashboard]
 Environment: demo
+
+Note: Credentials are stored in .env (not committed to git)
 ```
 
-### **Render Environment Variables**
+### **Environment Variables**
+Credentials are stored in `.env` file (not committed) and loaded at runtime:
 ```
-SUPABASE_URL=https://gocvyhizqggqaxryuplu.supabase.co
-SUPABASE_KEY=sb_publishable_283LZ_pvCLRaxYLaikfA7w_h4oSLVCW
-SUPABASE_JWT_SECRET=sb_secret_3qW7HsDKdwd69hmob1NHrQ_Tn--S4a4
-T212_API_KEY=40512867ZyijwBGwduNcUlkHinVZrCXhzxAqU
-T212_API_SECRET=iEQfVWUq3un1rGbM3ruzUWZweTRZYVLah-c8EFnCXW0
+SUPABASE_URL=...
+SUPABASE_KEY=...
+SUPABASE_JWT_SECRET=...
+T212_API_KEY=...
+T212_API_SECRET=...
 T212_ENVIRONMENT=demo
 T212_BASE_URL=https://demo.trading212.com/api/v0
 FASTAPI_ENV=production
