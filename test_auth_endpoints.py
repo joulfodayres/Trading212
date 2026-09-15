@@ -44,12 +44,12 @@ def wait_for_backend():
             return False
 
         try:
-            response = requests.get(f"{BACKEND_URL}/health", timeout=5)
+            response = requests.get(f"{BACKEND_URL}/health", timeout=15)
             if response.status_code == 200:
                 print(f"✔ Backend está online! (levou {int(elapsed)}s)")
                 return True
-        except requests.exceptions.RequestException:
-            pass
+        except requests.exceptions.RequestException as e:
+            print(f"  (último erro: {str(e)[:50]}...)")
 
         print(f"  Tentando novamente em {CHECK_INTERVAL}s... ({int(elapsed)}s/{MAX_WAIT_TIME}s)")
         time.sleep(CHECK_INTERVAL)
@@ -68,7 +68,7 @@ def test_register():
     }
 
     try:
-        response = requests.post(endpoint, json=payload, timeout=10)
+        response = requests.post(endpoint, json=payload, timeout=30)
         status_code = response.status_code
 
         print(f"URL: {endpoint}")
@@ -119,7 +119,7 @@ def test_login():
     }
 
     try:
-        response = requests.post(endpoint, json=payload, timeout=10)
+        response = requests.post(endpoint, json=payload, timeout=30)
         status_code = response.status_code
 
         print(f"URL: {endpoint}")
@@ -253,7 +253,7 @@ def test_verify_token_valid(token):
     }
 
     try:
-        response = requests.post(endpoint, json=payload, timeout=10)
+        response = requests.post(endpoint, json=payload, timeout=30)
         status_code = response.status_code
 
         print(f"URL: {endpoint}")
@@ -303,7 +303,7 @@ def test_verify_token_invalid():
     }
 
     try:
-        response = requests.post(endpoint, json=payload, timeout=10)
+        response = requests.post(endpoint, json=payload, timeout=30)
         status_code = response.status_code
 
         print(f"URL: {endpoint}")

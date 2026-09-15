@@ -24,7 +24,7 @@ TIMEOUT = 30
 
 # Test user credentials (from auth)
 TEST_USER_EMAIL = "teste@trading212.com"
-TEST_USER_PASSWORD = "test123"
+TEST_USER_PASSWORD = "test123456"  # Mínimo 8 caracteres
 
 # Test ISINs
 TEST_ISIN = "IE00BK5BQT80"
@@ -82,21 +82,30 @@ def get_jwt_token() -> Optional[str]:
     """Get JWT token from auth endpoint"""
     print("\n🔐 Obtendo JWT token...")
     try:
+        # Use test-token endpoint for development
         response = session.post(
             f"{BACKEND_URL}/api/auth/test-token",
             json={},
             timeout=TIMEOUT
         )
+
         if response.status_code == 200:
             data = response.json()
-            token = data.get("token")
+            token = data.get("token") or data.get("access_token")
             if token:
                 print(f"✅ Token obtido: {token[:20]}...")
                 return token
             else:
                 print("❌ Sem token na resposta")
+                print(f"  Resposta: {response.text[:200]}")
                 log_test("Auth: Get JWT Token", "❌ FAIL", "Sem token na resposta")
                 return None
+        else:
+            print(f"❌ Falha ao obter token (status {response.status_code})")
+            print(f"  Resposta: {response.text[:200]}")
+            log_test("Auth: Get JWT Token", "❌ FAIL", f"Status: {response.status_code}")
+            return None
+
     except Exception as e:
         print(f"❌ Erro ao obter token: {e}")
         log_test("Auth: Get JWT Token", "❌ FAIL", str(e))

@@ -123,7 +123,7 @@ async def create_isin(data: ISINCreate):
             )
 
         # Fetch dados do instrumento via T212 API
-        logger.info(f"° Buscando dados de T212 API para: {isin_code}")
+        logger.info(f"üì° Buscando dados de T212 API para: {isin_code}")
 
         # Para este MVP, usar dados mock da T212 API
         # Em produ√ß√£o, seria: t212_client.search_instrument(isin_code)
@@ -233,7 +233,7 @@ async def get_isin(isin_id: str):
         # Calcular P&L
         pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
 
-        logger.info(f"ñ ISIN obtido: {isin['isin']}")
+        logger.info(f"üìñ ISIN obtido: {isin['isin']}")
 
         return ISINResponse(
             id=isin["id"],
@@ -285,7 +285,7 @@ async def update_isin(isin_id: str, data: ISINUpdate):
 
         if not updates:
             # Se nenhum campo foi fornecido, retornar o ISIN sem mudan√ßas
-            logger.info(f"π Nenhum campo para atualizar em ISIN: {isin_id}")
+            logger.info(f"‚ÑπÔ∏è Nenhum campo para atualizar em ISIN: {isin_id}")
             pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
             return ISINResponse(
                 id=isin["id"],
@@ -503,9 +503,9 @@ async def sync_from_trading212():
                         fields_json=pos
                     )
                     synced_count += 1
-                    logger.info(f"® ISIN criado: {isin_code}")
+                    logger.info(f"‚ú® ISIN criado: {isin_code}")
 
-                # Adicionar √ resposta
+                # Adicionar √† resposta
                 pnl_data = db.get_isin_pnl(isin_record["id"], TEST_USER_ID)
                 isins_response.append({
                     "id": isin_record["id"],

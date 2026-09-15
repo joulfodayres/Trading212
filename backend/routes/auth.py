@@ -377,7 +377,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     Levanta 401 se token invÃ¡lido ou ausente
     """
     try:
-        logger.info(f"‹ Fetch user info: {current_user.get('email')}")
+        logger.info(f"ğŸ“‹ Fetch user info: {current_user.get('email')}")
 
         return UserResponse(
             user=UserInfo(
@@ -431,7 +431,7 @@ async def verify_token(current_user: dict = Depends(get_current_user)):
 @router.post("/test-token")
 async def get_test_token():
     """
-    §ª DEBUG ONLY - Obter JWT token de teste para testes do CRUD
+    ğŸ§ª DEBUG ONLY - Obter JWT token de teste para testes do CRUD
     Retorna um token vÃ¡lido para o utilizador de teste (teste@trading212.com)
 
      REMOVE EM PRODUÃ‡ÃƒO
@@ -448,7 +448,7 @@ async def get_test_token():
         )
 
     try:
-        logger.info("§ª Gerando token de teste")
+        logger.info("ğŸ§ª Gerando token de teste")
 
         # Fixed test user ID
         test_user_id = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"

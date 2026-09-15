@@ -41,7 +41,7 @@ class SupabaseDB:
             self.__init__()
         return self._client
 
-    # ===== OPERAÇÕES GEN�RICAS =====
+    # ===== OPERAÇÕES GENÉRICAS =====
 
     def query(self, table: str) -> Any:
         """Retorna query builder para uma tabela"""
