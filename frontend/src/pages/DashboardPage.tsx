@@ -1,36 +1,92 @@
 import { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import ISINTable from '../components/ISINTable'
+import ConfigPage from './ConfigPage'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 
 export default function DashboardPage() {
   const [activeView, setActiveView] = useState('isins') // 'isins', 'config', 'history'
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
       {/* Sidebar */}
       <Sidebar activeView={activeView} setActiveView={setActiveView} />
 
       {/* Main Content */}
-      <div className="main-content p-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="main-content flex-1 overflow-auto">
+        <div className="page-container">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="page-header">
+              {activeView === 'isins' && '📊 Meus ISINs'}
+              {activeView === 'config' && '⚙️ Configuração'}
+              {activeView === 'history' && '📈 Histórico'}
+            </h1>
+          </div>
+
           {activeView === 'isins' && (
             <div>
-              <h1 className="text-3xl font-bold mb-6">📊 ISINs</h1>
-              <ISINTable />
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <Card>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Saldo Total</div>
+                    <div className="kpi-value">€5.889,99</div>
+                    <div className="kpi-change kpi-positive">+2.3% hoje</div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="kpi-card">
+                    <div className="kpi-label">P&L Geral</div>
+                    <div className="kpi-value text-t212-success">+€124,50</div>
+                    <div className="kpi-change kpi-positive">+2.1%</div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Posições Abertas</div>
+                    <div className="kpi-value">12</div>
+                    <div className="kpi-change text-t212-info">2 com automação</div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="kpi-card">
+                    <div className="kpi-label">Trades Hoje</div>
+                    <div className="kpi-value">5</div>
+                    <div className="kpi-change kpi-positive">4 ganhos</div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* ISINs Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tabela de ISINs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ISINTable />
+                </CardContent>
+              </Card>
             </div>
           )}
 
           {activeView === 'config' && (
-            <div>
-              <h1 className="text-3xl font-bold mb-6">⚙️ Configuração</h1>
-              <p className="text-gray-600">Em construção...</p>
-            </div>
+            <ConfigPage />
           )}
 
           {activeView === 'history' && (
             <div>
-              <h1 className="text-3xl font-bold mb-6">📈 Histórico</h1>
-              <p className="text-gray-600">Em construção...</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Histórico de Trades</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-t212-secondary">Em construção...</p>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>

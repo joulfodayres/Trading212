@@ -1,5 +1,10 @@
-import { useState } from 'react'
-import { Plus, Edit2, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
+import { Button } from './ui/Button'
+import { Input } from './ui/Input'
+import { ToggleSwitch } from './ui/ToggleSwitch'
+import { useToast } from './ui/Toast'
+import { apiClient } from '../api/client'
 
 interface ISIN {
   id: string
@@ -8,117 +13,254 @@ interface ISIN {
   name: string
   automation_enabled: boolean
   currency: string
+  price?: number
+  pnl?: number
+  pnl_percent?: number
 }
 
 export default function ISINTable() {
-  const [isins, setIsins] = useState<ISIN[]>([
-    {
-      id: '1',
-      isin: 'IE00BK5BQT80',
-      ticker: 'VWCEd_EQ',
-      name: 'Vanguard FTSE All-World (Acc)',
-      automation_enabled: true,
-      currency: 'EUR'
-    }
-  ])
+  const [isins, setIsins] = useState<ISIN[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newISIN, setNewISIN] = useState('')
+  const [loadingSync, setLoadingSync] = useState(false)
+  const [loadingList, setLoadingList] = useState(true)
+  const toast = useToast()
 
-  const handleAdd = () => {
-    if (newISIN) {
-      // TODO: Chamar API para adicionar ISIN
-      setIsins([...isins, {
+  // Fetch ISINs na primeira carga
+  useEffect(() => {
+    loadISINs()
+  }, [])
+
+  // Carregar ISINs da API
+  const loadISINs = async () => {
+    setLoadingList(true)
+    try {
+      const response = await apiClient.get('/api/isins')
+      setIsins(response.data)
+    } catch (error) {
+      console.error('Erro ao carregar ISINs:', error)
+      toast.error('Erro ao carregar ISINs')
+      // Se erro, começar com lista vazia
+      setIsins([])
+    } finally {
+      setLoadingList(false)
+    }
+  }
+
+  // Sincronizar carteira com T212
+  const handleSync = async () => {
+    setLoadingSync(true)
+    toast.info('Sincronizando carteira...')
+    try {
+      const response = await apiClient.get('/api/isins/sync-from-trading212')
+      const { isins: syncedISINs, message } = response.data
+
+      // Atualizar lista com ISINs sincronizados
+      setIsins(syncedISINs)
+      toast.success(message || 'Carteira sincronizada com sucesso!')
+
+      // Guardar timestamp em localStorage
+      localStorage.setItem('last_sync_date', new Date().toISOString())
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao sincronizar carteira'
+      toast.error(message)
+      console.error('Erro ao sincronizar:', error)
+    } finally {
+      setLoadingSync(false)
+    }
+  }
+
+  // Adicionar novo ISIN
+  const handleAdd = async () => {
+    if (!newISIN) {
+      toast.error('Por favor, insira um ISIN ou Ticker')
+      return
+    }
+
+    try {
+      // TODO: Chamar API POST /api/isins
+      const newISINObj: ISIN = {
         id: Date.now().toString(),
         isin: newISIN,
         ticker: '',
         name: '',
         automation_enabled: false,
         currency: 'EUR'
-      }])
+      }
+
+      setIsins([...isins, newISINObj])
       setNewISIN('')
       setShowAddForm(false)
+      toast.success('ISIN adicionado com sucesso!')
+    } catch (error) {
+      toast.error('Erro ao adicionar ISIN')
+      console.error('Erro:', error)
     }
   }
 
-  const handleDelete = (id: string) => {
-    // TODO: Chamar API para deletar ISIN
-    setIsins(isins.filter(i => i.id !== id))
+  // Toggle automação
+  const handleToggle = async (id: string) => {
+    try {
+      // TODO: Chamar API PUT /api/isins/{id}/automation/toggle
+      setIsins(isins.map(i =>
+        i.id === id ? { ...i, automation_enabled: !i.automation_enabled } : i
+      ))
+
+      const isin = isins.find(i => i.id === id)
+      if (isin) {
+        const action = !isin.automation_enabled ? 'ativada' : 'desativada'
+        toast.success(`Automação ${action} para ${isin.ticker}`)
+      }
+    } catch (error) {
+      toast.error('Erro ao toggle automação')
+      console.error('Erro:', error)
+    }
+  }
+
+  // Loading skeleton
+  if (loadingList) {
+    return (
+      <div className="space-y-4">
+        <div className="h-10 bg-t212-hover rounded-lg animate-pulse"></div>
+        <div className="h-64 bg-t212-hover rounded-lg animate-pulse"></div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <button
-        onClick={() => setShowAddForm(!showAddForm)}
-        className="mb-6 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-      >
-        <Plus size={20} />
-        Novo ISIN
-      </button>
+    <div className="space-y-4">
+      {/* Action Bar */}
+      <div className="flex gap-4">
+        <Button
+          variant="primary"
+          size="md"
+          icon={<Plus size={18} />}
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
+          Novo ISIN
+        </Button>
 
+        <Button
+          variant="secondary"
+          size="md"
+          icon={<RefreshCw size={18} className={loadingSync ? 'animate-spin' : ''} />}
+          onClick={handleSync}
+          disabled={loadingSync}
+          isLoading={loadingSync}
+        >
+          Sincronizar Carteira
+        </Button>
+      </div>
+
+      {/* Add Form */}
       {showAddForm && (
-        <div className="mb-6 bg-white p-4 rounded-lg shadow">
-          <div className="flex gap-2">
-            <input
+        <div className="card border-t212-primary border-opacity-20">
+          <div className="flex gap-3">
+            <Input
               type="text"
               value={newISIN}
               onChange={(e) => setNewISIN(e.target.value)}
               placeholder="Cole o ISIN ou Ticker..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1"
             />
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleAdd}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
             >
               Adicionar
-            </button>
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setShowAddForm(false)}
+            >
+              Cancelar
+            </Button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">ISIN</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Ticker</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Automação</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isins.map((isin) => (
-              <tr key={isin.id} className="border-b hover:bg-gray-50">
-                <td className="px-6 py-3 font-mono text-sm">{isin.isin}</td>
-                <td className="px-6 py-3 text-sm">{isin.ticker}</td>
-                <td className="px-6 py-3 text-sm">{isin.name || '-'}</td>
-                <td className="px-6 py-3 text-sm">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    isin.automation_enabled
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {isin.automation_enabled ? '✓ Ativo' : '✗ Inativo'}
-                  </span>
-                </td>
-                <td className="px-6 py-3 text-sm">
-                  <div className="flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-800">
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(isin.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
+      {/* Table */}
+      {isins.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="table w-full">
+            <thead>
+              <tr>
+                <th>ISIN</th>
+                <th>Ticker</th>
+                <th>Nome</th>
+                <th>Preço</th>
+                <th>P&L</th>
+                <th>Automação</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {isins.map((isin) => (
+                <tr key={isin.id}>
+                  <td>
+                    <span className="font-mono text-sm text-t212-primary">{isin.isin}</span>
+                  </td>
+                  <td>
+                    <span className="font-semibold text-t212-primary">{isin.ticker}</span>
+                  </td>
+                  <td>
+                    <span className="text-t212-primary">{isin.name || '-'}</span>
+                  </td>
+                  <td>
+                    <span className="text-t212-primary">
+                      {isin.price ? `€${isin.price.toFixed(2)}` : '-'}
+                    </span>
+                  </td>
+                  <td>
+                    {isin.pnl !== undefined ? (
+                      <div className="flex items-center gap-2">
+                        {isin.pnl >= 0 ? (
+                          <>
+                            <TrendingUp size={16} className="text-t212-success" />
+                            <span className="price-positive">
+                              +€{isin.pnl.toFixed(2)} ({isin.pnl_percent?.toFixed(1)}%)
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <TrendingDown size={16} className="text-t212-error" />
+                            <span className="price-negative">
+                              -€{Math.abs(isin.pnl).toFixed(2)} ({isin.pnl_percent?.toFixed(1)}%)
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-t212-muted">-</span>
+                    )}
+                  </td>
+                  <td>
+                    <ToggleSwitch
+                      checked={isin.automation_enabled}
+                      onChange={() => handleToggle(isin.id)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-t212-secondary mb-4">Nenhum ISIN adicionado ainda</p>
+          <p className="text-t212-muted text-sm mb-6">
+            Clique em "Sincronizar Carteira" para importar suas posições do Trading 212
+          </p>
+          <Button
+            variant="primary"
+            onClick={handleSync}
+            isLoading={loadingSync}
+          >
+            Sincronizar Carteira
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
