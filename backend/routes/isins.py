@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/isins", tags=["isins"])
 t212_client = Trading212Client(
     api_key=settings.T212_API_KEY,
     api_secret=settings.T212_API_SECRET,
-    base_url=settings.T212_BASE_URL
+    environment=settings.T212_ENVIRONMENT
 )
 
 
