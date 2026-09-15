@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post('/api/auth/login', {
+      const response = await apiClient.post('/auth/login', {
         email,
         password
       })
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   register: async (email: string, password: string, passwordConfirm: string) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post('/api/auth/register', {
+      const response = await apiClient.post('/auth/register', {
         email,
         password,
         password_confirm: passwordConfirm
@@ -105,7 +105,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: async () => {
     try {
-      await apiClient.post('/api/auth/logout')
+      await apiClient.post('/auth/logout')
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
     } finally {
@@ -131,7 +131,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!token) return
 
     try {
-      const response = await apiClient.get('/api/auth/me', {
+      const response = await apiClient.get('/auth/me', {
         params: { token }
       })
 

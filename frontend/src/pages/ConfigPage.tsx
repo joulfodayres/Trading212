@@ -36,7 +36,7 @@ export default function ConfigPage() {
   const handleSaveStrategy = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.put('/api/config/strategy-params', params)
+      const response = await apiClient.put('/config/strategy-params', params)
       toast.success('Parâmetros da estratégia guardados com sucesso!')
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Erro ao guardar parâmetros'
