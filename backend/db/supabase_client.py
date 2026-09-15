@@ -29,9 +29,9 @@ class SupabaseDB:
                     supabase_url=settings.SUPABASE_URL,
                     supabase_key=settings.SUPABASE_KEY
                 )
-                logger.info("✅ Cliente Supabase inicializado")
+                logger.info(" Cliente Supabase inicializado")
             except Exception as e:
-                logger.error(f"❌ Erro ao inicializar Supabase: {str(e)}")
+                logger.error(f" Erro ao inicializar Supabase: {str(e)}")
                 raise
 
     @property
@@ -41,7 +41,7 @@ class SupabaseDB:
             self.__init__()
         return self._client
 
-    # ===== OPERAÇÕES GENÉRICAS =====
+    # ===== OPERAÇÕES GEN�RICAS =====
 
     def query(self, table: str) -> Any:
         """Retorna query builder para uma tabela"""
@@ -64,13 +64,13 @@ class SupabaseDB:
 
             response = self.client.table("isins").insert(data).execute()
             if response.data:
-                logger.info(f"✅ ISIN criado: {isin}")
+                logger.info(f" ISIN criado: {isin}")
                 return response.data[0]
             else:
                 raise Exception(f"Falha ao criar ISIN: {response}")
 
         except Exception as e:
-            logger.error(f"❌ Erro ao criar ISIN: {str(e)}")
+            logger.error(f" Erro ao criar ISIN: {str(e)}")
             raise
 
     def get_isin(self, isin_id: str, user_id: str) -> Optional[Dict]:
@@ -83,7 +83,7 @@ class SupabaseDB:
             return None
 
         except Exception as e:
-            logger.error(f"❌ Erro ao obter ISIN: {str(e)}")
+            logger.error(f" Erro ao obter ISIN: {str(e)}")
             raise
 
     def get_isin_by_isin_code(self, isin: str, user_id: str) -> Optional[Dict]:
@@ -96,7 +96,7 @@ class SupabaseDB:
             return None
 
         except Exception as e:
-            logger.error(f"❌ Erro ao obter ISIN por código: {str(e)}")
+            logger.error(f" Erro ao obter ISIN por código: {str(e)}")
             raise
 
     def list_isins(self, user_id: str, limit: int = 100, offset: int = 0) -> List[Dict]:
@@ -113,7 +113,7 @@ class SupabaseDB:
             return response.data or []
 
         except Exception as e:
-            logger.error(f"❌ Erro ao listar ISINs: {str(e)}")
+            logger.error(f" Erro ao listar ISINs: {str(e)}")
             raise
 
     def update_isin(self, isin_id: str, user_id: str, updates: Dict) -> Optional[Dict]:
@@ -128,13 +128,13 @@ class SupabaseDB:
             )
 
             if response.data:
-                logger.info(f"✅ ISIN atualizado: {isin_id}")
+                logger.info(f" ISIN atualizado: {isin_id}")
                 return response.data[0]
             else:
                 raise Exception(f"ISIN não encontrado: {isin_id}")
 
         except Exception as e:
-            logger.error(f"❌ Erro ao atualizar ISIN: {str(e)}")
+            logger.error(f" Erro ao atualizar ISIN: {str(e)}")
             raise
 
     def delete_isin(self, isin_id: str, user_id: str) -> bool:
@@ -152,11 +152,11 @@ class SupabaseDB:
                 .execute()
             )
 
-            logger.info(f"✅ ISIN deletado: {isin_id}")
+            logger.info(f" ISIN deletado: {isin_id}")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Erro ao deletar ISIN: {str(e)}")
+            logger.error(f" Erro ao deletar ISIN: {str(e)}")
             raise
 
     def toggle_automation(self, isin_id: str, user_id: str) -> Optional[Dict]:
@@ -180,13 +180,13 @@ class SupabaseDB:
             )
 
             if response.data:
-                logger.info(f"✅ Automação toggled: {isin_id} = {new_value}")
+                logger.info(f" Automação toggled: {isin_id} = {new_value}")
                 return response.data[0]
             else:
                 raise Exception(f"Falha ao toggle automação: {isin_id}")
 
         except Exception as e:
-            logger.error(f"❌ Erro ao toggle automation: {str(e)}")
+            logger.error(f" Erro ao toggle automation: {str(e)}")
             raise
 
     # ===== TRADES =====
@@ -207,7 +207,7 @@ class SupabaseDB:
             return response.data or []
 
         except Exception as e:
-            logger.error(f"❌ Erro ao listar trades: {str(e)}")
+            logger.error(f" Erro ao listar trades: {str(e)}")
             raise
 
     def get_isin_pnl(self, isin_id: str, user_id: str) -> Dict:
@@ -250,7 +250,7 @@ class SupabaseDB:
             }
 
         except Exception as e:
-            logger.error(f"❌ Erro ao calcular P&L: {str(e)}")
+            logger.error(f" Erro ao calcular P&L: {str(e)}")
             return {
                 "total_bought": 0,
                 "total_bought_value": 0,

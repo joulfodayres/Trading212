@@ -116,14 +116,14 @@ async def create_isin(data: ISINCreate):
         # Verificar se ISIN já existe para este user
         existing = db.get_isin_by_isin_code(isin_code, TEST_USER_ID)
         if existing:
-            logger.warning(f"⚠️ ISIN já existe: {isin_code}")
+            logger.warning(f" ISIN já existe: {isin_code}")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"ISIN já existe para este utilizador"
             )
 
         # Fetch dados do instrumento via T212 API
-        logger.info(f"📡 Buscando dados de T212 API para: {isin_code}")
+        logger.info(f"� Buscando dados de T212 API para: {isin_code}")
 
         # Para este MVP, usar dados mock da T212 API
         # Em produção, seria: t212_client.search_instrument(isin_code)
@@ -143,7 +143,7 @@ async def create_isin(data: ISINCreate):
             fields_json=t212_data
         )
 
-        logger.info(f"✅ ISIN criado com sucesso: {isin_code}")
+        logger.info(f" ISIN criado com sucesso: {isin_code}")
 
         return ISINResponse(
             id=isin_record["id"],
@@ -161,7 +161,7 @@ async def create_isin(data: ISINCreate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao criar ISIN: {str(e)}")
+        logger.error(f" Erro ao criar ISIN: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao adicionar ISIN: {str(e)}"
@@ -201,11 +201,11 @@ async def list_isins(limit: int = Query(20), offset: int = Query(0)):
                 updated_at=str(isin.get("updated_at"))
             ))
 
-        logger.info(f"📚 Listados {len(result)} ISINs")
+        logger.info(f" Listados {len(result)} ISINs")
         return result
 
     except Exception as e:
-        logger.error(f"❌ Erro ao listar ISINs: {str(e)}")
+        logger.error(f" Erro ao listar ISINs: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao listar ISINs: {str(e)}"
@@ -224,7 +224,7 @@ async def get_isin(isin_id: str):
         isin = db.get_isin(isin_id, TEST_USER_ID)
 
         if not isin:
-            logger.warning(f"⚠️ ISIN não encontrado: {isin_id}")
+            logger.warning(f" ISIN não encontrado: {isin_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"ISIN não encontrado"
@@ -233,7 +233,7 @@ async def get_isin(isin_id: str):
         # Calcular P&L
         pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
 
-        logger.info(f"📖 ISIN obtido: {isin['isin']}")
+        logger.info(f"� ISIN obtido: {isin['isin']}")
 
         return ISINResponse(
             id=isin["id"],
@@ -251,7 +251,7 @@ async def get_isin(isin_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao obter ISIN: {str(e)}")
+        logger.error(f" Erro ao obter ISIN: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao obter ISIN: {str(e)}"
@@ -285,7 +285,7 @@ async def update_isin(isin_id: str, data: ISINUpdate):
 
         if not updates:
             # Se nenhum campo foi fornecido, retornar o ISIN sem mudanças
-            logger.info(f"ℹ️ Nenhum campo para atualizar em ISIN: {isin_id}")
+            logger.info(f"� Nenhum campo para atualizar em ISIN: {isin_id}")
             pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
             return ISINResponse(
                 id=isin["id"],
@@ -303,7 +303,7 @@ async def update_isin(isin_id: str, data: ISINUpdate):
         # Atualizar em BD
         updated_isin = db.update_isin(isin_id, TEST_USER_ID, updates)
 
-        logger.info(f"✅ ISIN atualizado: {isin_id}")
+        logger.info(f" ISIN atualizado: {isin_id}")
 
         # Calcular P&L
         pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
@@ -324,7 +324,7 @@ async def update_isin(isin_id: str, data: ISINUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao atualizar ISIN: {str(e)}")
+        logger.error(f" Erro ao atualizar ISIN: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao atualizar ISIN: {str(e)}"
@@ -351,13 +351,13 @@ async def delete_isin(isin_id: str):
         # Deletar ISIN (cascade delete de trades é automático em BD)
         db.delete_isin(isin_id, TEST_USER_ID)
 
-        logger.info(f"✅ ISIN deletado: {isin_id}")
+        logger.info(f" ISIN deletado: {isin_id}")
         # Retorna 204 No Content (sem body)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao deletar ISIN: {str(e)}")
+        logger.error(f" Erro ao deletar ISIN: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao deletar ISIN: {str(e)}"
@@ -383,7 +383,7 @@ async def toggle_automation(isin_id: str):
         # Toggle automation
         updated_isin = db.toggle_automation(isin_id, TEST_USER_ID)
 
-        logger.info(f"✅ Automação toggled: {isin_id} = {updated_isin['automation_enabled']}")
+        logger.info(f" Automação toggled: {isin_id} = {updated_isin['automation_enabled']}")
 
         return ISINToggleResponse(
             id=updated_isin["id"],
@@ -394,7 +394,7 @@ async def toggle_automation(isin_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao toggle automation: {str(e)}")
+        logger.error(f" Erro ao toggle automation: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao toggle automation: {str(e)}"
@@ -423,14 +423,14 @@ async def get_isin_trades(isin_id: str, limit: int = Query(50)):
         # Buscar trades
         trades = db.list_isin_trades(isin_id, TEST_USER_ID, limit=limit)
 
-        logger.info(f"📊 Listados {len(trades)} trades para ISIN: {isin_id}")
+        logger.info(f" Listados {len(trades)} trades para ISIN: {isin_id}")
 
         return trades
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao obter trades: {str(e)}")
+        logger.error(f" Erro ao obter trades: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao obter trades: {str(e)}"
@@ -446,14 +446,14 @@ async def sync_from_trading212():
     Cria novos registos se não existem, atualiza se existem
     """
     try:
-        logger.info("🔄 Sincronizando ISINs da carteira T212...")
+        logger.info(" Sincronizando ISINs da carteira T212...")
 
         # Fetch positions de T212
         t212_client = get_t212_client()
         positions_data = t212_client.get_positions()
 
         if not positions_data:
-            logger.warning("⚠️ Nenhuma posição encontrada")
+            logger.warning(" Nenhuma posição encontrada")
             return SyncResponse(
                 synced_count=0,
                 updated_count=0,
@@ -474,7 +474,7 @@ async def sync_from_trading212():
                 currency = pos.get("currency", "EUR")
 
                 if not isin_code:
-                    logger.warning(f"⚠️ Posição sem ISIN: {ticker}")
+                    logger.warning(f" Posição sem ISIN: {ticker}")
                     continue
 
                 # Verificar se ISIN já existe
@@ -491,7 +491,7 @@ async def sync_from_trading212():
                     updated = db.update_isin(existing["id"], TEST_USER_ID, updates)
                     updated_count += 1
                     isin_record = updated
-                    logger.info(f"🔄 ISIN atualizado: {isin_code}")
+                    logger.info(f" ISIN atualizado: {isin_code}")
                 else:
                     # Criar novo
                     isin_record = db.create_isin(
@@ -503,9 +503,9 @@ async def sync_from_trading212():
                         fields_json=pos
                     )
                     synced_count += 1
-                    logger.info(f"✨ ISIN criado: {isin_code}")
+                    logger.info(f"� ISIN criado: {isin_code}")
 
-                # Adicionar à resposta
+                # Adicionar � resposta
                 pnl_data = db.get_isin_pnl(isin_record["id"], TEST_USER_ID)
                 isins_response.append({
                     "id": isin_record["id"],
@@ -522,10 +522,10 @@ async def sync_from_trading212():
                 time.sleep(0.5)
 
             except Exception as e:
-                logger.error(f"❌ Erro ao processar posição {pos.get('ticker')}: {str(e)}")
+                logger.error(f" Erro ao processar posição {pos.get('ticker')}: {str(e)}")
                 continue
 
-        logger.info(f"✅ Sincronização completa: {synced_count} criados, {updated_count} atualizados")
+        logger.info(f" Sincronização completa: {synced_count} criados, {updated_count} atualizados")
 
         return SyncResponse(
             synced_count=synced_count,
@@ -535,7 +535,7 @@ async def sync_from_trading212():
         )
 
     except Exception as e:
-        logger.error(f"❌ Erro ao sincronizar: {str(e)}")
+        logger.error(f" Erro ao sincronizar: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao sincronizar ISINs: {str(e)}"

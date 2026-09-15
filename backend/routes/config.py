@@ -127,7 +127,7 @@ async def save_config(config: T212Config):
 
         # TODO: Guardar em BD (config table)
 
-        logger.info(f"✅ Configuração guardada: {config.t212_environment}")
+        logger.info(f" Configuração guardada: {config.t212_environment}")
 
         return T212ConfigResponse(
             t212_environment=config.t212_environment,
@@ -169,7 +169,7 @@ async def test_connection():
                 detail="Credenciais inválidas ou API indisponível"
             )
 
-        logger.info("✅ Conexão T212 testada com sucesso")
+        logger.info(" Conexão T212 testada com sucesso")
 
         return {
             "status": "ok",
@@ -242,7 +242,7 @@ async def save_strategy_params(params: StrategyParams):
 
         # TODO: Guardar em BD (config.strategy_params JSONB)
 
-        logger.info("✅ Strategy params guardados")
+        logger.info(" Strategy params guardados")
 
         return ConfigResponse(
             t212_environment="demo",

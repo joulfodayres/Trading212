@@ -217,7 +217,7 @@ async def login(request: LoginRequest):
     - message: Mensagem de sucesso
     """
     try:
-        logger.info(f"🔐 Tentativa de login: {request.email}")
+        logger.info(f" Tentativa de login: {request.email}")
 
         # Autenticar com Supabase Auth
         supabase = get_supabase()
@@ -227,7 +227,7 @@ async def login(request: LoginRequest):
         })
 
         if not response or not response.user:
-            logger.warning(f"❌ Falha de login: {request.email} (credenciais inválidas)")
+            logger.warning(f" Falha de login: {request.email} (credenciais inválidas)")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email ou password inválidos"
@@ -239,7 +239,7 @@ async def login(request: LoginRequest):
         # Criar JWT token próprio
         access_token = create_jwt_token(user_id, request.email)
 
-        logger.info(f"✅ Login bem-sucedido: {request.email} (ID: {user_id})")
+        logger.info(f" Login bem-sucedido: {request.email} (ID: {user_id})")
 
         return TokenResponse(
             access_token=access_token,
@@ -252,7 +252,7 @@ async def login(request: LoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao fazer login: {str(e)}")
+        logger.error(f" Erro ao fazer login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou password inválidos"
@@ -278,7 +278,7 @@ async def register(request: RegisterRequest):
     - message: Mensagem de sucesso
     """
     try:
-        logger.info(f"📝 Tentativa de registo: {request.email}")
+        logger.info(f" Tentativa de registo: {request.email}")
 
         # Validações
         if len(request.password) < 8:
@@ -301,7 +301,7 @@ async def register(request: RegisterRequest):
         })
 
         if not response or not response.user:
-            logger.warning(f"❌ Falha de registo: {request.email} (email já registado ou erro interno)")
+            logger.warning(f" Falha de registo: {request.email} (email já registado ou erro interno)")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Este email já está registado ou erro ao criar conta"
@@ -320,7 +320,7 @@ async def register(request: RegisterRequest):
         # Criar JWT token
         access_token = create_jwt_token(user_id, request.email)
 
-        logger.info(f"✅ Registo bem-sucedido: {request.email} (ID: {user_id})")
+        logger.info(f" Registo bem-sucedido: {request.email} (ID: {user_id})")
 
         return TokenResponse(
             access_token=access_token,
@@ -333,7 +333,7 @@ async def register(request: RegisterRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao registar: {str(e)}")
+        logger.error(f" Erro ao registar: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Erro ao criar conta"
@@ -352,10 +352,10 @@ async def logout(current_user: dict = Depends(get_current_user)):
     - message: Confirmação de logout
     """
     try:
-        logger.info(f"✅ Logout: {current_user.get('email')}")
+        logger.info(f" Logout: {current_user.get('email')}")
         return {"message": "Logout realizado com sucesso"}
     except Exception as e:
-        logger.error(f"❌ Erro ao fazer logout: {str(e)}")
+        logger.error(f" Erro ao fazer logout: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Erro ao fazer logout"
@@ -377,7 +377,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     Levanta 401 se token inválido ou ausente
     """
     try:
-        logger.info(f"📋 Fetch user info: {current_user.get('email')}")
+        logger.info(f"� Fetch user info: {current_user.get('email')}")
 
         return UserResponse(
             user=UserInfo(
@@ -390,7 +390,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao obter user: {str(e)}")
+        logger.error(f" Erro ao obter user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao obter informações"
@@ -421,7 +421,7 @@ async def verify_token(current_user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erro ao verificar token: {str(e)}")
+        logger.error(f" Erro ao verificar token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido"
@@ -431,10 +431,10 @@ async def verify_token(current_user: dict = Depends(get_current_user)):
 @router.post("/test-token")
 async def get_test_token():
     """
-    🧪 DEBUG ONLY - Obter JWT token de teste para testes do CRUD
+    �� DEBUG ONLY - Obter JWT token de teste para testes do CRUD
     Retorna um token válido para o utilizador de teste (teste@trading212.com)
 
-    ⚠️ REMOVE EM PRODUÇÃO
+     REMOVE EM PRODUÇÃO
 
     Response:
     - token: JWT token válido por 24h
@@ -448,7 +448,7 @@ async def get_test_token():
         )
 
     try:
-        logger.info("🧪 Gerando token de teste")
+        logger.info("�� Gerando token de teste")
 
         # Fixed test user ID
         test_user_id = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"
@@ -465,7 +465,7 @@ async def get_test_token():
             "message": "Token de teste gerado com sucesso"
         }
     except Exception as e:
-        logger.error(f"❌ Erro ao gerar token de teste: {str(e)}")
+        logger.error(f" Erro ao gerar token de teste: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao gerar token de teste"
