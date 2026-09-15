@@ -412,3 +412,47 @@ async def verify_token(current_user: dict = Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido"
         )
+
+
+@router.post("/test-token")
+async def get_test_token():
+    """
+    🧪 DEBUG ONLY - Obter JWT token de teste para testes do CRUD
+    Retorna um token válido para o utilizador de teste (teste@trading212.com)
+
+    ⚠️ REMOVE EM PRODUÇÃO
+
+    Response:
+    - token: JWT token válido por 24h
+    - user_id: UUID do utilizador de teste
+    - email: Email do utilizador de teste
+    """
+    if settings.FASTAPI_ENV == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Endpoint de teste não disponível em produção"
+        )
+
+    try:
+        logger.info("🧪 Gerando token de teste")
+
+        # Fixed test user ID
+        test_user_id = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"
+        test_email = "teste@trading212.com"
+
+        # Create JWT token
+        access_token = create_jwt_token(test_user_id, test_email)
+
+        return {
+            "token": access_token,
+            "access_token": access_token,  # Compatibilidade
+            "user_id": test_user_id,
+            "email": test_email,
+            "message": "Token de teste gerado com sucesso"
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao gerar token de teste: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao gerar token de teste"
+        )
