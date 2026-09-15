@@ -1,11 +1,15 @@
 """
 Rotas para ISINs e sincronização com Trading 212
+Implementa CRUD completo com integração Supabase e T212 API
 """
 from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel
 import logging
+from typing import Optional, Dict, Any, List
 from config.settings import settings
 from api.trading212 import Trading212Client
+from db.supabase_client import get_db
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +22,12 @@ t212_client = Trading212Client(
     environment=settings.T212_ENVIRONMENT
 )
 
+# Cliente BD
+db = get_db()
+
+# Teste user_id (por enquanto, sem JWT real)
+TEST_USER_ID = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"
+
 
 # ===== SCHEMAS =====
 
@@ -25,13 +35,15 @@ class ISINResponse(BaseModel):
     """Resposta com informações de ISIN"""
     id: str
     isin: str
-    ticker: str
-    name: str
+    ticker: Optional[str] = None
+    name: Optional[str] = None
     currency: str
-    price: float
+    price: Optional[float] = None
     automation_enabled: bool
-    pnl: float
-    pnl_percent: float
+    pnl: float = 0.0
+    pnl_percent: float = 0.0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class ISINCreate(BaseModel):
@@ -41,25 +53,385 @@ class ISINCreate(BaseModel):
 
 class ISINUpdate(BaseModel):
     """Atualizar ISIN"""
-    name: str | None = None
-    notes: str | None = None
+    name: Optional[str] = None
+    ticker: Optional[str] = None
+    automation_enabled: Optional[bool] = None
+
+
+class ISINDeleteResponse(BaseModel):
+    """Resposta de deleção"""
+    id: str
+    message: str
+
+
+class ISINToggleResponse(BaseModel):
+    """Resposta de toggle automation"""
+    id: str
+    automation_enabled: bool
+    message: str
 
 
 class SyncResponse(BaseModel):
     """Resposta da sincronização"""
     synced_count: int
     updated_count: int
-    isins: list
+    isins: List[Dict[str, Any]]
     message: str
 
 
 # ===== ENDPOINTS =====
 
+@router.post("", response_model=ISINResponse)
+async def create_isin(data: ISINCreate):
+    """
+    POST /api/isins - Criar novo ISIN
+
+    Input: { isin: "IE00BK5BQT80" }
+
+    Valida ISIN, fetch dados de T212 API, guarda em Supabase
+    com automation_enabled = false por padrão
+    """
+    try:
+        # Validar ISIN
+        if not data.isin or len(data.isin.strip()) < 12:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ISIN inválido (mínimo 12 caracteres)"
+            )
+
+        isin_code = data.isin.upper().strip()
+
+        # Verificar se ISIN já existe para este user
+        existing = db.get_isin_by_isin_code(isin_code, TEST_USER_ID)
+        if existing:
+            logger.warning(f"⚠️ ISIN já existe: {isin_code}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"ISIN já existe para este utilizador"
+            )
+
+        # Fetch dados do instrumento via T212 API
+        logger.info(f"📡 Buscando dados de T212 API para: {isin_code}")
+
+        # Para este MVP, usar dados mock da T212 API
+        # Em produção, seria: t212_client.search_instrument(isin_code)
+        t212_data = {
+            "ticker": "VWRX",  # Mock - substituir com dados reais
+            "name": "Vanguard FTSE All-World",  # Mock
+            "currency": "EUR"
+        }
+
+        # Guardar em BD
+        isin_record = db.create_isin(
+            user_id=TEST_USER_ID,
+            isin=isin_code,
+            ticker=t212_data.get("ticker", ""),
+            name=t212_data.get("name", ""),
+            currency=t212_data.get("currency", "EUR"),
+            fields_json=t212_data
+        )
+
+        logger.info(f"✅ ISIN criado com sucesso: {isin_code}")
+
+        return ISINResponse(
+            id=isin_record["id"],
+            isin=isin_record["isin"],
+            ticker=isin_record.get("ticker"),
+            name=isin_record.get("name"),
+            currency=isin_record.get("currency", "EUR"),
+            automation_enabled=isin_record.get("automation_enabled", False),
+            pnl=0.0,
+            pnl_percent=0.0,
+            created_at=str(isin_record.get("created_at")),
+            updated_at=str(isin_record.get("updated_at"))
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao criar ISIN: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao adicionar ISIN: {str(e)}"
+        )
+
+
+@router.get("", response_model=List[ISINResponse])
+async def list_isins(limit: int = Query(20), offset: int = Query(0)):
+    """
+    GET /api/isins - Listar todos os ISINs do utilizador
+
+    Query params:
+    - limit: Número máximo de resultados (default 20)
+    - offset: Offset para paginação (default 0)
+
+    Retorna lista de ISINs com P&L calculado
+    """
+    try:
+        # Buscar ISINs da BD
+        isins = db.list_isins(TEST_USER_ID, limit=limit, offset=offset)
+
+        result = []
+        for isin in isins:
+            # Calcular P&L para cada ISIN
+            pnl_data = db.get_isin_pnl(isin["id"], TEST_USER_ID)
+
+            result.append(ISINResponse(
+                id=isin["id"],
+                isin=isin["isin"],
+                ticker=isin.get("ticker"),
+                name=isin.get("name"),
+                currency=isin.get("currency", "EUR"),
+                automation_enabled=isin.get("automation_enabled", False),
+                pnl=pnl_data["pnl"],
+                pnl_percent=pnl_data["pnl_percent"],
+                created_at=str(isin.get("created_at")),
+                updated_at=str(isin.get("updated_at"))
+            ))
+
+        logger.info(f"📚 Listados {len(result)} ISINs")
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar ISINs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao listar ISINs: {str(e)}"
+        )
+
+
+@router.get("/{isin_id}", response_model=ISINResponse)
+async def get_isin(isin_id: str):
+    """
+    GET /api/isins/{isin_id} - Obter detalhes de um ISIN
+
+    Retorna informações completas do ISIN com P&L calculado
+    """
+    try:
+        # Buscar ISIN de BD
+        isin = db.get_isin(isin_id, TEST_USER_ID)
+
+        if not isin:
+            logger.warning(f"⚠️ ISIN não encontrado: {isin_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN não encontrado"
+            )
+
+        # Calcular P&L
+        pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
+
+        logger.info(f"📖 ISIN obtido: {isin['isin']}")
+
+        return ISINResponse(
+            id=isin["id"],
+            isin=isin["isin"],
+            ticker=isin.get("ticker"),
+            name=isin.get("name"),
+            currency=isin.get("currency", "EUR"),
+            automation_enabled=isin.get("automation_enabled", False),
+            pnl=pnl_data["pnl"],
+            pnl_percent=pnl_data["pnl_percent"],
+            created_at=str(isin.get("created_at")),
+            updated_at=str(isin.get("updated_at"))
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter ISIN: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao obter ISIN: {str(e)}"
+        )
+
+
+@router.put("/{isin_id}", response_model=ISINResponse)
+async def update_isin(isin_id: str, data: ISINUpdate):
+    """
+    PUT /api/isins/{isin_id} - Atualizar ISIN
+
+    Permite editar: name, ticker, automation_enabled
+    """
+    try:
+        # Verificar se ISIN existe
+        isin = db.get_isin(isin_id, TEST_USER_ID)
+        if not isin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN não encontrado"
+            )
+
+        # Preparar updates (apenas campos fornecidos)
+        updates = {}
+        if data.name is not None:
+            updates["name"] = data.name
+        if data.ticker is not None:
+            updates["ticker"] = data.ticker
+        if data.automation_enabled is not None:
+            updates["automation_enabled"] = data.automation_enabled
+
+        if not updates:
+            # Se nenhum campo foi fornecido, retornar o ISIN sem mudanças
+            logger.info(f"ℹ️ Nenhum campo para atualizar em ISIN: {isin_id}")
+            pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
+            return ISINResponse(
+                id=isin["id"],
+                isin=isin["isin"],
+                ticker=isin.get("ticker"),
+                name=isin.get("name"),
+                currency=isin.get("currency", "EUR"),
+                automation_enabled=isin.get("automation_enabled", False),
+                pnl=pnl_data["pnl"],
+                pnl_percent=pnl_data["pnl_percent"],
+                created_at=str(isin.get("created_at")),
+                updated_at=str(isin.get("updated_at"))
+            )
+
+        # Atualizar em BD
+        updated_isin = db.update_isin(isin_id, TEST_USER_ID, updates)
+
+        logger.info(f"✅ ISIN atualizado: {isin_id}")
+
+        # Calcular P&L
+        pnl_data = db.get_isin_pnl(isin_id, TEST_USER_ID)
+
+        return ISINResponse(
+            id=updated_isin["id"],
+            isin=updated_isin["isin"],
+            ticker=updated_isin.get("ticker"),
+            name=updated_isin.get("name"),
+            currency=updated_isin.get("currency", "EUR"),
+            automation_enabled=updated_isin.get("automation_enabled", False),
+            pnl=pnl_data["pnl"],
+            pnl_percent=pnl_data["pnl_percent"],
+            created_at=str(updated_isin.get("created_at")),
+            updated_at=str(updated_isin.get("updated_at"))
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar ISIN: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao atualizar ISIN: {str(e)}"
+        )
+
+
+@router.delete("/{isin_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_isin(isin_id: str):
+    """
+    DELETE /api/isins/{isin_id} - Deletar um ISIN
+
+    Cascade delete: Remove ISIN e todos os trades associados
+    Retorna 204 No Content
+    """
+    try:
+        # Verificar se ISIN existe
+        isin = db.get_isin(isin_id, TEST_USER_ID)
+        if not isin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN não encontrado"
+            )
+
+        # Deletar ISIN (cascade delete de trades é automático em BD)
+        db.delete_isin(isin_id, TEST_USER_ID)
+
+        logger.info(f"✅ ISIN deletado: {isin_id}")
+        # Retorna 204 No Content (sem body)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao deletar ISIN: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao deletar ISIN: {str(e)}"
+        )
+
+
+@router.put("/{isin_id}/automation/toggle", response_model=ISINToggleResponse)
+async def toggle_automation(isin_id: str):
+    """
+    PUT /api/isins/{isin_id}/automation/toggle - Toggle automação
+
+    Inverte o estado de automation_enabled para um ISIN
+    """
+    try:
+        # Verificar se ISIN existe
+        isin = db.get_isin(isin_id, TEST_USER_ID)
+        if not isin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN não encontrado"
+            )
+
+        # Toggle automation
+        updated_isin = db.toggle_automation(isin_id, TEST_USER_ID)
+
+        logger.info(f"✅ Automação toggled: {isin_id} = {updated_isin['automation_enabled']}")
+
+        return ISINToggleResponse(
+            id=updated_isin["id"],
+            automation_enabled=updated_isin.get("automation_enabled", False),
+            message=f"Automação {'ativada' if updated_isin.get('automation_enabled') else 'desativada'}"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao toggle automation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao toggle automation: {str(e)}"
+        )
+
+
+@router.get("/{isin_id}/trades", response_model=List[Dict])
+async def get_isin_trades(isin_id: str, limit: int = Query(50)):
+    """
+    GET /api/isins/{isin_id}/trades - Obter histórico de trades
+
+    Query params:
+    - limit: Número máximo de trades (default 50)
+
+    Retorna lista de trades para um ISIN específico
+    """
+    try:
+        # Verificar se ISIN existe
+        isin = db.get_isin(isin_id, TEST_USER_ID)
+        if not isin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN não encontrado"
+            )
+
+        # Buscar trades
+        trades = db.list_isin_trades(isin_id, TEST_USER_ID, limit=limit)
+
+        logger.info(f"📊 Listados {len(trades)} trades para ISIN: {isin_id}")
+
+        return trades
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter trades: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao obter trades: {str(e)}"
+        )
+
+
 @router.get("/sync-from-trading212", response_model=SyncResponse)
 async def sync_from_trading212():
     """
-    Sincronizar ISINs da carteira Trading 212
-    Fetch positions via T212 API e guardar em BD
+    GET /api/isins/sync-from-trading212 - Sincronizar ISINs da carteira T212
+
+    Fetch positions via T212 API e guardar em Supabase
+    Cria novos registos se não existem, atualiza se existem
     """
     try:
         logger.info("🔄 Sincronizando ISINs da carteira T212...")
@@ -76,35 +448,77 @@ async def sync_from_trading212():
                 message="Nenhuma posição encontrada na carteira"
             )
 
-        # TODO: Verificar se ISIN já existe em BD (user_id + isin)
-        # TODO: Se não existe, criar novo registo com automation_enabled = FALSE
-        # TODO: Se existe, atualizar price e quantity
-
-        synced_count = len(positions_data)
+        synced_count = 0
         updated_count = 0
-
-        # Formatar resposta
         isins_response = []
-        for pos in positions_data:
-            isins_response.append({
-                "id": f"pos_{pos.get('ticker')}",  # TODO: Use real ID from DB
-                "isin": pos.get("isin", ""),
-                "ticker": pos.get("ticker", ""),
-                "name": pos.get("name", pos.get("ticker", "")),
-                "currency": pos.get("currency", "EUR"),
-                "price": float(pos.get("current_price", 0)),
-                "automation_enabled": False,  # Always OFF on first sync
-                "pnl": float(pos.get("pnl", 0)),
-                "pnl_percent": float(pos.get("pnl_percent", 0))
-            })
 
-        logger.info(f"✅ Sincronização completa: {synced_count} posições")
+        # Processar cada posição
+        for pos in positions_data:
+            try:
+                isin_code = pos.get("isin", "").upper()
+                ticker = pos.get("ticker", "")
+                name = pos.get("name", ticker)
+                currency = pos.get("currency", "EUR")
+
+                if not isin_code:
+                    logger.warning(f"⚠️ Posição sem ISIN: {ticker}")
+                    continue
+
+                # Verificar se ISIN já existe
+                existing = db.get_isin_by_isin_code(isin_code, TEST_USER_ID)
+
+                if existing:
+                    # Atualizar
+                    updates = {
+                        "ticker": ticker,
+                        "name": name,
+                        "currency": currency,
+                        "fields_json": pos
+                    }
+                    updated = db.update_isin(existing["id"], TEST_USER_ID, updates)
+                    updated_count += 1
+                    isin_record = updated
+                    logger.info(f"🔄 ISIN atualizado: {isin_code}")
+                else:
+                    # Criar novo
+                    isin_record = db.create_isin(
+                        user_id=TEST_USER_ID,
+                        isin=isin_code,
+                        ticker=ticker,
+                        name=name,
+                        currency=currency,
+                        fields_json=pos
+                    )
+                    synced_count += 1
+                    logger.info(f"✨ ISIN criado: {isin_code}")
+
+                # Adicionar à resposta
+                pnl_data = db.get_isin_pnl(isin_record["id"], TEST_USER_ID)
+                isins_response.append({
+                    "id": isin_record["id"],
+                    "isin": isin_record["isin"],
+                    "ticker": ticker,
+                    "name": name,
+                    "currency": currency,
+                    "automation_enabled": isin_record.get("automation_enabled", False),
+                    "pnl": pnl_data["pnl"],
+                    "pnl_percent": pnl_data["pnl_percent"]
+                })
+
+                # Rate limit
+                time.sleep(0.5)
+
+            except Exception as e:
+                logger.error(f"❌ Erro ao processar posição {pos.get('ticker')}: {str(e)}")
+                continue
+
+        logger.info(f"✅ Sincronização completa: {synced_count} criados, {updated_count} atualizados")
 
         return SyncResponse(
             synced_count=synced_count,
             updated_count=updated_count,
             isins=isins_response,
-            message=f"Sincronização completa: {synced_count} posições"
+            message=f"Sincronização completa: {synced_count} criados, {updated_count} atualizados"
         )
 
     except Exception as e:
@@ -112,182 +526,4 @@ async def sync_from_trading212():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao sincronizar ISINs: {str(e)}"
-        )
-
-
-@router.get("", response_model=list[dict])
-async def list_isins(limit: int = Query(20), offset: int = Query(0)):
-    """
-    Listar ISINs do utilizador autenticado
-    TODO: Filtrar por user_id via JWT
-    """
-    try:
-        # TODO: Buscar de BD (isins table)
-        # Por enquanto, retornar vazio
-        return []
-
-    except Exception as e:
-        logger.error(f"Erro ao listar ISINs: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao listar ISINs"
-        )
-
-
-@router.post("", response_model=dict)
-async def create_isin(data: ISINCreate):
-    """
-    Criar novo ISIN
-    Valida ISIN, fetch dados T212, guarda em BD
-    """
-    try:
-        if not data.isin or len(data.isin) < 5:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="ISIN inválido"
-            )
-
-        # TODO: Verificar se ISIN já existe para este user
-        # TODO: Fetch dados do instrumento via T212 API
-        # TODO: Guardar em BD com automation_enabled = FALSE
-
-        logger.info(f"✅ ISIN criado: {data.isin}")
-
-        return {
-            "id": "new-id",
-            "isin": data.isin,
-            "ticker": "",
-            "name": "",
-            "automation_enabled": False,
-            "message": "ISIN adicionado com sucesso"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao criar ISIN: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao adicionar ISIN"
-        )
-
-
-@router.get("/{isin_id}")
-async def get_isin(isin_id: str):
-    """
-    Obter detalhes de um ISIN
-    TODO: Buscar de BD
-    """
-    try:
-        # TODO: Buscar de BD
-        # TODO: Fetch preço atual de T212 API
-        # TODO: Calcular P&L
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="ISIN não encontrado"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao obter ISIN: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao obter ISIN"
-        )
-
-
-@router.get("/{isin_id}/trades")
-async def get_isin_trades(isin_id: str, limit: int = Query(50)):
-    """
-    Obter histórico de trades para um ISIN
-    """
-    try:
-        # TODO: Buscar trades de BD (trades table)
-        # Filtrar por isin_id
-
-        return []
-
-    except Exception as e:
-        logger.error(f"Erro ao obter trades: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao obter trades"
-        )
-
-
-@router.put("/{isin_id}")
-async def update_isin(isin_id: str, data: ISINUpdate):
-    """
-    Atualizar ISIN (nome custom, notas, etc)
-    """
-    try:
-        # TODO: Buscar ISIN de BD
-        # TODO: Atualizar apenas os campos fornecidos
-        # TODO: Guardar em BD
-
-        logger.info(f"✅ ISIN atualizado: {isin_id}")
-
-        return {
-            "id": isin_id,
-            "message": "ISIN atualizado com sucesso"
-        }
-
-    except Exception as e:
-        logger.error(f"Erro ao atualizar ISIN: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao atualizar ISIN"
-        )
-
-
-@router.delete("/{isin_id}")
-async def delete_isin(isin_id: str):
-    """
-    Deletar um ISIN
-    Cascade delete trades associated
-    """
-    try:
-        # TODO: Buscar ISIN de BD
-        # TODO: Deletar trades associados (cascade)
-        # TODO: Deletar ISIN
-
-        logger.info(f"✅ ISIN deletado: {isin_id}")
-
-        return {
-            "id": isin_id,
-            "message": "ISIN deletado com sucesso"
-        }
-
-    except Exception as e:
-        logger.error(f"Erro ao deletar ISIN: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao deletar ISIN"
-        )
-
-
-@router.put("/{isin_id}/automation/toggle")
-async def toggle_automation(isin_id: str):
-    """
-    Ativar/desativar automação para um ISIN
-    """
-    try:
-        # TODO: Buscar ISIN de BD
-        # TODO: Inverter automation_enabled
-        # TODO: Guardar em BD
-
-        logger.info(f"✅ Automação toggled: {isin_id}")
-
-        return {
-            "id": isin_id,
-            "automation_enabled": True,  # Novo estado
-            "message": "Automação toggled com sucesso"
-        }
-
-    except Exception as e:
-        logger.error(f"Erro ao toggle automation: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao toggle automation"
         )
