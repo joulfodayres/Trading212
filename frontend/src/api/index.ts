@@ -4,8 +4,8 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
 
-  register: (email: string, password: string) =>
-    api.post('/auth/register', { email, password }),
+  register: (email: string, password: string, password_confirm: string) =>
+    api.post('/auth/register', { email, password, password_confirm }),
 
   logout: () => {
     localStorage.removeItem('token')
@@ -24,7 +24,13 @@ export const isinsAPI = {
 
   delete: (id: string) => api.delete(`/isins/${id}`),
 
-  getDetails: (id: string) => api.get(`/isins/${id}/details`)
+  getDetails: (id: string) => api.get(`/isins/${id}`),
+
+  getTrades: (id: string) => api.get(`/isins/${id}/trades`),
+
+  sync: () => api.get('/isins/sync-from-trading212'),
+
+  toggleAutomation: (id: string) => api.put(`/isins/${id}/automation/toggle`)
 }
 
 export const configAPI = {

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import { useAuthStore } from './stores/authStore'
 import { ToastProvider } from './components/ui/Toast'
@@ -14,6 +15,10 @@ function App() {
           <Route
             path="/login"
             element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/register"
+            element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/dashboard"

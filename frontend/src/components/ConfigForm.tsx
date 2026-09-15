@@ -25,7 +25,7 @@ export const ConfigForm = () => {
 
     setLoading(true)
     try {
-      const response = await apiClient.put('/api/config', {
+      const response = await apiClient.put('/config', {
         t212_api_key: apiKey,
         t212_api_secret: apiSecret,
         t212_environment: environment
@@ -47,7 +47,7 @@ export const ConfigForm = () => {
     setTesting(true)
     setTestResult(null)
     try {
-      const response = await apiClient.post('/api/config/test')
+      const response = await apiClient.post('/config/test')
       setTestResult({ success: true, data: response.data })
       toast.success('Conexão bem-sucedida!')
     } catch (error: any) {

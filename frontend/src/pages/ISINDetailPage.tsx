@@ -47,44 +47,22 @@ export default function ISINDetailPage() {
 
     setLoading(true)
     try {
-      // TODO: Chamar GET /api/isins/{id}
-      // TODO: Chamar GET /api/isins/{id}/trades
+      // Chamar GET /api/isins/{id}
+      const isinResponse = await apiClient.get(`/isins/${id}`)
+      setIsin(isinResponse.data)
 
-      // Por enquanto, mock data
-      setIsin({
-        id: id,
-        isin: 'IE00BK5BQT80',
-        ticker: 'VWCEd_EQ',
-        name: 'Vanguard FTSE All-World (Acc)',
-        price: 166.86,
-        quantity: 14.84,
-        average_price: 160.50,
-        pnl: 100.50,
-        pnl_percent: 4.1,
-        currency: 'EUR',
-        automation_enabled: false
-      })
-
-      setTrades([
-        {
-          id: '1',
-          type: 'BUY',
-          quantity: 10,
-          price: 160.00,
-          date: '2026-09-01',
-          status: 'EXECUTED'
-        },
-        {
-          id: '2',
-          type: 'BUY',
-          quantity: 4.84,
-          price: 161.20,
-          date: '2026-09-05',
-          status: 'EXECUTED'
-        }
-      ])
-    } catch (error) {
-      toast.error('Erro ao carregar detalhes do ISIN')
+      // Chamar GET /api/isins/{id}/trades
+      try {
+        const tradesResponse = await apiClient.get(`/isins/${id}/trades`)
+        setTrades(tradesResponse.data || [])
+      } catch (error) {
+        // Se endpoint não existe ainda, manter array vazio
+        console.log('Endpoint /trades não disponível ainda')
+        setTrades([])
+      }
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao carregar detalhes do ISIN'
+      toast.error(message)
       console.error('Erro:', error)
     } finally {
       setLoading(false)

@@ -35,7 +35,7 @@ export default function ISINTable() {
   const loadISINs = async () => {
     setLoadingList(true)
     try {
-      const response = await apiClient.get('/api/isins')
+      const response = await apiClient.get('/isins')
       setIsins(response.data)
     } catch (error) {
       console.error('Erro ao carregar ISINs:', error)
@@ -52,7 +52,7 @@ export default function ISINTable() {
     setLoadingSync(true)
     toast.info('Sincronizando carteira...')
     try {
-      const response = await apiClient.get('/api/isins/sync-from-trading212')
+      const response = await apiClient.get('/isins/sync-from-trading212')
       const { isins: syncedISINs, message } = response.data
 
       // Atualizar lista com ISINs sincronizados
@@ -78,41 +78,61 @@ export default function ISINTable() {
     }
 
     try {
-      // TODO: Chamar API POST /api/isins
-      const newISINObj: ISIN = {
-        id: Date.now().toString(),
-        isin: newISIN,
-        ticker: '',
-        name: '',
-        automation_enabled: false,
-        currency: 'EUR'
-      }
+      // Chamar API POST /api/isins
+      const response = await apiClient.post('/isins', {
+        isin: newISIN
+      })
+
+      const newISINObj = response.data
 
       setIsins([...isins, newISINObj])
       setNewISIN('')
       setShowAddForm(false)
       toast.success('ISIN adicionado com sucesso!')
-    } catch (error) {
-      toast.error('Erro ao adicionar ISIN')
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao adicionar ISIN'
+      toast.error(message)
+      console.error('Erro:', error)
+    }
+  }
+
+  // Deletar ISIN
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja deletar este ISIN?')) {
+      return
+    }
+
+    try {
+      await apiClient.delete(`/isins/${id}`)
+
+      setIsins(isins.filter(i => i.id !== id))
+      toast.success('ISIN deletado com sucesso!')
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao deletar ISIN'
+      toast.error(message)
       console.error('Erro:', error)
     }
   }
 
   // Toggle automação
-  const handleToggle = async (id: string) => {
+  const handleToggle = async (id: string, currentState: boolean) => {
     try {
-      // TODO: Chamar API PUT /api/isins/{id}/automation/toggle
+      // Chamar API PUT /api/isins/{id}/automation/toggle
+      const response = await apiClient.put(`/isins/${id}/automation/toggle`)
+
+      // Atualizar lista local com resposta da API
       setIsins(isins.map(i =>
-        i.id === id ? { ...i, automation_enabled: !i.automation_enabled } : i
+        i.id === id ? { ...i, automation_enabled: response.data.automation_enabled } : i
       ))
 
       const isin = isins.find(i => i.id === id)
       if (isin) {
-        const action = !isin.automation_enabled ? 'ativada' : 'desativada'
+        const action = !currentState ? 'ativada' : 'desativada'
         toast.success(`Automação ${action} para ${isin.ticker}`)
       }
-    } catch (error) {
-      toast.error('Erro ao toggle automação')
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao toggle automação'
+      toast.error(message)
       console.error('Erro:', error)
     }
   }
@@ -193,6 +213,7 @@ export default function ISINTable() {
                 <th>Preço</th>
                 <th>P&L</th>
                 <th>Automação</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -238,8 +259,18 @@ export default function ISINTable() {
                   <td>
                     <ToggleSwitch
                       checked={isin.automation_enabled}
-                      onChange={() => handleToggle(isin.id)}
+                      onChange={() => handleToggle(isin.id, isin.automation_enabled)}
                     />
+                  </td>
+                  <td>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(isin.id)}
+                      className="text-t212-error hover:text-t212-error-light"
+                    >
+                      🗑️ Deletar
+                    </Button>
                   </td>
                 </tr>
               ))}

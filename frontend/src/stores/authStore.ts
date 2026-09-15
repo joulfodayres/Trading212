@@ -36,7 +36,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         password
       })
 
-      const { access_token, user } = response.data
+      // Backend retorna: { access_token, token_type, user_id, email, message }
+      const { access_token, user_id, email: userEmail } = response.data
 
       // Guardar token no localStorage
       localStorage.setItem('token', access_token)
@@ -45,7 +46,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
 
       set({
-        user,
+        user: {
+          id: user_id,
+          email: userEmail,
+          is_admin: false
+        },
         token: access_token,
         isAuthenticated: true,
         isLoading: false
@@ -69,7 +74,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         password_confirm: passwordConfirm
       })
 
-      const { access_token, user } = response.data
+      // Backend retorna: { access_token, token_type, user_id, email, message }
+      const { access_token, user_id, email: userEmail } = response.data
 
       // Guardar token no localStorage
       localStorage.setItem('token', access_token)
@@ -78,7 +84,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
 
       set({
-        user,
+        user: {
+          id: user_id,
+          email: userEmail,
+          is_admin: false
+        },
         token: access_token,
         isAuthenticated: true,
         isLoading: false
