@@ -1,9 +1,13 @@
 """
-Rotas de autenticação com Supabase Auth
+Rotas de autenticação com JWT e Supabase
 """
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Header
 from pydantic import BaseModel, EmailStr
+from datetime import datetime, timedelta
+from typing import Optional
 import logging
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 from config.settings import settings
 from supabase import create_client, Client
 
@@ -13,6 +17,9 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Inicializar cliente Supabase
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+
+# Configurar password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ===== SCHEMAS =====
@@ -30,8 +37,17 @@ class RegisterRequest(BaseModel):
     password_confirm: str
 
 
+class TokenResponse(BaseModel):
+    """Resposta com token JWT"""
+    access_token: str
+    token_type: str = "Bearer"
+    user_id: str
+    email: str
+    message: str
+
+
 class AuthResponse(BaseModel):
-    """Resposta de autenticação"""
+    """Resposta de autenticação (compatível com API)"""
     access_token: str
     user: dict
     message: str
@@ -50,84 +66,208 @@ class UserResponse(BaseModel):
     message: str
 
 
-# ===== HELPERS =====
+# ===== JWT HELPERS =====
 
-def get_current_user_from_token(token: str) -> dict:
+def create_jwt_token(user_id: str, email: str, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Verifica token JWT e retorna user info
-    Levanta HTTPException 401 se inválido
+    Cria um JWT token assinado com a chave secreta
+
+    Args:
+        user_id: ID do utilizador
+        email: Email do utilizador
+        expires_delta: Tempo de expiração (padrão: 24 horas)
+
+    Returns:
+        JWT token string
+    """
+    if expires_delta is None:
+        expires_delta = timedelta(hours=settings.JWT_EXPIRATION_HOURS)
+
+    expire = datetime.utcnow() + expires_delta
+    payload = {
+        "user_id": user_id,
+        "email": email,
+        "exp": expire,
+        "iat": datetime.utcnow()
+    }
+
+    encoded_jwt = jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
+def verify_jwt_token(token: str) -> dict:
+    """
+    Verifica e decodifica um JWT token
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Payload do token (contém user_id e email)
+
+    Raises:
+        HTTPException: Se token inválido ou expirado
     """
     try:
-        # Verificar token com Supabase
-        user = supabase.auth.get_user(token)
-        if not user:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM]
+        )
+        user_id = payload.get("user_id")
+        email = payload.get("email")
+
+        if user_id is None or email is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token inválido ou expirado"
+                detail="Token inválido"
             )
-        return user.dict()
-    except Exception as e:
-        logger.error(f"Erro ao verificar token: {str(e)}")
+        return payload
+    except JWTError as e:
+        logger.error(f"Erro ao verificar JWT: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado"
         )
 
 
+def get_current_user_from_token(token: str) -> dict:
+    """
+    Verifica token JWT e retorna user info
+    Levanta HTTPException 401 se inválido
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Dicionário com dados do user
+    """
+    payload = verify_jwt_token(token)
+    return {
+        "id": payload.get("user_id"),
+        "email": payload.get("email")
+    }
+
+
+def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    """
+    Dependency para extrair user do Authorization header
+    Espera formato: "Bearer <token>"
+
+    Args:
+        authorization: Authorization header
+
+    Returns:
+        Dicionário com dados do user
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header ausente"
+        )
+
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Scheme de autenticação inválido"
+            )
+        return get_current_user_from_token(token)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header malformado"
+        )
+
+
 # ===== ENDPOINTS =====
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest):
     """
     Fazer login com email e password
-    Retorna JWT access_token
+    Retorna JWT access_token (válido por 24h)
+
+    Request body:
+    - email: EmailStr
+    - password: str
+
+    Response:
+    - access_token: JWT token
+    - token_type: "Bearer"
+    - user_id: UUID do utilizador
+    - email: Email do utilizador
+    - message: Mensagem de sucesso
     """
     try:
-        # Autenticar com Supabase
+        logger.info(f"🔐 Tentativa de login: {request.email}")
+
+        # Autenticar com Supabase Auth
         response = supabase.auth.sign_in_with_password({
             "email": request.email,
             "password": request.password
         })
 
-        if not response or not response.session:
+        if not response or not response.user:
+            logger.warning(f"❌ Falha de login: {request.email} (credenciais inválidas)")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Email ou senha inválidos"
+                detail="Email ou password inválidos"
             )
 
         user = response.user
-        session = response.session
+        user_id = str(user.id)
 
-        logger.info(f"✅ Login bem-sucedido: {request.email}")
+        # Criar JWT token próprio
+        access_token = create_jwt_token(user_id, request.email)
 
-        return AuthResponse(
-            access_token=session.access_token,
-            user={
-                "id": str(user.id),
-                "email": user.email,
-                "is_admin": False  # TODO: Buscar de BD
-            },
+        logger.info(f"✅ Login bem-sucedido: {request.email} (ID: {user_id})")
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="Bearer",
+            user_id=user_id,
+            email=request.email,
             message="Login realizado com sucesso"
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao fazer login: {str(e)}")
+        logger.error(f"❌ Erro ao fazer login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou senha inválidos"
+            detail="Email ou password inválidos"
         )
 
 
-@router.post("/register", response_model=AuthResponse)
+@router.post("/register", response_model=TokenResponse)
 async def register(request: RegisterRequest):
     """
     Criar nova conta com email e password
-    Retorna JWT access_token
+    Retorna JWT access_token (válido por 24h)
+
+    Request body:
+    - email: EmailStr
+    - password: str (mínimo 8 caracteres)
+    - password_confirm: str (deve ser igual a password)
+
+    Response:
+    - access_token: JWT token
+    - token_type: "Bearer"
+    - user_id: UUID do utilizador
+    - email: Email do utilizador
+    - message: Mensagem de sucesso
     """
     try:
-        # Validar passwords
+        logger.info(f"📝 Tentativa de registo: {request.email}")
+
+        # Validações
         if len(request.password) < 8:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -140,39 +280,46 @@ async def register(request: RegisterRequest):
                 detail="Passwords não coincidem"
             )
 
-        # Registar com Supabase
+        # Criar conta em Supabase Auth
         response = supabase.auth.sign_up({
             "email": request.email,
             "password": request.password
         })
 
         if not response or not response.user:
+            logger.warning(f"❌ Falha de registo: {request.email} (email já registado ou erro interno)")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Este email já está registado"
+                detail="Este email já está registado ou erro ao criar conta"
             )
 
         user = response.user
-        session = response.session
+        user_id = str(user.id)
 
-        # TODO: Guardar user em BD (users table)
+        # TODO: Guardar user em BD (users table) com is_admin=False
+        # await db.users.insert({
+        #     "id": user_id,
+        #     "email": request.email,
+        #     "is_admin": False
+        # })
 
-        logger.info(f"✅ Registo bem-sucedido: {request.email}")
+        # Criar JWT token
+        access_token = create_jwt_token(user_id, request.email)
 
-        return AuthResponse(
-            access_token=session.access_token if session else "",
-            user={
-                "id": str(user.id),
-                "email": user.email,
-                "is_admin": False
-            },
+        logger.info(f"✅ Registo bem-sucedido: {request.email} (ID: {user_id})")
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="Bearer",
+            user_id=user_id,
+            email=request.email,
             message="Conta criada com sucesso"
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao registar: {str(e)}")
+        logger.error(f"❌ Erro ao registar: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Erro ao criar conta"
@@ -180,13 +327,21 @@ async def register(request: RegisterRequest):
 
 
 @router.post("/logout")
-async def logout():
-    """Logout (invalida JWT no cliente)"""
+async def logout(current_user: dict = Depends(get_current_user)):
+    """
+    Logout (invalida JWT no cliente)
+
+    Headers:
+    - Authorization: Bearer <token>
+
+    Response:
+    - message: Confirmação de logout
+    """
     try:
-        logger.info("✅ Logout bem-sucedido")
+        logger.info(f"✅ Logout: {current_user.get('email')}")
         return {"message": "Logout realizado com sucesso"}
     except Exception as e:
-        logger.error(f"Erro ao fazer logout: {str(e)}")
+        logger.error(f"❌ Erro ao fazer logout: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Erro ao fazer logout"
@@ -194,27 +349,66 @@ async def logout():
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(token: str):
+async def get_me(current_user: dict = Depends(get_current_user)):
     """
     Obter informações do utilizador autenticado
-    Token deve ser passado em header ou query param
+
+    Headers:
+    - Authorization: Bearer <token>
+
+    Response:
+    - user: UserInfo (id, email, is_admin)
+    - message: Mensagem
+
+    Levanta 401 se token inválido ou ausente
     """
     try:
-        user_data = get_current_user_from_token(token)
+        logger.info(f"📋 Fetch user info: {current_user.get('email')}")
 
         return UserResponse(
             user=UserInfo(
-                id=str(user_data.get("id")),
-                email=user_data.get("email", ""),
-                is_admin=False  # TODO: Buscar de BD
+                id=current_user.get("id"),
+                email=current_user.get("email", ""),
+                is_admin=False  # TODO: Buscar de BD (users table)
             ),
-            message="Utilizador autenticado"
+            message="Informações de utilizador obtidas com sucesso"
         )
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao obter user: {str(e)}")
+        logger.error(f"❌ Erro ao obter user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter informações"
+        )
+
+
+@router.post("/verify-token")
+async def verify_token(current_user: dict = Depends(get_current_user)):
+    """
+    Verificar se um token JWT é válido
+
+    Headers:
+    - Authorization: Bearer <token>
+
+    Response:
+    - valid: bool (sempre True se chegar aqui)
+    - user_id: UUID
+    - email: Email
+
+    Levanta 401 se token inválido ou ausente
+    """
+    try:
+        return {
+            "valid": True,
+            "user_id": current_user.get("id"),
+            "email": current_user.get("email")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao verificar token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Erro ao obter informações"
+            detail="Token inválido"
         )
