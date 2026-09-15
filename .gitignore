@@ -54,3 +54,12 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+DEPLOYMENT_COMPLETE.txt
+DEPLOYMENT_RESUMO.txt
+RENDER_*.txt
+RENDER_*.sh
+create_test_user.py
+execute_sql*.py
+final_sql_attempt.py
+run_sql.py
+setup_supabase*.py
