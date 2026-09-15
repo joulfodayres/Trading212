@@ -71,7 +71,7 @@ async def general_exception_handler(request, exc):
 @app.on_event("startup")
 async def startup_event():
     """Executado ao iniciar a aplicação"""
-    logger.info("🚀 Iniciando Trading 212 Bot API")
+    logger.info("Iniciando Trading 212 Bot API")
     logger.info(f"Ambiente: {settings.FASTAPI_ENV}")
     logger.info(f"Debug: {settings.FASTAPI_DEBUG}")
 
@@ -79,7 +79,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Executado ao desligar a aplicação"""
-    logger.info("🛑 Encerrando Trading 212 Bot API")
+    logger.info("Encerrando Trading 212 Bot API")
 
 
 # ===== IMPORTAR ROUTERS =====
