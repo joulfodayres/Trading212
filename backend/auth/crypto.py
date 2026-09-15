@@ -9,7 +9,12 @@ class EncryptionManager:
     """Gerencia encriptação e desencriptação de dados sensíveis"""
 
     def __init__(self):
-        self.cipher = Fernet(settings.ENCRYPTION_KEY.encode())
+        # ENCRYPTION_KEY deve ser uma string base64 válida (32 bytes)
+        key = settings.ENCRYPTION_KEY
+        # Se já for string, converter para bytes
+        if isinstance(key, str):
+            key = key.encode()
+        self.cipher = Fernet(key)
 
     def encrypt(self, data: str) -> str:
         """Encripta uma string"""
