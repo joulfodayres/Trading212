@@ -15,12 +15,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/isins", tags=["isins"])
 
-# Cliente T212
-t212_client = Trading212Client(
-    api_key=settings.T212_API_KEY,
-    api_secret=settings.T212_API_SECRET,
-    environment=settings.T212_ENVIRONMENT
-)
+# Cliente T212 (lazy initialization)
+_t212_client = None
+
+def get_t212_client():
+    """Obter cliente T212 (lazy initialization)"""
+    global _t212_client
+    if _t212_client is None:
+        try:
+            _t212_client = Trading212Client(
+                api_key=settings.T212_API_KEY,
+                api_secret=settings.T212_API_SECRET,
+                environment=settings.T212_ENVIRONMENT
+            )
+            logger.info("T212 client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize T212 client: {e}")
+            raise
+    return _t212_client
 
 # Cliente BD
 db = get_db()
@@ -437,6 +449,7 @@ async def sync_from_trading212():
         logger.info("🔄 Sincronizando ISINs da carteira T212...")
 
         # Fetch positions de T212
+        t212_client = get_t212_client()
         positions_data = t212_client.get_positions()
 
         if not positions_data:

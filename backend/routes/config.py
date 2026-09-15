@@ -13,6 +13,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/config", tags=["config"])
 
 
+# ===== T212 CLIENT (lazy initialization) =====
+
+_t212_client = None
+
+def get_t212_client():
+    """Obter cliente T212 (lazy initialization)"""
+    global _t212_client
+    if _t212_client is None:
+        try:
+            _t212_client = Trading212Client(
+                api_key=settings.T212_API_KEY,
+                api_secret=settings.T212_API_SECRET,
+                base_url=settings.T212_BASE_URL
+            )
+            logger.info("T212 client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize T212 client: {e}")
+            raise
+    return _t212_client
+
+
 # ===== SCHEMAS =====
 
 class T212Config(BaseModel):
@@ -137,11 +158,7 @@ async def test_connection():
         # TODO: Chamar /equity/account/summary para testar
 
         # Por enquanto, usar credenciais do .env
-        t212_client = Trading212Client(
-            api_key=settings.T212_API_KEY,
-            api_secret=settings.T212_API_SECRET,
-            base_url=settings.T212_BASE_URL
-        )
+        t212_client = get_t212_client()
 
         # Testar conexão
         account_data = t212_client.get_account_summary()
