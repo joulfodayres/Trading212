@@ -46,6 +46,7 @@ const config: Config = {
         't212-dark': '#0A0E27',
         't212-card': '#1A1F3A',
         't212-hover': '#242D4A',
+        't212-muted': '#7A7A7A',
         't212-primary': '#00C853',
         't212-secondary': '#FF9800',
         't212-success': '#4CAF50',
@@ -73,6 +74,19 @@ const config: Config = {
       },
       placeholderColor: {
         't212-muted': '#7A7A7A',
+      },
+      gradientColorStops: {
+        't212-dark': '#0A0E27',
+        't212-bg-dark': '#0A0E27',
+        't212-bg-darker': '#050811',
+        't212-bg-card': '#1A1F3A',
+        't212-bg-hover': '#242D4A',
+        't212-primary': '#00C853',
+        't212-secondary': '#FF9800',
+        't212-success': '#4CAF50',
+        't212-error': '#F44336',
+        't212-warning': '#FF9800',
+        't212-info': '#2196F3',
       },
       fontFamily: {
         'sans': ['Inter', 'Roboto', 'system-ui', 'sans-serif'],

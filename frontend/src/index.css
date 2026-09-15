@@ -215,7 +215,7 @@ body {
 
 /* Main Content */
 .main-content {
-  @apply flex-1 overflow-auto bg-gradient-to-b from-t212-dark to-t212-bg-card;
+  @apply flex-1 overflow-auto bg-gradient-to-b from-t212-bg-dark to-t212-bg-card;
 }
 
 .page-header {
