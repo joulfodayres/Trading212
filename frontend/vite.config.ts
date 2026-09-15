@@ -11,5 +11,15 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  // Cache busting - force rebuild
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `[name]-[hash].js`,
+        chunkFileNames: `[name]-[hash].js`,
+        assetFileNames: `[name]-[hash][extname]`
+      }
+    }
   }
 })
