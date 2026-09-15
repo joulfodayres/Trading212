@@ -31,3 +31,14 @@ class EncryptionManager:
 
 # Instância global
 encryption_manager = EncryptionManager()
+
+
+# Funções de conveniência (wrapper)
+def encrypt_text(data: str) -> str:
+    """Encripta uma string usando a instância global"""
+    return encryption_manager.encrypt(data)
+
+
+def decrypt_text(encrypted_data: str) -> str:
+    """Desencripta uma string usando a instância global"""
+    return encryption_manager.decrypt(encrypted_data)
