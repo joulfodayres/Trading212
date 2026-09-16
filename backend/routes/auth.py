@@ -219,6 +219,22 @@ async def login(request: LoginRequest):
     try:
         logger.info(f" Tentativa de login: {request.email}")
 
+        # Em desenvolvimento, aceitar conta de teste sem validação Supabase
+        if settings.FASTAPI_ENV == "development" and request.email == "teste@trading212.com":
+            logger.info(f" Login dev (sem Supabase): {request.email}")
+
+            # User ID criado em Supabase
+            user_id = "17780beb-e61f-4604-ba5a-b6329312ac90"
+            access_token = create_jwt_token(user_id, request.email)
+
+            return TokenResponse(
+                access_token=access_token,
+                token_type="Bearer",
+                user_id=user_id,
+                email=request.email,
+                message="Login bem-sucedido (modo desenvolvimento)"
+            )
+
         # Autenticar com Supabase Auth
         supabase = get_supabase()
         response = supabase.auth.sign_in_with_password({
@@ -450,8 +466,8 @@ async def get_test_token():
     try:
         logger.info("🧪 Gerando token de teste")
 
-        # Fixed test user ID
-        test_user_id = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"
+        # Fixed test user ID (created in Supabase)
+        test_user_id = "17780beb-e61f-4604-ba5a-b6329312ac90"
         test_email = "teste@trading212.com"
 
         # Create JWT token

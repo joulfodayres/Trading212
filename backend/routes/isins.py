@@ -37,8 +37,8 @@ def get_t212_client():
 # Cliente BD
 db = get_db()
 
-# Teste user_id (por enquanto, sem JWT real)
-TEST_USER_ID = "ab1036ff-937d-46e5-8f5b-bab07f1fb100"
+# Teste user_id (created in Supabase - teste@trading212.com)
+TEST_USER_ID = "17780beb-e61f-4604-ba5a-b6329312ac90"
 
 
 # ===== SCHEMAS =====
