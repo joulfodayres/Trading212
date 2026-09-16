@@ -28,7 +28,8 @@ export default function ISINTable() {
 
   // Fetch ISINs na primeira carga
   useEffect(() => {
-    loadISINs()
+    // Auto-sync with T212 on component mount
+    handleSync()
   }, [])
 
   // Carregar ISINs da API
@@ -280,16 +281,9 @@ export default function ISINTable() {
       ) : (
         <div className="text-center py-12">
           <p className="text-t212-secondary mb-4">Nenhum ISIN adicionado ainda</p>
-          <p className="text-t212-muted text-sm mb-6">
-            Clique em "Sincronizar Carteira" para importar suas posições do Trading 212
+          <p className="text-t212-muted text-sm">
+            Clique em "Sincronizar Carteira" acima para importar suas posições do Trading 212
           </p>
-          <Button
-            variant="primary"
-            onClick={handleSync}
-            isLoading={loadingSync}
-          >
-            Sincronizar Carteira
-          </Button>
         </div>
       )}
     </div>

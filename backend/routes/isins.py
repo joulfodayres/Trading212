@@ -92,6 +92,8 @@ class SyncResponse(BaseModel):
 
 
 # ===== ENDPOINTS =====
+# IMPORTANT: Specific routes (with fixed path segments) must come BEFORE generic routes (with path parameters)
+# Order: POST "" → GET "/sync-from-trading212" → GET "" → GET "/{id}" → PUT "/{id}" → DELETE "/{id}" → etc
 
 @router.post("", response_model=ISINResponse)
 async def create_isin(data: ISINCreate):
@@ -209,6 +211,111 @@ async def list_isins(limit: int = Query(20), offset: int = Query(0)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao listar ISINs: {str(e)}"
+        )
+
+
+@router.get("/sync-from-trading212", response_model=SyncResponse)
+async def sync_from_trading212():
+    """
+    GET /api/isins/sync-from-trading212 - Sincronizar ISINs da carteira T212
+
+    Fetch positions via T212 API e guardar em Supabase
+    Cria novos registos se não existem, atualiza se existem
+    """
+    try:
+        logger.info(" Sincronizando ISINs da carteira T212...")
+
+        # Fetch positions de T212
+        t212_client = get_t212_client()
+        positions_data = t212_client.get_positions()
+
+        if not positions_data:
+            logger.warning(" Nenhuma posição encontrada")
+            return SyncResponse(
+                synced_count=0,
+                updated_count=0,
+                isins=[],
+                message="Nenhuma posição encontrada na carteira"
+            )
+
+        synced_count = 0
+        updated_count = 0
+        isins_response = []
+
+        # Processar cada posição
+        for pos in positions_data:
+            try:
+                isin_code = pos.get("isin", "").upper()
+                ticker = pos.get("ticker", "")
+                name = pos.get("name", ticker)
+                currency = pos.get("currency", "EUR")
+
+                if not isin_code:
+                    logger.warning(f" Posição sem ISIN: {ticker}")
+                    continue
+
+                # Verificar se ISIN já existe
+                existing = db.get_isin_by_isin_code(isin_code, TEST_USER_ID)
+
+                if existing:
+                    # Atualizar
+                    updates = {
+                        "ticker": ticker,
+                        "name": name,
+                        "currency": currency,
+                        "fields_json": pos
+                    }
+                    updated = db.update_isin(existing["id"], TEST_USER_ID, updates)
+                    updated_count += 1
+                    isin_record = updated
+                    logger.info(f" ISIN atualizado: {isin_code}")
+                else:
+                    # Criar novo
+                    isin_record = db.create_isin(
+                        user_id=TEST_USER_ID,
+                        isin=isin_code,
+                        ticker=ticker,
+                        name=name,
+                        currency=currency,
+                        fields_json=pos
+                    )
+                    synced_count += 1
+                    logger.info(f"✨ ISIN criado: {isin_code}")
+
+                # Adicionar à resposta
+                pnl_data = db.get_isin_pnl(isin_record["id"], TEST_USER_ID)
+                isins_response.append({
+                    "id": isin_record["id"],
+                    "isin": isin_record["isin"],
+                    "ticker": ticker,
+                    "name": name,
+                    "currency": currency,
+                    "automation_enabled": isin_record.get("automation_enabled", False),
+                    "pnl": pnl_data["pnl"],
+                    "pnl_percent": pnl_data["pnl_percent"]
+                })
+
+                # Rate limit
+                time.sleep(0.5)
+
+            except Exception as e:
+                logger.error(f" Erro ao processar posição {pos.get('ticker')}: {str(e)}")
+                continue
+
+        logger.info(f" Sincronização completa: {synced_count} criados, {updated_count} atualizados")
+
+        return SyncResponse(
+            synced_count=synced_count,
+            updated_count=updated_count,
+            isins=isins_response,
+            message=f"Sincronização completa: {synced_count} criados, {updated_count} atualizados"
+        )
+
+    except Exception as e:
+        logger.error(f" Erro ao sincronizar: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Erro ao sincronizar ISINs: {str(e)}"
         )
 
 
@@ -434,109 +541,4 @@ async def get_isin_trades(isin_id: str, limit: int = Query(50)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao obter trades: {str(e)}"
-        )
-
-
-@router.get("/sync-from-trading212", response_model=SyncResponse)
-async def sync_from_trading212():
-    """
-    GET /api/isins/sync-from-trading212 - Sincronizar ISINs da carteira T212
-
-    Fetch positions via T212 API e guardar em Supabase
-    Cria novos registos se não existem, atualiza se existem
-    """
-    try:
-        logger.info(" Sincronizando ISINs da carteira T212...")
-
-        # Fetch positions de T212
-        t212_client = get_t212_client()
-        positions_data = t212_client.get_positions()
-
-        if not positions_data:
-            logger.warning(" Nenhuma posição encontrada")
-            return SyncResponse(
-                synced_count=0,
-                updated_count=0,
-                isins=[],
-                message="Nenhuma posição encontrada na carteira"
-            )
-
-        synced_count = 0
-        updated_count = 0
-        isins_response = []
-
-        # Processar cada posição
-        for pos in positions_data:
-            try:
-                isin_code = pos.get("isin", "").upper()
-                ticker = pos.get("ticker", "")
-                name = pos.get("name", ticker)
-                currency = pos.get("currency", "EUR")
-
-                if not isin_code:
-                    logger.warning(f" Posição sem ISIN: {ticker}")
-                    continue
-
-                # Verificar se ISIN já existe
-                existing = db.get_isin_by_isin_code(isin_code, TEST_USER_ID)
-
-                if existing:
-                    # Atualizar
-                    updates = {
-                        "ticker": ticker,
-                        "name": name,
-                        "currency": currency,
-                        "fields_json": pos
-                    }
-                    updated = db.update_isin(existing["id"], TEST_USER_ID, updates)
-                    updated_count += 1
-                    isin_record = updated
-                    logger.info(f" ISIN atualizado: {isin_code}")
-                else:
-                    # Criar novo
-                    isin_record = db.create_isin(
-                        user_id=TEST_USER_ID,
-                        isin=isin_code,
-                        ticker=ticker,
-                        name=name,
-                        currency=currency,
-                        fields_json=pos
-                    )
-                    synced_count += 1
-                    logger.info(f"✨ ISIN criado: {isin_code}")
-
-                # Adicionar à resposta
-                pnl_data = db.get_isin_pnl(isin_record["id"], TEST_USER_ID)
-                isins_response.append({
-                    "id": isin_record["id"],
-                    "isin": isin_record["isin"],
-                    "ticker": ticker,
-                    "name": name,
-                    "currency": currency,
-                    "automation_enabled": isin_record.get("automation_enabled", False),
-                    "pnl": pnl_data["pnl"],
-                    "pnl_percent": pnl_data["pnl_percent"]
-                })
-
-                # Rate limit
-                time.sleep(0.5)
-
-            except Exception as e:
-                logger.error(f" Erro ao processar posição {pos.get('ticker')}: {str(e)}")
-                continue
-
-        logger.info(f" Sincronização completa: {synced_count} criados, {updated_count} atualizados")
-
-        return SyncResponse(
-            synced_count=synced_count,
-            updated_count=updated_count,
-            isins=isins_response,
-            message=f"Sincronização completa: {synced_count} criados, {updated_count} atualizados"
-        )
-
-    except Exception as e:
-        logger.error(f" Erro ao sincronizar: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Erro ao sincronizar ISINs: {str(e)}"
         )
