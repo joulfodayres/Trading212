@@ -50,12 +50,23 @@ export default function LoginPage() {
     }
 
     try {
+      console.log('[LoginPage] Attempting login with email:', email)
       await login(email, password)
+      console.log('[LoginPage] Login successful, navigating to dashboard')
       toast.success('Login realizado com sucesso!')
       navigate('/dashboard')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao fazer login'
+      console.error('[LoginPage] Login error:', {
+        message,
+        error: err,
+        errorString: String(err)
+      })
       toast.error(message)
+      // Keep error visible for 5 seconds
+      setTimeout(() => {
+        clearError()
+      }, 5000)
     }
   }
 

@@ -31,13 +31,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null })
     try {
+      console.log('[authStore.login] Starting login request to /api/auth/login', { email })
       const response = await apiClient.post('/auth/login', {
         email,
         password
       })
 
+      console.log('[authStore.login] Login response received:', response.status, response.data)
+
       // Backend retorna: { access_token, token_type, user_id, email, message }
       const { access_token, user_id, email: userEmail } = response.data
+
+      if (!access_token) {
+        throw new Error('No access_token in response')
+      }
+
+      console.log('[authStore.login] Token received, saving to localStorage', { user_id, userEmail })
 
       // Guardar token no localStorage
       localStorage.setItem('token', access_token)
@@ -55,8 +64,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isAuthenticated: true,
         isLoading: false
       })
+
+      console.log('[authStore.login] Login state updated successfully')
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao fazer login'
+      const message = error?.response?.data?.detail || error?.message || 'Erro ao fazer login'
+      console.error('[authStore.login] Login error:', {
+        status: error?.response?.status,
+        detail: error?.response?.data?.detail,
+        message: error?.message,
+        fullError: error
+      })
       set({
         isLoading: false,
         error: message
