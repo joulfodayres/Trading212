@@ -1,141 +1,60 @@
 import { useState, useEffect } from 'react'
-import { Plus, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from './ui/Button'
-import { Input } from './ui/Input'
 import { ToggleSwitch } from './ui/ToggleSwitch'
 import { useToast } from './ui/Toast'
 import { apiClient } from '../api/client'
 
 interface ISIN {
-  id: string
   isin: string
   ticker: string
   name: string
-  automation_enabled: boolean
   currency: string
-  price?: number
-  pnl?: number
-  pnl_percent?: number
+  quantity: number
+  currentPrice: number
+  averagePricePaid: number
+  automation_enabled: boolean
+  pnl: number
+  pnl_percent: number
 }
 
 export default function ISINTable() {
   const [isins, setIsins] = useState<ISIN[]>([])
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newISIN, setNewISIN] = useState('')
   const [loadingSync, setLoadingSync] = useState(false)
   const [loadingList, setLoadingList] = useState(true)
   const toast = useToast()
 
   // Fetch ISINs na primeira carga
   useEffect(() => {
-    // Auto-sync with T212 on component mount
-    handleSync()
+    // Auto-load ISINs on component mount
+    loadISINs()
   }, [])
 
-  // Carregar ISINs da API
+  // Carregar ISINs da API (dados frescos da T212)
   const loadISINs = async () => {
     setLoadingList(true)
+    setLoadingSync(true)
     try {
+      console.log('[ISINTable] Fetching ISINs from backend...')
       const response = await apiClient.get('/isins')
+      console.log('[ISINTable] ISINs received:', response.data)
       setIsins(response.data)
+      if (response.data.length > 0) {
+        toast.success(`Carregados ${response.data.length} ISINs`)
+      }
     } catch (error) {
       console.error('Erro ao carregar ISINs:', error)
       toast.error('Erro ao carregar ISINs')
-      // Se erro, começar com lista vazia
       setIsins([])
     } finally {
       setLoadingList(false)
-    }
-  }
-
-  // Sincronizar carteira com T212
-  const handleSync = async () => {
-    setLoadingSync(true)
-    toast.info('Sincronizando carteira...')
-    try {
-      const response = await apiClient.get('/isins/sync-from-trading212')
-      const { isins: syncedISINs, message } = response.data
-
-      // Atualizar lista com ISINs sincronizados
-      setIsins(syncedISINs)
-      toast.success(message || 'Carteira sincronizada com sucesso!')
-
-      // Guardar timestamp em localStorage
-      localStorage.setItem('last_sync_date', new Date().toISOString())
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao sincronizar carteira'
-      toast.error(message)
-      console.error('Erro ao sincronizar:', error)
-    } finally {
       setLoadingSync(false)
     }
   }
 
-  // Adicionar novo ISIN
-  const handleAdd = async () => {
-    if (!newISIN) {
-      toast.error('Por favor, insira um ISIN ou Ticker')
-      return
-    }
-
-    try {
-      // Chamar API POST /api/isins
-      const response = await apiClient.post('/isins', {
-        isin: newISIN
-      })
-
-      const newISINObj = response.data
-
-      setIsins([...isins, newISINObj])
-      setNewISIN('')
-      setShowAddForm(false)
-      toast.success('ISIN adicionado com sucesso!')
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao adicionar ISIN'
-      toast.error(message)
-      console.error('Erro:', error)
-    }
-  }
-
-  // Deletar ISIN
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar este ISIN?')) {
-      return
-    }
-
-    try {
-      await apiClient.delete(`/isins/${id}`)
-
-      setIsins(isins.filter(i => i.id !== id))
-      toast.success('ISIN deletado com sucesso!')
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao deletar ISIN'
-      toast.error(message)
-      console.error('Erro:', error)
-    }
-  }
-
-  // Toggle automação
-  const handleToggle = async (id: string, currentState: boolean) => {
-    try {
-      // Chamar API PUT /api/isins/{id}/automation/toggle
-      const response = await apiClient.put(`/isins/${id}/automation/toggle`)
-
-      // Atualizar lista local com resposta da API
-      setIsins(isins.map(i =>
-        i.id === id ? { ...i, automation_enabled: response.data.automation_enabled } : i
-      ))
-
-      const isin = isins.find(i => i.id === id)
-      if (isin) {
-        const action = !currentState ? 'ativada' : 'desativada'
-        toast.success(`Automação ${action} para ${isin.ticker}`)
-      }
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao toggle automação'
-      toast.error(message)
-      console.error('Erro:', error)
-    }
+  // Sincronizar carteira (é apenas um refresh dos dados)
+  const handleSync = async () => {
+    await loadISINs()
   }
 
   // Loading skeleton
@@ -153,15 +72,6 @@ export default function ISINTable() {
       {/* Action Bar */}
       <div className="flex gap-4">
         <Button
-          variant="primary"
-          size="md"
-          icon={<Plus size={18} />}
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          Novo ISIN
-        </Button>
-
-        <Button
           variant="secondary"
           size="md"
           icon={<RefreshCw size={18} className={loadingSync ? 'animate-spin' : ''} />}
@@ -173,35 +83,6 @@ export default function ISINTable() {
         </Button>
       </div>
 
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="card border-t212-primary border-opacity-20">
-          <div className="flex gap-3">
-            <Input
-              type="text"
-              value={newISIN}
-              onChange={(e) => setNewISIN(e.target.value)}
-              placeholder="Cole o ISIN ou Ticker..."
-              className="flex-1"
-            />
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleAdd}
-            >
-              Adicionar
-            </Button>
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => setShowAddForm(false)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       {isins.length > 0 ? (
         <div className="overflow-x-auto">
@@ -211,15 +92,16 @@ export default function ISINTable() {
                 <th>ISIN</th>
                 <th>Ticker</th>
                 <th>Nome</th>
-                <th>Preço</th>
+                <th>Quantidade</th>
+                <th>Preço Atual</th>
+                <th>Preço Médio</th>
                 <th>P&L</th>
                 <th>Automação</th>
-                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {isins.map((isin) => (
-                <tr key={isin.id}>
+                <tr key={isin.isin}>
                   <td>
                     <span className="font-mono text-sm text-t212-primary">{isin.isin}</span>
                   </td>
@@ -227,11 +109,19 @@ export default function ISINTable() {
                     <span className="font-semibold text-t212-primary">{isin.ticker}</span>
                   </td>
                   <td>
-                    <span className="text-t212-primary">{isin.name || '-'}</span>
+                    <span className="text-t212-primary">{isin.name}</span>
+                  </td>
+                  <td>
+                    <span className="text-t212-primary">{isin.quantity.toFixed(2)}</span>
                   </td>
                   <td>
                     <span className="text-t212-primary">
-                      {isin.price ? `€${isin.price.toFixed(2)}` : '-'}
+                      €{isin.currentPrice.toFixed(2)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-t212-primary">
+                      €{isin.averagePricePaid.toFixed(2)}
                     </span>
                   </td>
                   <td>
@@ -260,18 +150,8 @@ export default function ISINTable() {
                   <td>
                     <ToggleSwitch
                       checked={isin.automation_enabled}
-                      onChange={() => handleToggle(isin.id, isin.automation_enabled)}
+                      onChange={() => handleToggleAutomation(isin.isin, isin.automation_enabled)}
                     />
-                  </td>
-                  <td>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(isin.id)}
-                      className="text-t212-error hover:text-t212-error-light"
-                    >
-                      🗑️ Deletar
-                    </Button>
                   </td>
                 </tr>
               ))}
@@ -280,12 +160,19 @@ export default function ISINTable() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-t212-secondary mb-4">Nenhum ISIN adicionado ainda</p>
+          <p className="text-t212-secondary mb-4">Nenhuma posição aberta</p>
           <p className="text-t212-muted text-sm">
-            Clique em "Sincronizar Carteira" acima para importar suas posições do Trading 212
+            Clique em "Sincronizar Carteira" acima para carregares as tuas posições do Trading 212
           </p>
         </div>
       )}
     </div>
   )
+
+  // Handler para toggle automação
+  function handleToggleAutomation(isin: string, currentState: boolean) {
+    console.log(`Toggle automation for ${isin}: ${currentState}`)
+    toast.info(`Automação será ${!currentState ? 'ativada' : 'desativada'} para ${isin}`)
+    // TODO: Chamar API PUT /api/isins/{isin}/config
+  }
 }
