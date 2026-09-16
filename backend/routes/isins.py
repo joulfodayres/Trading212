@@ -245,10 +245,12 @@ async def sync_from_trading212():
         # Processar cada posição
         for pos in positions_data:
             try:
-                isin_code = pos.get("isin", "").upper()
-                ticker = pos.get("ticker", "")
-                name = pos.get("name", ticker)
-                currency = pos.get("currency", "EUR")
+                # Extract from nested 'instrument' object (T212 API format)
+                instrument = pos.get("instrument", {})
+                isin_code = instrument.get("isin", "").upper()
+                ticker = instrument.get("ticker", "")
+                name = instrument.get("name", ticker)
+                currency = instrument.get("currency", "EUR")
 
                 if not isin_code:
                     logger.warning(f" Posição sem ISIN: {ticker}")
