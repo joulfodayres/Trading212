@@ -227,7 +227,16 @@ async def sync_from_trading212():
 
         # Fetch positions de T212
         t212_client = get_t212_client()
+        logger.info(" T212 client initialized")
+
         positions_data = t212_client.get_positions()
+        logger.info(f" T212 API returned {len(positions_data) if positions_data else 0} positions")
+        logger.info(f" Positions data type: {type(positions_data)}")
+
+        # Debug: log first position structure
+        if positions_data and len(positions_data) > 0:
+            logger.info(f" First position keys: {list(positions_data[0].keys())}")
+            logger.info(f" First position: {positions_data[0]}")
 
         if not positions_data:
             logger.warning(" Nenhuma posição encontrada")
@@ -245,12 +254,18 @@ async def sync_from_trading212():
         # Processar cada posição
         for pos in positions_data:
             try:
+                logger.debug(f" Processing position: {pos}")
+
                 # Extract from nested 'instrument' object (T212 API format)
                 instrument = pos.get("instrument", {})
+                logger.debug(f" Instrument: {instrument}")
+
                 isin_code = instrument.get("isin", "").upper()
                 ticker = instrument.get("ticker", "")
                 name = instrument.get("name", ticker)
                 currency = instrument.get("currency", "EUR")
+
+                logger.info(f" Extracted: ISIN={isin_code}, Ticker={ticker}, Name={name}")
 
                 if not isin_code:
                     logger.warning(f" Posição sem ISIN: {ticker}")
@@ -302,6 +317,7 @@ async def sync_from_trading212():
 
             except Exception as e:
                 logger.error(f" Erro ao processar posição {pos.get('ticker')}: {str(e)}")
+                logger.exception(f" Stack trace: ")
                 continue
 
         logger.info(f" Sincronização completa: {synced_count} criados, {updated_count} atualizados")
@@ -315,6 +331,7 @@ async def sync_from_trading212():
 
     except Exception as e:
         logger.error(f" Erro ao sincronizar: {str(e)}")
+        logger.exception(f" Stack trace: ")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Erro ao sincronizar ISINs: {str(e)}"
