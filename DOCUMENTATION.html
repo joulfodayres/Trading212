@@ -224,6 +224,18 @@
             color: #FF9800;
         }
 
+        .tag.phase4 {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .tag.critical {
+            background: rgba(244, 67, 54, 0.2);
+            color: #F44336;
+            font-weight: bold;
+        }
+
         .hidden {
             display: none;
         }
@@ -260,8 +272,8 @@
         <header>
             <h1>🚀 Trading 212 Bot</h1>
             <p class="subtitle">Documentation Navigator</p>
-            <p><span class="status">✅ Phase 2 Complete</span></p>
-            <p class="date">Last updated: 2026-09-15</p>
+            <p><span class="status">✅ Phase 4 - API Analysis Complete</span></p>
+            <p class="date">Last updated: 2026-09-17 | Documentação: 2000+ linhas | Estrutura: Organizada por Fase</p>
         </header>
 
         <div class="search-box">
@@ -270,20 +282,20 @@
 
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-number">18</div>
+                <div class="stat-number">30+</div>
                 <div class="stat-label">Ficheiros</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">5</div>
+                <div class="stat-number">9</div>
                 <div class="stat-label">Categorias</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">20</div>
-                <div class="stat-label">Endpoints</div>
+                <div class="stat-number">2000+</div>
+                <div class="stat-label">Linhas Docs</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">100%</div>
-                <div class="stat-label">Fase 2</div>
+                <div class="stat-number">Phase 4</div>
+                <div class="stat-label">Status</div>
             </div>
         </div>
 
@@ -292,6 +304,7 @@
             <a href="https://trading212-1.onrender.com" target="_blank">🌐 Frontend Live</a>
             <a href="https://trading212-4ojx.onrender.com" target="_blank">🔧 Backend Live</a>
             <a href="https://trading212-4ojx.onrender.com/docs" target="_blank">📖 API Docs</a>
+            <a href="https://docs.trading212.com/api" target="_blank">📚 T212 API Docs</a>
             <a href="https://github.com/joulfodayres/Trading212" target="_blank">💻 GitHub</a>
         </div>
 
@@ -302,19 +315,23 @@
                 <ul class="doc-list">
                     <li class="doc-item">
                         <a href="./README.md" class="doc-link">README.md</a>
-                        <div class="doc-description">Project overview e status geral</div>
+                        <div class="doc-description">Project overview e status geral | Phase 4 em produção</div>
                     </li>
                     <li class="doc-item">
                         <a href="./COMECA_AQUI.md" class="doc-link">COMECA_AQUI.md</a>
                         <div class="doc-description">Quick start guide para utilizadores e developers</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./CHECKLIST_FINAL.md" class="doc-link">CHECKLIST_FINAL.md</a>
-                        <div class="doc-description">Status completo Fase 2 + roadmap Fase 3</div>
+                        <a href="./docs/README.md" class="doc-link">docs/README.md</a>
+                        <div class="doc-description">📚 Índice de documentação | Navegação por categoria</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./INDEX.md" class="doc-link">INDEX.md</a>
-                        <div class="doc-description">Índice detalhado de toda documentação</div>
+                        <a href="./docs/QUICK_REFERENCE_PHASE4.md" class="doc-link">docs/QUICK_REFERENCE_PHASE4.md</a>
+                        <div class="doc-description">⭐ Cheat sheet Phase 4 | TL;DR essencial (2 min)</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/DOCUMENTATION_INDEX.md" class="doc-link">docs/DOCUMENTATION_INDEX.md</a>
+                        <div class="doc-description">📑 Índice detalhado completo com links cruzados</div>
                     </li>
                 </ul>
             </div>
@@ -328,17 +345,52 @@
                         <div class="doc-description">Arquitetura completa, stack técnico, database schema</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./docs/SESSION_CONTINUATION_SUMMARY.md" class="doc-link">SESSION_CONTINUATION_SUMMARY.md</a>
-                        <div class="doc-description">Histórico detalhado implementação Fase 2</div>
-                    </li>
-                    <li class="doc-item">
-                        <a href="./docs/RESUMO_PROBLEMA_SOLUCAO.md" class="doc-link">RESUMO_PROBLEMA_SOLUCAO.md</a>
-                        <div class="doc-description">Problemas encontrados e soluções aplicadas</div>
+                        <a href="./docs/PHASE_4_SUMMARY.md" class="doc-link">docs/PHASE_4_SUMMARY.md</a>
+                        <div class="doc-description">📋 Resumo executivo Phase 4 | Descobertas + roadmap</div>
                     </li>
                     <li class="doc-item">
                         <a href="./db/supabase_schema.sql" class="doc-link">supabase_schema.sql</a>
                         <div class="doc-description">SQL schema completo Supabase</div>
                         <span class="tag db">Database</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- T212 API Documentation (NEW) -->
+            <div class="section">
+                <h2 class="section-title"><span class="section-icon">📡</span>Trading 212 API (Phase 4)</h2>
+                <ul class="doc-list">
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/API_ANALYSIS.md" class="doc-link">📖 API_ANALYSIS.md</a>
+                        <div class="doc-description">Análise completa de TODOS endpoints T212 | Rate limits | Estrutura</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/ORDERING_WARNING.md" class="doc-link">⚠️ ORDERING_WARNING.md</a>
+                        <div class="doc-description">CRÍTICO: Assunção não documentada sobre DESC ordering | Validação pendente</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/INCREMENTAL_SYNC.md" class="doc-link">🔄 INCREMENTAL_SYNC.md</a>
+                        <div class="doc-description">Estratégia de sync incremental | Código Python pronto + APScheduler</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/HISTORY_ORDERS_NO_DATE_FILTER.md" class="doc-link">📋 HISTORY_ORDERS_NO_DATE_FILTER.md</a>
+                        <div class="doc-description">Limitação: /history/orders sem filtro de data | 3 estratégias workaround</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/HISTORY_ORDERS_PARAMS.md" class="doc-link">🔧 HISTORY_ORDERS_PARAMS.md</a>
+                        <div class="doc-description">Parâmetros detalhados: limit, cursor, ticker | 5 exemplos Python</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/ORDER_HISTORY_BY_ID.md" class="doc-link">🔍 ORDER_HISTORY_BY_ID.md</a>
+                        <div class="doc-description">GET /orders/{id} vs GET /history/orders | Casos de uso</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="./docs/t212-api/api.yaml" class="doc-link">🎯 api.yaml</a>
+                        <div class="doc-description">OpenAPI 3.0.1 spec completo (reference)</div>
+                    </li>
+                    <li class="doc-item">
+                        <a href="https://docs.trading212.com/api" class="doc-link" target="_blank">📚 Official T212 API Docs</a>
+                        <div class="doc-description">Documentação oficial (externos link)</div>
                     </li>
                 </ul>
             </div>
@@ -458,25 +510,25 @@
                 </ul>
             </div>
 
-            <!-- Bug Fixes & Archive -->
+            <!-- Documentation Archive -->
             <div class="section">
-                <h2 class="section-title"><span class="section-icon">🐛</span>Bug Fixes & Archived</h2>
+                <h2 class="section-title"><span class="section-icon">📦</span>Documentation Archive</h2>
                 <ul class="doc-list">
                     <li class="doc-item">
-                        <a href="./_archive/_logs/FIX_FINAL_DUPLICATE_API_PREFIX.md" class="doc-link">FIX_FINAL_DUPLICATE_API_PREFIX.md</a>
-                        <div class="doc-description">/api/api duplication bug e fix final</div>
+                        <a href="./docs/_archive/phase-2/" class="doc-link">📁 Phase 2 (Auth, CRUD, Deployment)</a>
+                        <div class="doc-description">Documentação histórica Phase 2 | API, Architecture, Frontend, Deployment</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./_archive/_logs/FIX_ROUTES_NOW_REGISTERED.md" class="doc-link">FIX_ROUTES_NOW_REGISTERED.md</a>
-                        <div class="doc-description">T212 client lazy initialization fix</div>
+                        <a href="./docs/_archive/phase-3/" class="doc-link">📁 Phase 3 (Login, ISINs)</a>
+                        <div class="doc-description">Documentação histórica Phase 3 | Login fixes, ISIN management, tests</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./_archive/_logs/FIX_SUPABASE_LAZY_INIT.md" class="doc-link">FIX_SUPABASE_LAZY_INIT.md</a>
-                        <div class="doc-description">Supabase client lazy initialization pattern</div>
+                        <a href="./docs/_archive/sessions/" class="doc-link">📁 Session Reports</a>
+                        <div class="doc-description">Relatórios de sessões anteriores | Histórico de decisões e aprendizados</div>
                     </li>
                     <li class="doc-item">
-                        <a href="./_archive/" class="doc-link">_archive/ folder</a>
-                        <div class="doc-description">Todos scripts e logs de desenvolvimento antigos</div>
+                        <a href="./docs/CHANGELOG_2026_09_17.md" class="doc-link">📜 CHANGELOG_2026_09_17.md</a>
+                        <div class="doc-description">Changelog desta sessão | Phase 4 análise completa</div>
                     </li>
                 </ul>
             </div>
@@ -486,8 +538,12 @@
                 <h2 class="section-title"><span class="section-icon">📊</span>Project Status</h2>
                 <ul class="doc-list">
                     <li class="doc-item">
-                        <strong>Phase 2 Status:</strong>
-                        <div class="doc-description">✅ 100% COMPLETO</div>
+                        <strong>Phase 4 Status:</strong>
+                        <div class="doc-description">🟢 T212 API Analysis COMPLETO | 2000+ linhas docs</div>
+                    </li>
+                    <li class="doc-item">
+                        <strong>Documentação:</strong>
+                        <div class="doc-description">✅ 9 ficheiros Phase 4 | Organizado por categoria | Archive preservado</div>
                     </li>
                     <li class="doc-item">
                         <strong>Frontend:</strong>
@@ -502,35 +558,35 @@
                         <div class="doc-description">✅ Supabase PostgreSQL + RLS + Auth</div>
                     </li>
                     <li class="doc-item">
-                        <strong>Authentication:</strong>
-                        <div class="doc-description">✅ JWT tokens (24h) | Register + Login + Logout</div>
-                    </li>
-                    <li class="doc-item">
-                        <strong>ISIN CRUD:</strong>
-                        <div class="doc-description">✅ Create, Read, Update, Delete + Sync from T212</div>
+                        <strong>T212 API Integration:</strong>
+                        <div class="doc-description">✅ Endpoint analysis | ⏳ Incremental sync ready | ⚠️ Validation pending</div>
                     </li>
                 </ul>
             </div>
 
             <!-- Next Phase -->
             <div class="section">
-                <h2 class="section-title"><span class="section-icon">⏳</span>Phase 3 (Next)</h2>
+                <h2 class="section-title"><span class="section-icon">⏳</span>Phase 5 (Next)</h2>
                 <ul class="doc-list">
                     <li class="doc-item">
-                        <strong>Automation:</strong>
-                        <div class="doc-description">Grid Trading strategy + APScheduler</div>
+                        <strong>Implementação OrderHistoryManager:</strong>
+                        <div class="doc-description">Classe backend com full_sync + incremental | APScheduler setup</div>
                     </li>
                     <li class="doc-item">
-                        <strong>Real T212 Integration:</strong>
-                        <div class="doc-description">Credenciais encriptadas + real API calls</div>
+                        <strong>Validação Prática (Crítico):</strong>
+                        <div class="doc-description">Testar ordenação DESC com múltiplas ordens | Rate limits reais</div>
+                    </li>
+                    <li class="doc-item">
+                        <strong>Grid Trading Strategy:</strong>
+                        <div class="doc-description">Lógica +1% vender / -1% comprar | Risk management</div>
                     </li>
                     <li class="doc-item">
                         <strong>Real-time Updates:</strong>
-                        <div class="doc-description">WebSocket para live data + trades</div>
+                        <div class="doc-description">WebSocket para live data + trades | Dashboard avançado</div>
                     </li>
                     <li class="doc-item">
-                        <strong>Dashboard:</strong>
-                        <div class="doc-description">Gráficos + histórico real + P&L tracking</div>
+                        <strong>Documentação Próxima Sessão:</strong>
+                        <div class="doc-description">📄 ORDERING_VERIFICATION_RESULTS.md | GRID_TRADING_IMPLEMENTATION.md</div>
                     </li>
                 </ul>
             </div>
@@ -538,8 +594,8 @@
 
         <footer>
             <p>🚀 Trading 212 Bot - MVP Documentation Navigator</p>
-            <p>Fase 2: ✅ Complete | Ready for Phase 3</p>
-            <p>Last updated: 2026-09-15 23:45 UTC</p>
+            <p>Phase 4: ✅ Complete (2000+ lines API analysis) | Ready for Phase 5 Implementation</p>
+            <p>Last updated: 2026-09-17 | Docs reorganized by Phase | Archive preserved</p>
         </footer>
     </div>
 
