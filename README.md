@@ -41,25 +41,53 @@ npm run dev  # http://localhost:5173
 
 ## 📚 Documentação
 
-| Ficheiro | Descrição | Acesso |
-|----------|-----------|--------|
-| **COMECA_AQUI.md** | Quick start + troubleshooting | [Ler](./COMECA_AQUI.md) |
-| **CHECKLIST_FINAL.md** | Status Fase 2 + roadmap | [Ler](./CHECKLIST_FINAL.md) |
-| **INDEX.md** | Índice detalhado todos ficheiros | [Ler](./INDEX.md) |
-| **CLAUDE.md** | Arquitetura técnica + BD schema | [Ler](./CLAUDE.md) |
-| **DOCUMENTATION.html** | Navegador HTML interativo | [Abrir](./DOCUMENTATION.html) |
+### 🔴 Ler Primeiro (Phase 4 - API Analysis)
+| Ficheiro | Descrição |
+|----------|-----------|
+| **`docs/PHASE_4_SUMMARY.md`** | ⭐ Resumo executivo da análise T212 API |
+| **`docs/DOCUMENTATION_INDEX.md`** | 📑 Índice completo de toda documentação |
+| **`docs/T212_ORDERING_ASSUMPTION_WARNING.md`** | ⚠️ CRÍTICO: Assunção não documentada |
+
+### 📖 Documentação Completa
+| Ficheiro | Descrição |
+|----------|-----------|
+| **COMECA_AQUI.md** | Quick start + troubleshooting |
+| **CHECKLIST_FINAL.md** | Status Fase 2 + roadmap |
+| **INDEX.md** | Índice detalhado todos ficheiros |
+| **CLAUDE.md** | Arquitetura técnica + BD schema |
+
+### 🔵 Phase 4 - T212 API (Detailed Analysis)
+| Ficheiro | Descrição |
+|----------|-----------|
+| **`docs/T212_API_ANALYSIS.md`** | Análise completa de todos endpoints |
+| **`docs/T212_HISTORY_ORDERS_PARAMS.md`** | Parâmetros GET /history/orders |
+| **`docs/T212_HISTORY_ORDERS_NO_DATE_FILTER.md`** | Limitação: sem filtro de data |
+| **`docs/T212_INCREMENTAL_SYNC_HOW_IT_WORKS.md`** | Estratégia sync incremental |
+| **`docs/T212_ORDER_HISTORY_BY_ID.md`** | Acesso a histórico ordem por ID |
 
 ---
 
-## ✅ O que já funciona (Fase 2)
+## ✅ O que já funciona (Fase 3 - Atual)
 
 - ✅ Autenticação real (Email/Password → JWT)
+- ✅ Dashboard com dados LIVE de T212 API
+- ✅ Tabela ISINs com sincronização automática
 - ✅ CRUD ISINs (Create, Read, Update, Delete)
 - ✅ Backend online em Render (FastAPI)
 - ✅ Frontend online em Render (React)
 - ✅ Database Supabase (PostgreSQL + RLS)
-- ✅ 20 endpoints API funcionais
+- ✅ 25+ endpoints API funcionais
 - ✅ Row-Level Security (cada user vê só seus dados)
+- ✅ Toggle automação por ISIN
+- ✅ T212 API Integration (polling de posições)
+- ✅ Análise completa de T212 API (documentada)
+
+### 🔄 Em Desenvolvimento (Phase 4 Próximo)
+- ⏳ APScheduler (monitoramento a cada 5s)
+- ⏳ Grid Trading Logic (+1%/-1%)
+- ⏳ Sincronização incremental de histórico
+- ⏳ Real-time updates (WebSocket)
+- ⏳ Execução automática de trades
 
 ---
 
@@ -90,14 +118,24 @@ Qualquer push para `main` no GitHub dispara auto-deploy.
 
 ## 🎯 Próximas Fases
 
-### Fase 3: Automação (Próximo)
-- [ ] Integração real T212 credentials
-- [ ] Encriptação credenciais
-- [ ] Grid Trading scheduler
-- [ ] Trade execution
+### Fase 4: Grid Trading Automation (Próximo)
+- [ ] Implementar OrderHistoryManager
+- [ ] Setup APScheduler (polling a cada 5s)
+- [ ] Grid Trading strategy (+1% vender, -1% comprar)
+- [ ] Trade execution via T212 API
+- [ ] Testes de ordenação de /history/orders
 
-### Fase 4: Polish
+### Fase 5: Polish & Production
 - [ ] Real-time updates (WebSocket)
+- [ ] Dashboard avançado (gráficos)
+- [ ] Testes automatizados
+- [ ] Monitoring e alertas
+- [ ] Deploy em Live (com risco controlado)
+
+### 🔍 Validação Crítica Pendente
+- ⏳ Confirmar ordenação DESC de /history/orders (implícita, não documentada)
+- ⏳ Testar rate limits na prática
+- ⏳ Validar incremental sync com dados reais
 - [ ] Gráficos (Recharts)
 - [ ] Histórico de trades
 - [ ] Alertas

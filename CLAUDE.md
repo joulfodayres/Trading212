@@ -687,6 +687,43 @@ npm run build
 
 ---
 
+## 📖 Documentação Interna Detalhada (Phase 4)
+
+Após investigação profunda da T212 API, criámos documentação completa:
+
+- **`docs/T212_API_ANALYSIS.md`** - Análise completa de todos os endpoints
+- **`docs/T212_ORDER_HISTORY_BY_ID.md`** - Acesso a histórico de ordens específicas
+- **`docs/T212_HISTORY_ORDERS_PARAMS.md`** - Parâmetros detalhados de /history/orders
+- **`docs/T212_HISTORY_ORDERS_NO_DATE_FILTER.md`** - Limitação: sem filtro de data
+- **`docs/T212_INCREMENTAL_SYNC_HOW_IT_WORKS.md`** - Estratégia de incremental sync
+- **`docs/T212_ORDERING_ASSUMPTION_WARNING.md`** - ⚠️ Assunção não documentada sobre ordenação DESC
+- **`docs/T212_ORDERING_VERIFICATION_RESULTS.md`** - (A criar) Resultados de testes práticos
+
+### ⭐ Descobertas Importantes:
+
+1. **SEM Webhooks/Callbacks** - T212 API é polling-only
+2. **SEM filtro de data** - Não há parâmetro `time` em `/history/orders`
+3. **Ordenação DESC implícita** - Exemplo sugere DESC, mas NÃO está documentado
+4. **Incremental sync possível** - Com cuidado (validar ordem antes de produção)
+5. **Rate limits permitem polling** - 6 req/min em histórico, 1 req/1s em posições
+
+### 🔐 Autenticação T212:
+
+- HTTP Basic Auth: `base64(API_KEY:API_SECRET)`
+- Demo: `https://demo.trading212.com/api/v0`
+- Live: `https://live.trading212.com/api/v0`
+
+### ⚠️ Limitações Críticas:
+
+- ❌ Sem webhooks (polling obrigatório)
+- ❌ Sem filtro de data em /history/orders
+- ❌ Sem endpoint direto para buscar ordem histórica por ID
+- ❌ Máx 50 ordens pendentes por ticker
+- ❌ Apenas contas Invest/Stocks ISA
+- ✅ Todas as operações na moeda primária da conta
+
+---
+
 ## ✅ Checklist de Produção
 
 - ✅ Código em GitHub
