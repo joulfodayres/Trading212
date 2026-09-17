@@ -307,9 +307,6 @@ async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
         instrument = t212_position.get("instrument", {})
         isin_data = {
             "isin": isin_id,
-            "ticker": instrument.get("ticker", ""),
-            "name": instrument.get("name", ""),
-            "currency": instrument.get("currency", "EUR"),
             "automation_enabled": data.automation_enabled,
             "strategy_id": strategy_id,
             "updated_at": "now()"
