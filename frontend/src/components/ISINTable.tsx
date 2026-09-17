@@ -3,6 +3,8 @@ import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
 import { useToast } from './ui/Toast'
+import { AutomationDialog } from './AutomationDialog'
+import { useAutomation } from '../hooks/useAutomation'
 import { apiClient } from '../api/client'
 
 interface ISIN {
@@ -14,6 +16,7 @@ interface ISIN {
   currentPrice: number
   averagePricePaid: number
   automation_enabled: boolean
+  strategy_name?: string
   pnl: number
   pnl_percent: number
 }
@@ -22,7 +25,11 @@ export default function ISINTable() {
   const [isins, setIsins] = useState<ISIN[]>([])
   const [loadingSync, setLoadingSync] = useState(false)
   const [loadingList, setLoadingList] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogType, setDialogType] = useState<'enable' | 'disable'>('enable')
+  const [selectedISIN, setSelectedISIN] = useState<ISIN | null>(null)
   const toast = useToast()
+  const { toggleAutomation, loading: automationLoading } = useAutomation()
 
   // Fetch ISINs na primeira carga
   useEffect(() => {
@@ -57,6 +64,52 @@ export default function ISINTable() {
     await loadISINs()
   }
 
+  // Handler para toggle automação
+  function handleToggleAutomation(isin: ISIN, currentState: boolean) {
+    setSelectedISIN(isin)
+    if (currentState) {
+      // Desativar - pedir confirmação
+      setDialogType('disable')
+      setDialogOpen(true)
+    } else {
+      // Ativar - mostrar dialog de escolha de estratégia
+      setDialogType('enable')
+      setDialogOpen(true)
+    }
+  }
+
+  async function handleDialogConfirm(strategyId?: string) {
+    if (!selectedISIN) return
+
+    const result = await toggleAutomation(
+      selectedISIN.isin,
+      dialogType === 'enable',
+      strategyId
+    )
+
+    if (result) {
+      // Atualizar o ISIN na lista local
+      setIsins((prev) =>
+        prev.map((item) =>
+          item.isin === selectedISIN.isin
+            ? {
+                ...item,
+                automation_enabled: result.automation_enabled,
+                strategy_name: result.strategy_name || undefined
+              }
+            : item
+        )
+      )
+      setDialogOpen(false)
+      setSelectedISIN(null)
+    }
+  }
+
+  function handleDialogCancel() {
+    setDialogOpen(false)
+    setSelectedISIN(null)
+  }
+
   // Loading skeleton
   if (loadingList) {
     return (
@@ -83,6 +136,17 @@ export default function ISINTable() {
         </Button>
       </div>
 
+      {/* Automation Dialog */}
+      {selectedISIN && (
+        <AutomationDialog
+          isOpen={dialogOpen}
+          type={dialogType}
+          isin={selectedISIN.isin}
+          onConfirm={handleDialogConfirm}
+          onCancel={handleDialogCancel}
+        />
+      )}
+
       {/* Table */}
       {isins.length > 0 ? (
         <div className="overflow-x-auto">
@@ -97,6 +161,7 @@ export default function ISINTable() {
                 <th>Preço Médio</th>
                 <th>P&L</th>
                 <th>Automação</th>
+                <th>Estratégia</th>
               </tr>
             </thead>
             <tbody>
@@ -150,8 +215,18 @@ export default function ISINTable() {
                   <td>
                     <ToggleSwitch
                       checked={isin.automation_enabled}
-                      onChange={() => handleToggleAutomation(isin.isin, isin.automation_enabled)}
+                      onChange={() => handleToggleAutomation(isin, isin.automation_enabled)}
+                      disabled={automationLoading}
                     />
+                  </td>
+                  <td>
+                    {isin.automation_enabled && isin.strategy_name ? (
+                      <span className="px-2 py-1 bg-t212-success bg-opacity-20 text-t212-success rounded text-sm">
+                        {isin.strategy_name}
+                      </span>
+                    ) : (
+                      <span className="text-t212-muted text-sm">-</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -168,11 +243,4 @@ export default function ISINTable() {
       )}
     </div>
   )
-
-  // Handler para toggle automação
-  function handleToggleAutomation(isin: string, currentState: boolean) {
-    console.log(`Toggle automation for ${isin}: ${currentState}`)
-    toast.info(`Automação será ${!currentState ? 'ativada' : 'desativada'} para ${isin}`)
-    // TODO: Chamar API PUT /api/isins/{isin}/config
-  }
 }

@@ -50,6 +50,7 @@ class ISINResponse(BaseModel):
     currentPrice: float
     averagePricePaid: float
     automation_enabled: bool
+    strategy_name: Optional[str] = None
     pnl: float = 0.0
     pnl_percent: float = 0.0
 
@@ -92,7 +93,7 @@ class AutomationUpdateResponse(BaseModel):
 def _format_t212_position(position: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Formata posição da T212 API para ISINResponse
-    Enriquece com configuração local (automation_enabled, strategy_params)
+    Enriquece com configuração local (automation_enabled, strategy_id, strategy_name)
     """
     instrument = position.get("instrument", {})
     isin = instrument.get("isin", "")
@@ -114,6 +115,7 @@ def _format_t212_position(position: Dict[str, Any], config: Optional[Dict[str, A
         "currentPrice": current_price,
         "averagePricePaid": avg_paid,
         "automation_enabled": config.get("automation_enabled", False) if config else False,
+        "strategy_name": config.get("strategy_name") if config else None,
         "pnl": pnl,
         "pnl_percent": pnl_percent
     }
@@ -122,13 +124,29 @@ def _format_t212_position(position: Dict[str, Any], config: Optional[Dict[str, A
 async def _get_isin_configs() -> Dict[str, Dict[str, Any]]:
     """Obter todas as configurações de ISINs (keyed by ISIN)"""
     try:
-        result = db.client.table("isin_config").select("*").execute()
+        result = db.client.table("isins").select("isin, automation_enabled, strategy_id").execute()
         configs = {}
+
+        # Carregar todos os dados de ISINs
         for row in result.data or []:
-            configs[row["isin"]] = {
+            isin = row["isin"]
+            strategy_id = row.get("strategy_id")
+            strategy_name = None
+
+            # Se tem estratégia, buscar o nome
+            if strategy_id:
+                try:
+                    strategy_result = db.client.table("strategies").select("strategy_name").eq("id", strategy_id).single().execute()
+                    if strategy_result.data:
+                        strategy_name = strategy_result.data.get("strategy_name")
+                except:
+                    pass
+
+            configs[isin] = {
                 "automation_enabled": row.get("automation_enabled", False),
-                "strategy_params": row.get("strategy_params", {})
+                "strategy_name": strategy_name
             }
+
         return configs
     except Exception as e:
         logger.warning(f"Failed to get ISIN configs: {e}")
