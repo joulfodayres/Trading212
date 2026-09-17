@@ -67,6 +67,26 @@ class ISINConfigResponse(BaseModel):
     strategy_params: Dict[str, Any]
 
 
+class StrategyOption(BaseModel):
+    """Opção de estratégia para seleção no dialog"""
+    id: str
+    strategy_name: str
+
+
+class AutomationToggleRequest(BaseModel):
+    """Request para alternar automação"""
+    automation_enabled: bool
+    strategy_id: Optional[str] = None
+
+
+class AutomationUpdateResponse(BaseModel):
+    """Response com configuração atualizada de automação"""
+    isin_id: str
+    automation_enabled: bool
+    strategy_id: Optional[str] = None
+    strategy_name: Optional[str] = None
+
+
 # ===== HELPERS =====
 
 def _format_t212_position(position: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -266,4 +286,186 @@ async def get_isin_config(isin: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao obter configuração: {str(e)}"
+        )
+
+
+# ===== AUTOMATION ENDPOINTS =====
+
+@router.get("/strategies", response_model=List[StrategyOption])
+async def get_enabled_strategies():
+    """
+    GET /api/isins/strategies - Obter estratégias habilitadas
+
+    Retorna apenas estratégias com strategy_status = 'E' (Enabled)
+    Usado para o dialog de seleção de estratégia na automação
+    """
+    try:
+        logger.info("Fetching enabled strategies...")
+
+        # Buscar estratégias habilitadas
+        result = db.client.table("strategies").select("id", "name").eq("strategy_status", "E").execute()
+
+        strategies = []
+        for row in result.data or []:
+            strategies.append({
+                "id": row["id"],
+                "strategy_name": row.get("name", "Unnamed Strategy")
+            })
+
+        logger.info(f"Found {len(strategies)} enabled strategies")
+        return strategies
+
+    except Exception as e:
+        logger.error(f"Error fetching strategies: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao buscar estratégias: {str(e)}"
+        )
+
+
+@router.put("/{isin_id}/automation", response_model=AutomationUpdateResponse)
+async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
+    """
+    PUT /api/isins/{isin_id}/automation - Alternar automação de um ISIN
+
+    Permite ativar/desativar automação com estratégia associada.
+
+    Request body:
+    {
+        "automation_enabled": true/false,
+        "strategy_id": "uuid-da-estrategia" ou null
+    }
+
+    Lógica:
+    1. Valida que ISIN existe em T212 positions
+    2. Se automation_enabled=true:
+       - Cria ou atualiza linha em 'isins' table
+       - Associa strategy_id
+    3. Se automation_enabled=false:
+       - Desativa automação (strategy_id = null)
+    4. Após UPDATE/INSERT em 'isins', insere audit record em 'isin_strategy_history'
+    5. Retorna configuração atualizada
+    """
+    try:
+        logger.info(f"Toggling automation for ISIN: {isin_id}, enabled: {data.automation_enabled}")
+
+        # Step 1: Verificar se ISIN existe em T212
+        t212_client = get_t212_client()
+        positions = t212_client.get_positions()
+
+        # Encontrar posição T212
+        t212_position = None
+        for pos in positions:
+            instrument = pos.get("instrument", {})
+            if instrument.get("isin") == isin_id:
+                t212_position = pos
+                break
+
+        if not t212_position:
+            logger.warning(f"ISIN {isin_id} not found in T212 positions")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"ISIN {isin_id} não encontrado nas posições da T212"
+            )
+
+        logger.info(f"ISIN {isin_id} found in T212 positions")
+
+        # Step 2 & 3: Processar automação
+        strategy_id = None
+        strategy_name = None
+
+        if data.automation_enabled:
+            # Validar strategy_id se fornecido
+            if data.strategy_id:
+                try:
+                    strategy_result = db.client.table("strategies").select("id", "name").eq("id", data.strategy_id).execute()
+                    if strategy_result.data:
+                        strategy_row = strategy_result.data[0]
+                        strategy_id = data.strategy_id
+                        strategy_name = strategy_row.get("name", "Unknown")
+                        logger.info(f"Strategy {strategy_id} ({strategy_name}) selected for automation")
+                    else:
+                        logger.warning(f"Strategy {data.strategy_id} not found")
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Estratégia {data.strategy_id} não encontrada"
+                        )
+                except Exception as e:
+                    if isinstance(e, HTTPException):
+                        raise
+                    logger.error(f"Error validating strategy: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Erro ao validar estratégia: {str(e)}"
+                    )
+            else:
+                logger.warning("automation_enabled=true but no strategy_id provided")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="strategy_id é obrigatório quando automation_enabled=true"
+                )
+
+        # Step 4: Inserir ou atualizar em 'isins' table
+        instrument = t212_position.get("instrument", {})
+        isin_data = {
+            "isin": isin_id,
+            "ticker": instrument.get("ticker", ""),
+            "name": instrument.get("name", ""),
+            "currency": instrument.get("currency", "EUR"),
+            "automation_enabled": data.automation_enabled,
+            "strategy_id": strategy_id,
+            "updated_at": "now()"
+        }
+
+        # Tentar encontrar ISIN existente
+        existing_result = db.client.table("isins").select("id").eq("isin", isin_id).execute()
+
+        if existing_result.data:
+            # UPDATE existente
+            logger.info(f"Updating existing ISIN record: {isin_id}")
+            db.client.table("isins").update(isin_data).eq("isin", isin_id).execute()
+            isin_row_id = existing_result.data[0]["id"]
+        else:
+            # INSERT novo
+            logger.info(f"Creating new ISIN record: {isin_id}")
+            insert_result = db.client.table("isins").insert(isin_data).execute()
+            if insert_result.data:
+                isin_row_id = insert_result.data[0]["id"]
+            else:
+                raise Exception("Failed to insert ISIN record")
+
+        # Step 5: Auditar em 'isin_strategy_history'
+        try:
+            audit_data = {
+                "isin_id": isin_row_id,
+                "strategy_id": strategy_id,
+                "automated": data.automation_enabled,
+                "created_at": "now()",
+                "updated_at": "now()"
+            }
+
+            db.client.table("isin_strategy_history").insert(audit_data).execute()
+            logger.info(f"Audit record created for ISIN {isin_id}")
+        except Exception as e:
+            logger.error(f"Warning: Failed to create audit record: {e}")
+            # Não falha a operação se audit falhar
+
+        # Step 6: Preparar resposta
+        response = {
+            "isin_id": isin_row_id,
+            "automation_enabled": data.automation_enabled,
+            "strategy_id": strategy_id,
+            "strategy_name": strategy_name
+        }
+
+        logger.info(f"Automation toggle completed for ISIN {isin_id}: {response}")
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling automation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao alternar automação: {str(e)}"
         )
