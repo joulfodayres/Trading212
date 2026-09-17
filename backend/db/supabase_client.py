@@ -41,23 +41,6 @@ class SupabaseDB:
             self.__init__()
         return self._client
 
-    @property
-    def admin_client(self) -> Client:
-        """Retorna cliente Supabase com chave admin (bypass RLS)"""
-        try:
-            admin_key = settings.SUPABASE_ADMIN_KEY
-            if not admin_key:
-                logger.warning("SUPABASE_ADMIN_KEY não configurada, usando cliente regular")
-                return self.client
-
-            return create_client(
-                supabase_url=settings.SUPABASE_URL,
-                supabase_key=admin_key
-            )
-        except Exception as e:
-            logger.warning(f"Erro ao inicializar admin client: {e}, usando cliente regular")
-            return self.client
-
     # ===== OPERAÇÕES GENÉRICAS =====
 
     def query(self, table: str) -> Any:

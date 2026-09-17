@@ -315,17 +315,14 @@ async def get_enabled_strategies():
     GET /api/isins/strategies - Obter estratégias habilitadas
 
     Retorna apenas estratégias com strategy_status = 'E' (Enabled)
+    Estratégias públicas (user_id IS NULL) e próprias do user
     Usado para o dialog de seleção de estratégia na automação
-
-    Nota: Usa admin client para bypass de RLS, já que estratégias
-    são globais (não user-specific) para essa função
     """
     try:
         logger.info("Fetching enabled strategies...")
 
-        # Usar admin client para bypass de RLS
-        admin_client = db.admin_client
-        result = admin_client.table("strategies").select("id", "strategy_name").eq("strategy_status", "E").execute()
+        # Buscar estratégias habilitadas (públicas e próprias)
+        result = db.client.table("strategies").select("id", "strategy_name").eq("strategy_status", "E").execute()
 
         strategies = []
         for row in result.data or []:
