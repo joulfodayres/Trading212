@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
 import { apiClient } from '../api/client'
-import { useToast } from '../components/ui/Toast'
 
 interface AutomationConfig {
   isin_id: string
@@ -11,7 +10,6 @@ interface AutomationConfig {
 
 export const useAutomation = () => {
   const [loading, setLoading] = useState(false)
-  const toast = useToast()
 
   const toggleAutomation = useCallback(
     async (isin: string, automationEnabled: boolean, strategyId?: string): Promise<AutomationConfig | null> => {
@@ -22,20 +20,15 @@ export const useAutomation = () => {
           strategy_id: strategyId || null
         })
 
-        const action = automationEnabled ? 'ativada' : 'desativada'
-        toast.success(`Automação ${action} com sucesso`)
-
         return response.data
       } catch (error: any) {
         console.error('Erro ao alternar automação:', error)
-        const message = error.response?.data?.detail || 'Erro ao alterar automação'
-        toast.error(message)
         return null
       } finally {
         setLoading(false)
       }
     },
-    [toast]
+    []
   )
 
   return {

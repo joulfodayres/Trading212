@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AlertCircle, Check, X, Zap } from 'lucide-react'
+import { Zap, X } from 'lucide-react'
 import { Button } from './ui/Button'
-import { useToast } from './ui/Toast'
 import { apiClient } from '../api/client'
 
 interface Strategy {
@@ -28,7 +27,6 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
   const [loadingStrategies, setLoadingStrategies] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const toast = useToast()
 
   // Load enabled strategies when sheet opens for enable
   useEffect(() => {
@@ -47,7 +45,6 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
       }
     } catch (error) {
       console.error('Erro ao carregar estratégias:', error)
-      toast.error('Erro ao carregar estratégias')
     } finally {
       setLoadingStrategies(false)
     }
@@ -55,7 +52,6 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 
   const handleConfirm = async () => {
     if (type === 'enable' && !selectedStrategy) {
-      toast.error('Seleciona uma estratégia')
       return
     }
 

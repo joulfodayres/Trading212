@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
-import { useToast } from './ui/Toast'
 import { AutomationBottomSheet } from './AutomationBottomSheet'
 import { useAutomation } from '../hooks/useAutomation'
 import { apiClient } from '../api/client'
@@ -28,7 +27,6 @@ export default function ISINTable() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'enable' | 'disable'>('enable')
   const [selectedISIN, setSelectedISIN] = useState<ISIN | null>(null)
-  const toast = useToast()
   const { toggleAutomation, loading: automationLoading } = useAutomation()
 
   // Fetch ISINs na primeira carga
@@ -46,12 +44,8 @@ export default function ISINTable() {
       const response = await apiClient.get('/isins')
       console.log('[ISINTable] ISINs received:', response.data)
       setIsins(response.data)
-      if (response.data.length > 0) {
-        toast.success(`Carregados ${response.data.length} ISINs`)
-      }
     } catch (error) {
       console.error('Erro ao carregar ISINs:', error)
-      toast.error('Erro ao carregar ISINs')
       setIsins([])
     } finally {
       setLoadingList(false)
