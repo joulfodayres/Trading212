@@ -76,7 +76,7 @@ class ConfigResponse(BaseModel):
 async def get_config():
     """
     Obter configuração do Trading 212
-    TODO: Filtrar por user_id via JWT
+    (Single-user - sem filtro de user_id necessário)
     """
     try:
         # TODO: Buscar de BD (config table)
@@ -191,7 +191,7 @@ async def test_connection():
 async def get_strategy_params():
     """
     Obter parâmetros da estratégia Grid Trading
-    TODO: Filtrar por user_id via JWT
+    (Single-user - sem filtro de user_id necessário)
     """
     try:
         # TODO: Buscar de BD (config.strategy_params JSONB)

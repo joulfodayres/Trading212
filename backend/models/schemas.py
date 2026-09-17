@@ -1,5 +1,6 @@
 """
 Schemas Pydantic para validação de requests/responses
+Simplificado para single-user (sem user_id)
 """
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
@@ -45,7 +46,6 @@ class ISINResponse(BaseModel):
     name: Optional[str]
     currency: str
     automation_enabled: bool
-    fields_json: Optional[Dict[str, Any]]
     created_at: datetime
     updated_at: datetime
 
@@ -64,7 +64,6 @@ class ConfigCreate(BaseModel):
 class ConfigResponse(BaseModel):
     """Schema de response de config"""
     id: str
-    user_id: str
     t212_environment: str
     strategy_params: Optional[Dict[str, Any]]
     updated_at: datetime
@@ -75,19 +74,19 @@ class ConfigResponse(BaseModel):
 
 class StrategyCreate(BaseModel):
     """Schema para criar estratégia"""
-    name: str
-    type: str = "grid_trading"
-    params: Dict[str, Any]
+    strategy_name: str
+    strategy_desc: Optional[str] = None
+    strategy_status: str = "E"
 
 
 class StrategyResponse(BaseModel):
     """Schema de response de estratégia"""
     id: str
-    user_id: str
-    name: str
-    type: str
-    params: Dict[str, Any]
+    strategy_name: str
+    strategy_desc: Optional[str]
+    strategy_status: str
     created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -96,7 +95,6 @@ class StrategyResponse(BaseModel):
 class TradeResponse(BaseModel):
     """Schema de response de trade"""
     id: str
-    user_id: str
     isin_id: Optional[str]
     strategy_id: Optional[str]
     tipo: str
@@ -116,7 +114,6 @@ class TradeResponse(BaseModel):
 class LogResponse(BaseModel):
     """Schema de response de log"""
     id: str
-    user_id: Optional[str]
     nivel: str
     mensagem: str
     detalhes_json: Optional[Dict[str, Any]]

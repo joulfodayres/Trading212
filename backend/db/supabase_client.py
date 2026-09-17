@@ -1,6 +1,7 @@
 """
 Cliente Supabase para operações de BD
 Wrapper para integração com Supabase PostgreSQL
+Simplificado para single-user (sem user_id)
 """
 import logging
 from typing import Dict, List, Optional, Any
@@ -49,11 +50,10 @@ class SupabaseDB:
 
     # ===== ISINS =====
 
-    def create_isin(self, user_id: str, isin: str, ticker: str, name: str, currency: str = "EUR", fields_json: Optional[Dict] = None) -> Dict:
+    def create_isin(self, isin: str, ticker: str, name: str, currency: str = "EUR", fields_json: Optional[Dict] = None) -> Dict:
         """Criar novo ISIN"""
         try:
             data = {
-                "user_id": user_id,
                 "isin": isin,
                 "ticker": ticker,
                 "name": name,
@@ -73,10 +73,10 @@ class SupabaseDB:
             logger.error(f" Erro ao criar ISIN: {str(e)}")
             raise
 
-    def get_isin(self, isin_id: str, user_id: str) -> Optional[Dict]:
+    def get_isin(self, isin_id: str) -> Optional[Dict]:
         """Obter ISIN específico"""
         try:
-            response = self.client.table("isins").select("*").eq("id", isin_id).eq("user_id", user_id).execute()
+            response = self.client.table("isins").select("*").eq("id", isin_id).execute()
 
             if response.data:
                 return response.data[0]
@@ -86,10 +86,10 @@ class SupabaseDB:
             logger.error(f" Erro ao obter ISIN: {str(e)}")
             raise
 
-    def get_isin_by_isin_code(self, isin: str, user_id: str) -> Optional[Dict]:
+    def get_isin_by_isin_code(self, isin: str) -> Optional[Dict]:
         """Obter ISIN por código ISIN"""
         try:
-            response = self.client.table("isins").select("*").eq("isin", isin).eq("user_id", user_id).execute()
+            response = self.client.table("isins").select("*").eq("isin", isin).execute()
 
             if response.data:
                 return response.data[0]
@@ -99,13 +99,12 @@ class SupabaseDB:
             logger.error(f" Erro ao obter ISIN por código: {str(e)}")
             raise
 
-    def list_isins(self, user_id: str, limit: int = 100, offset: int = 0) -> List[Dict]:
-        """Listar todos os ISINs do user"""
+    def list_isins(self, limit: int = 100, offset: int = 0) -> List[Dict]:
+        """Listar todos os ISINs"""
         try:
             response = (
                 self.client.table("isins")
                 .select("*")
-                .eq("user_id", user_id)
                 .range(offset, offset + limit - 1)
                 .execute()
             )
@@ -116,14 +115,13 @@ class SupabaseDB:
             logger.error(f" Erro ao listar ISINs: {str(e)}")
             raise
 
-    def update_isin(self, isin_id: str, user_id: str, updates: Dict) -> Optional[Dict]:
+    def update_isin(self, isin_id: str, updates: Dict) -> Optional[Dict]:
         """Atualizar ISIN"""
         try:
             response = (
                 self.client.table("isins")
                 .update(updates)
                 .eq("id", isin_id)
-                .eq("user_id", user_id)
                 .execute()
             )
 
@@ -137,7 +135,7 @@ class SupabaseDB:
             logger.error(f" Erro ao atualizar ISIN: {str(e)}")
             raise
 
-    def delete_isin(self, isin_id: str, user_id: str) -> bool:
+    def delete_isin(self, isin_id: str) -> bool:
         """Deletar ISIN (com cascade delete de trades)"""
         try:
             # Primeiro, deletar todos os trades associados
@@ -148,7 +146,6 @@ class SupabaseDB:
                 self.client.table("isins")
                 .delete()
                 .eq("id", isin_id)
-                .eq("user_id", user_id)
                 .execute()
             )
 
@@ -159,11 +156,11 @@ class SupabaseDB:
             logger.error(f" Erro ao deletar ISIN: {str(e)}")
             raise
 
-    def toggle_automation(self, isin_id: str, user_id: str) -> Optional[Dict]:
+    def toggle_automation(self, isin_id: str) -> Optional[Dict]:
         """Toggle automation_enabled para um ISIN"""
         try:
             # Primeiro, obter o ISIN atual
-            isin = self.get_isin(isin_id, user_id)
+            isin = self.get_isin(isin_id)
             if not isin:
                 raise Exception(f"ISIN não encontrado: {isin_id}")
 
@@ -175,7 +172,6 @@ class SupabaseDB:
                 self.client.table("isins")
                 .update({"automation_enabled": new_value})
                 .eq("id", isin_id)
-                .eq("user_id", user_id)
                 .execute()
             )
 
@@ -191,14 +187,13 @@ class SupabaseDB:
 
     # ===== TRADES =====
 
-    def list_isin_trades(self, isin_id: str, user_id: str, limit: int = 50) -> List[Dict]:
+    def list_isin_trades(self, isin_id: str, limit: int = 50) -> List[Dict]:
         """Listar trades para um ISIN"""
         try:
             response = (
                 self.client.table("trades")
                 .select("*")
                 .eq("isin_id", isin_id)
-                .eq("user_id", user_id)
                 .order("created_at", desc=True)
                 .limit(limit)
                 .execute()
@@ -210,10 +205,10 @@ class SupabaseDB:
             logger.error(f" Erro ao listar trades: {str(e)}")
             raise
 
-    def get_isin_pnl(self, isin_id: str, user_id: str) -> Dict:
+    def get_isin_pnl(self, isin_id: str) -> Dict:
         """Calcular P&L total para um ISIN baseado em trades"""
         try:
-            trades = self.list_isin_trades(isin_id, user_id, limit=1000)
+            trades = self.list_isin_trades(isin_id, limit=1000)
 
             total_bought = 0
             total_bought_value = 0
