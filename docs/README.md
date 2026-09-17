@@ -1,166 +1,79 @@
-# 📚 Documentação Trading 212 Bot
+# Documentation Directory
 
-**Estrutura Organizada de Documentação**
-
----
-
-## 🎯 Comece Aqui
-
-### Para **Iniciar Rápido:**
-- Voltar a: [`../../README.md`](../../README.md)
-- Quick start: [`../../COMECA_AQUI.md`](../../COMECA_AQUI.md)
-
-### Para **Desenvolvedor:**
-- Instruções Claude: [`../../CLAUDE.md`](../../CLAUDE.md) 🔒
-- Índice Completo: [`DOCUMENTATION_INDEX.md`](./DOCUMENTATION_INDEX.md)
-- Cheat Sheet: [`QUICK_REFERENCE_PHASE4.md`](./QUICK_REFERENCE_PHASE4.md)
+**Updated:** 2026-09-17  
+**Active Phase:** 3 (UI & Automation)
 
 ---
 
-## 📁 Estrutura de Documentação
+## 📚 Current Documentation (Phase 3)
 
-### 🟢 Phase 4 (Atual - T212 API Analysis)
+### Essential Guides
+- **`../STATUS.md`** - Current project status
+- **`../README.md`** - Project overview
+- **`../CLAUDE.md`** - Architecture & tech stack
 
-```
-t212-api/
-├── API_ANALYSIS.md                 - Análise completa de endpoints
-├── ORDER_HISTORY_BY_ID.md          - Acesso a histórico por ID
-├── HISTORY_ORDERS_PARAMS.md        - Parâmetros detalhados
-├── HISTORY_ORDERS_NO_DATE_FILTER.md - Limitações de data
-├── INCREMENTAL_SYNC.md             - Algoritmo de sync
-├── ORDERING_WARNING.md             - ⚠️ Assunção crítica
-└── api.yaml                        - OpenAPI 3.0.1 spec
-```
-
-### 🔵 Índices e Resumos
-
-- `DOCUMENTATION_INDEX.md` - Índice completo de TODA documentação
-- `PHASE_4_SUMMARY.md` - Resumo executivo da pesquisa
-- `QUICK_REFERENCE_PHASE4.md` - Cheat sheet para implementação
-- `CHANGELOG_2026_09_17.md` - Changelog desta sessão
+### Trading 212 API (Phase 4 Reference)
+- **`t212-api/API_ANALYSIS.md`** - Complete API endpoint reference
+- **`t212-api/HISTORY_ORDERS_PARAMS.md`** - /history/orders parameters
+- **`t212-api/INCREMENTAL_SYNC.md`** - Order history sync strategy
+- **`t212-api/...`** - Other API documentation
 
 ---
 
-### 📦 Documentação Arquivada
+## 🗂️ Folder Structure
 
-```
-_archive/
-├── phase-2/                        - Phase 2 (JWT Auth, CRUD)
-│   ├── api/
-│   ├── architecture/
-│   ├── frontend/
-│   ├── deployment/
-│   └── guides/
-│
-├── phase-3/                        - Phase 3 (Login, ISINs)
-│   ├── PHASE_3_DEVELOPMENT_PLAN.md
-│   ├── PHASE_3_LOGIN_FIX.md
-│   ├── API_INTEGRATION_STATUS.md
-│   └── ...outros fixes
-│
-└── sessions/                       - Session Reports
-    ├── SESSION_FINAL_REPORT.md
-    └── ...outros reports
-```
-
----
-
-## 🔍 Encontrar Documentação Específica
-
-### Sobre T212 API:
-→ Pasta: `t212-api/`
-
-### Sobre Grid Trading:
-→ Arquivo: `t212-api/INCREMENTAL_SYNC.md` (implementação)
-→ Arquivo: `PHASE_4_SUMMARY.md` (arquitetura)
-
-### Sobre Rate Limits:
-→ Arquivo: `t212-api/API_ANALYSIS.md` (tabela completa)
-
-### Sobre Autenticação (Phase 2):
-→ Pasta: `_archive/phase-2/api/`
-
-### Sobre Frontend:
-→ Pasta: `_archive/phase-2/frontend/`
-
-### Sobre Deployment:
-→ Pasta: `_archive/phase-2/deployment/`
-
----
-
-## ⚠️ Documentação Crítica
-
-### DEVE LER:
-1. `../../CLAUDE.md` - Instruções do projeto
-2. `QUICK_REFERENCE_PHASE4.md` - Overview rápido
-3. `t212-api/ORDERING_WARNING.md` - ⚠️ Assunção importante
-
-### ANTES DE PRODUÇÃO:
-1. `t212-api/API_ANALYSIS.md` - Todos endpoints
-2. `t212-api/INCREMENTAL_SYNC.md` - Estratégia sync
-3. `PHASE_4_SUMMARY.md` - Validações pendentes
-
----
-
-## 📈 Documentação por Fase
-
-| Fase | Status | Documentação | Localização |
-|------|--------|-------------|------------|
-| **Phase 2** | ✅ Completa | Auth, CRUD, Deploy | `_archive/phase-2/` |
-| **Phase 3** | ✅ Completa | Login, ISINs | `_archive/phase-3/` |
-| **Phase 4** | 🟢 Atual | T212 API Analysis | `t212-api/` |
-| **Phase 5** | 📋 Planejado | Grid Trading | _Em breve_ |
-
----
-
-## 🗂️ Organização Prática
-
-### Documentação Ativa (Use Diariamente):
 ```
 docs/
-├── t212-api/                    ← Integração T212
-├── QUICK_REFERENCE_PHASE4.md    ← Cheat sheet
-├── PHASE_4_SUMMARY.md           ← Arquitetura
-└── DOCUMENTATION_INDEX.md       ← Índice
-```
-
-### Documentação de Referência:
-```
-docs/_archive/
-├── phase-2/                     ← Como foi feito
-├── phase-3/                     ← Etapas anteriores
-└── sessions/                    ← Histórico
+├── README.md                    # ← This file
+├── t212-api/                    # Trading 212 API analysis
+│   ├── API_ANALYSIS.md
+│   ├── HISTORY_ORDERS_PARAMS.md
+│   ├── INCREMENTAL_SYNC.md
+│   └── ...
+└── _archive/                    # Old documentation
+    ├── phase-2/                 # Backend & DB setup
+    ├── phase-3/                 # UI & UX fixes
+    └── sessions/                # Historical session reports
 ```
 
 ---
 
-## 🚀 Próximas Ações
+## 🔍 Quick Links
 
-1. **Implementação Phase 4:**
-   - Ler: `QUICK_REFERENCE_PHASE4.md`
-   - Código: `t212-api/INCREMENTAL_SYNC.md`
+### Phase 4 Implementation (Grid Trading)
+- Start here: `t212-api/API_ANALYSIS.md`
+- Implementation guide: `t212-api/INCREMENTAL_SYNC.md`
+- Parameter reference: `t212-api/HISTORY_ORDERS_PARAMS.md`
 
-2. **Validação Prática:**
-   - Testar: Ordenação DESC (ver `t212-api/ORDERING_WARNING.md`)
+### Architecture
+- Read: `../CLAUDE.md`
+- Database: Check `../db/supabase_schema.sql`
+- Backend code: Check `../backend/routes/`
 
-3. **Novos Documentos (será criado):**
-   - `t212-api/ORDERING_VERIFICATION_RESULTS.md`
-   - `GRID_TRADING_IMPLEMENTATION.md`
-
----
-
-## 📞 Suporte
-
-**Documentação não está clara?**
-→ Ler: `DOCUMENTATION_INDEX.md` para índice completo
-
-**Precisa de histórico de decisões?**
-→ Ver: `_archive/` (phases anteriores)
-
-**Precisa de exemplos de código?**
-→ Arquivo: `t212-api/INCREMENTAL_SYNC.md` (15+ exemplos)
+### Deployment
+- Status: Check `../STATUS.md`
+- Quick start: Check `../COMECA_AQUI.md`
+- API docs: https://trading212-4ojx.onrender.com/docs
 
 ---
 
-**Última Atualização:** 2026-09-17  
-**Próxima Revisão:** Após implementação Phase 4
+## 📝 File Types
+
+- `API_*.md` - Trading 212 API documentation
+- `INCREMENTAL_SYNC.md` - Phase 4 implementation guide
+- `STRATEGY_*.md` - Strategy design documents
+- `SIMPLIFY_TO_SINGLEUSER.md` - Database migration guide
+
+---
+
+## 🚀 Contributing
+
+When adding new documentation:
+1. Place in appropriate subfolder
+2. Add link to this README.md
+3. Update `../DOCUMENTATION_INDEX.md`
+4. Commit with clear message
+
+---
+
+**For complete doc index, see `../DOCUMENTATION_INDEX.md`**

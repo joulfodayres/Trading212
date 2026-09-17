@@ -1,7 +1,8 @@
 # Trading 212 Bot - MVP
 
-**Status:** ✅ **Fase 2 Completa - Produção** 🚀  
-**Último Update:** 2026-09-15
+**Status:** ✅ **Phase 3 Complete - Moving to Phase 4** 🚀  
+**Last Update:** 2026-09-17  
+**Version:** 0.3.0
 
 Automação de trading algorítmico integrada com Trading 212 API, acessível via browser de qualquer lugar.
 
@@ -9,24 +10,21 @@ Automação de trading algorítmico integrada com Trading 212 API, acessível vi
 
 ## ⚡ Quick Start
 
-### Aceder ao Sistema (Online)
+### 🌐 Access Online (Production)
 ```
 Frontend: https://trading212-1.onrender.com
-Backend:  https://trading212-4ojx.onrender.com/docs
+Backend:  https://trading212-4ojx.onrender.com
+API Docs: https://trading212-4ojx.onrender.com/docs
 ```
 
-1. Clica em **Sign Up** para registar conta
-2. Faz login com email/password
-3. Vê dashboard com ISINs (dados mock por enquanto)
-
-### Setup Local (Desenvolvimento)
+### 💻 Development (Local)
 
 **Backend:**
 ```bash
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-# → Edita .env com tuas credenciais
+# → Edit .env with your credentials
 python main.py  # http://localhost:8000
 ```
 
@@ -39,195 +37,188 @@ npm run dev  # http://localhost:5173
 
 ---
 
-## 📚 Documentação
+## 📚 Documentation
 
-### 🔴 Ler Primeiro (Phase 4 - API Analysis)
-| Ficheiro | Descrição |
-|----------|-----------|
-| **`docs/QUICK_REFERENCE_PHASE4.md`** | ⭐ Quick start (2 min) |
-| **`docs/PHASE_4_SUMMARY.md`** | 📋 Resumo executivo |
-| **`docs/t212-api/ORDERING_WARNING.md`** | ⚠️ CRÍTICO validar |
+### Essential Reading
+| Document | Purpose |
+|----------|---------|
+| **`STATUS.md`** | Current project status & timeline |
+| **`CLAUDE.md`** | Architecture, database schema, tech stack |
+| **`COMECA_AQUI.md`** | Quick start & troubleshooting |
 
-### 📖 Documentação Completa
-| Ficheiro | Descrição |
-|----------|-----------|
-| **`COMECA_AQUI.md`** | Quick start + troubleshooting |
-| **`CLAUDE.md`** | Arquitetura técnica + BD schema |
-| **`docs/README.md`** | Índice completo de docs |
-| **`docs/DOCUMENTATION_INDEX.md`** | Índice detalhado |
-
-### 🔵 Phase 4 - T212 API (Detailed Analysis)
-| Ficheiro | Descrição |
-|----------|-----------|
-| **`docs/t212-api/API_ANALYSIS.md`** | Análise de todos endpoints |
-| **`docs/t212-api/HISTORY_ORDERS_PARAMS.md`** | Parâmetros com exemplos |
-| **`docs/t212-api/HISTORY_ORDERS_NO_DATE_FILTER.md`** | Limitações e workarounds |
-| **`docs/t212-api/INCREMENTAL_SYNC.md`** | Algoritmo + código Python |
-| **`docs/t212-api/ORDER_HISTORY_BY_ID.md`** | Acesso a histórico |
-
-### 📦 Documentação Anterior (Archive)
-| Localização | Descrição |
-|------------|-----------|
-| **`docs/_archive/phase-2/`** | Auth, CRUD, Deployment |
-| **`docs/_archive/phase-3/`** | Login fixes, ISIN updates |
-| **`docs/_archive/sessions/`** | Session reports |
+### Detailed Guides
+| Document | Topic |
+|----------|-------|
+| **`docs/README.md`** | Documentation index |
+| **`docs/t212-api/`** | Trading 212 API analysis (Phase 4) |
 
 ---
 
-## ✅ O que já funciona (Fase 3 - Atual)
+## ✅ What Works Now (Phase 3)
 
-- ✅ Autenticação real (Email/Password → JWT)
-- ✅ Dashboard com dados LIVE de T212 API
-- ✅ Tabela ISINs com sincronização automática
-- ✅ CRUD ISINs (Create, Read, Update, Delete)
-- ✅ Backend online em Render (FastAPI)
-- ✅ Frontend online em Render (React)
-- ✅ Database Supabase (PostgreSQL + RLS)
-- ✅ 25+ endpoints API funcionais
-- ✅ Row-Level Security (cada user vê só seus dados)
-- ✅ Toggle automação por ISIN
-- ✅ T212 API Integration (polling de posições)
-- ✅ Análise completa de T212 API (documentada)
+### Core Features
+- ✅ Live ISINs data from Trading 212 API
+- ✅ Dashboard with real-time positions
+- ✅ Automation toggle (enable/disable per ISIN)
+- ✅ Strategy selection dialog
+- ✅ Audit trail for all changes
+- ✅ Modal dialog (Trading 212 style UI)
 
-### 🔄 Em Desenvolvimento (Phase 4 Próximo)
-- ⏳ APScheduler (monitoramento a cada 5s)
-- ⏳ Grid Trading Logic (+1%/-1%)
-- ⏳ Sincronização incremental de histórico
-- ⏳ Real-time updates (WebSocket)
-- ⏳ Execução automática de trades
+### Technical
+- ✅ Backend: FastAPI with 25+ endpoints
+- ✅ Frontend: React 18 + TypeScript
+- ✅ Database: PostgreSQL (Supabase)
+- ✅ Auth: JWT tokens
+- ✅ Deployment: Auto-deploy on git push
+- ✅ Encryption: API keys encrypted
+- ✅ Logging: Full audit trail
+
+---
+
+## 🚧 Next Phase (Phase 4: Grid Trading)
+
+Priority tasks to implement automation:
+
+1. **OrderHistoryManager**
+   - Incremental sync of order history
+   - Validate ordering assumptions
+   - Handle pagination
+
+2. **APScheduler Setup**
+   - Polling every 5 seconds
+   - Monitor positions
+   - Check strategy triggers
+
+3. **Grid Trading Logic**
+   - Buy at -1% below average
+   - Sell at +1% above average
+   - Risk management (max position, stop-loss)
+
+4. **Validation**
+   - Test with real data (DEMO account)
+   - Verify order history ordering
+   - Rate limit handling
 
 ---
 
 ## 📊 Tech Stack
 
-| Componente | Tecnologia |
+| Component | Technology |
 |-----------|-----------|
 | **Frontend** | React 18 + TypeScript + Vite + Tailwind |
-| **Backend** | FastAPI + Python 3.14 + Uvicorn |
-| **Database** | PostgreSQL (Supabase) + RLS |
-| **Auth** | Supabase Auth (JWT) |
-| **Hosting** | Render (Cloud) |
-| **Version Control** | GitHub |
+| **Backend** | FastAPI + Python 3.14 |
+| **Database** | PostgreSQL (Supabase) |
+| **Auth** | JWT (Supabase Auth) |
+| **Trading API** | Trading 212 Official API |
+| **Hosting** | Render.com |
 
 ---
 
-## 🚀 Deployment
-
-Ambos os serviços estão online e auto-deploy ativo:
-
-- **Frontend:** https://trading212-1.onrender.com
-- **Backend:** https://trading212-4ojx.onrender.com
-- **API Docs:** https://trading212-4ojx.onrender.com/docs
-
-Qualquer push para `main` no GitHub dispara auto-deploy.
-
----
-
-## 🎯 Próximas Fases
-
-### Fase 4: Grid Trading Automation (Próximo)
-- [ ] Implementar OrderHistoryManager
-- [ ] Setup APScheduler (polling a cada 5s)
-- [ ] Grid Trading strategy (+1% vender, -1% comprar)
-- [ ] Trade execution via T212 API
-- [ ] Testes de ordenação de /history/orders
-
-### Fase 5: Polish & Production
-- [ ] Real-time updates (WebSocket)
-- [ ] Dashboard avançado (gráficos)
-- [ ] Testes automatizados
-- [ ] Monitoring e alertas
-- [ ] Deploy em Live (com risco controlado)
-
-### 🔍 Validação Crítica Pendente
-- ⏳ Confirmar ordenação DESC de /history/orders (implícita, não documentada)
-- ⏳ Testar rate limits na prática
-- ⏳ Validar incremental sync com dados reais
-- [ ] Gráficos (Recharts)
-- [ ] Histórico de trades
-- [ ] Alertas
-
----
-
-## 📁 Estrutura de Ficheiros
-
-```
-Trading212/
-├── README.md              # Este ficheiro
-├── COMECA_AQUI.md         # Quick start
-├── CHECKLIST_FINAL.md     # Status
-├── INDEX.md               # Índice docs
-├── CLAUDE.md              # Arquitetura
-├── DOCUMENTATION.html     # Navegador HTML
-│
-├── backend/               # FastAPI Python
-├── frontend/              # React TypeScript
-├── db/                    # SQL schemas
-├── docs/                  # Developer documentation
-├── _archive/              # Scripts antigos
-│   ├── _scripts/
-│   └── _logs/
-│
-└── [Config files]         # .gitignore, render.yaml, etc
-```
-
-Ver **INDEX.md** ou **DOCUMENTATION.html** para navegação completa.
-
----
-
-## 🔐 Segurança
-
-- ✅ JWT tokens (24h expiration)
-- ✅ Row-Level Security ativa
-- ✅ Passwords hashed (bcrypt)
-- ✅ API keys encriptados (Fernet)
-- ✅ HTTPS automático (Render)
-- ✅ CORS configurado
-- ✅ .env não commitado
-
----
-
-## 🧪 Testing
-
-Testar endpoints localmente:
-
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Login
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"123456"}'
-
-# Listar ISINs (com JWT token)
-curl http://localhost:8000/api/isins \
-  -H "Authorization: Bearer <token>"
-```
-
-API Docs interativa: http://localhost:8000/docs (Swagger)
-
----
-
-## 📞 Links Úteis
+## 🔗 Useful Links
 
 - **Frontend:** https://trading212-1.onrender.com
 - **Backend:** https://trading212-4ojx.onrender.com
 - **API Docs:** https://trading212-4ojx.onrender.com/docs
 - **GitHub:** https://github.com/joulfodayres/Trading212
-- **Supabase:** https://supabase.com (project: Trading212)
+- **Supabase:** https://supabase.com
 
 ---
 
-## 📝 Notas
+## 🚀 Deployment
 
-- **Sistema de utilizador único:** Apenas tu usas este sistema
-- **Modo:** Development/Testing (pode expandir para live)
-- **Deployment:** Render auto-deploy on git push
-- **Ambiente T212:** DEMO (pode mudar para LIVE depois)
+Fully automated:
+- Push to `main` on GitHub
+- Render auto-builds and deploys
+- Frontend: ~10-15 min
+- Backend: ~5-10 min
 
 ---
 
-🚀 **Pronto para Fase 3 - Automação!**
+## 📁 Project Structure
 
-Para questões, ver documentação em **COMECA_AQUI.md** ou **INDEX.md**.
+```
+Trading212/
+├── STATUS.md           ← Current status
+├── README.md           ← This file
+├── CLAUDE.md           ← Architecture guide
+├── COMECA_AQUI.md      ← Quick start
+│
+├── backend/            # FastAPI
+├── frontend/           # React + TypeScript
+├── db/                 # SQL schemas
+├── docs/               # Developer docs
+└── _archive/           # Old files
+```
+
+---
+
+## 🧪 Quick Test
+
+### Health check
+```bash
+curl https://trading212-4ojx.onrender.com/health
+```
+
+### View API docs
+```
+https://trading212-4ojx.onrender.com/docs
+```
+
+---
+
+## 🔐 Security
+
+- ✅ JWT authentication (24h expiration)
+- ✅ Encrypted API keys (Fernet)
+- ✅ HTTPS/TLS automatic
+- ✅ CORS configured
+- ✅ Database RLS policies
+- ✅ Passwords hashed
+- ⏳ TODO: Rate limiting on endpoints
+
+---
+
+## 📞 Common Issues
+
+**Frontend not updating after deploy:**
+```bash
+npm cache clean --force
+rm -rf node_modules
+npm install
+```
+
+**Backend 500 error:**
+Check logs in Render dashboard and environment variables.
+
+**Database connection failed:**
+Verify SUPABASE_URL and SUPABASE_KEY in .env
+
+---
+
+## 📝 Recent Changes
+
+- ✅ Upgraded modal to Trading 212 style design
+- ✅ Removed toast notifications
+- ✅ Simplified to single-user (no user_id)
+- ✅ Fixed automation toggle bugs
+- ✅ Implemented strategy selection
+
+See **`STATUS.md`** for full timeline.
+
+---
+
+## 🎯 Next Steps
+
+1. Implement Grid Trading strategy
+2. Setup APScheduler polling
+3. Test with real data
+4. Deploy to live (with controls)
+
+---
+
+**Version:** 0.3.0 (MVP Phase 3)  
+**Updated:** 2026-09-17  
+**Status:** ✅ Functional | 🚧 Advancing to Phase 4
+
+For detailed status, see **`STATUS.md`**.
+
