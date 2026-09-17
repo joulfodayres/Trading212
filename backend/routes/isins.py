@@ -316,12 +316,16 @@ async def get_enabled_strategies():
 
     Retorna apenas estratégias com strategy_status = 'E' (Enabled)
     Usado para o dialog de seleção de estratégia na automação
+
+    Nota: Usa admin client para bypass de RLS, já que estratégias
+    são globais (não user-specific) para essa função
     """
     try:
         logger.info("Fetching enabled strategies...")
 
-        # Buscar estratégias habilitadas
-        result = db.client.table("strategies").select("id", "strategy_name").eq("strategy_status", "E").execute()
+        # Usar admin client para bypass de RLS
+        admin_client = db.admin_client
+        result = admin_client.table("strategies").select("id", "strategy_name").eq("strategy_status", "E").execute()
 
         strategies = []
         for row in result.data or []:

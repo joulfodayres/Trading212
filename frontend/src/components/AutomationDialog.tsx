@@ -70,7 +70,7 @@ export const AutomationDialog: React.FC<AutomationDialogProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
       <div className="bg-t212-bg-primary rounded-lg shadow-2xl max-w-md w-full mx-4 border-2 border-t212-primary">
         {/* Header */}
         <div className="p-6 border-b-2 border-t212-primary bg-t212-bg-secondary">

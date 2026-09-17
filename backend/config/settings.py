@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
     SUPABASE_JWT_SECRET: str
+    SUPABASE_ADMIN_KEY: Optional[str] = None
 
     # ===== TRADING 212 =====
     T212_API_KEY: str
