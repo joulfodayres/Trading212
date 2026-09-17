@@ -3,7 +3,7 @@ import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
 import { useToast } from './ui/Toast'
-import { AutomationDialog } from './AutomationDialog'
+import { AutomationBottomSheet } from './AutomationBottomSheet'
 import { useAutomation } from '../hooks/useAutomation'
 import { apiClient } from '../api/client'
 
@@ -136,9 +136,9 @@ export default function ISINTable() {
         </Button>
       </div>
 
-      {/* Automation Dialog */}
+      {/* Automation Bottom Sheet */}
       {selectedISIN && (
-        <AutomationDialog
+        <AutomationBottomSheet
           isOpen={dialogOpen}
           type={dialogType}
           isin={selectedISIN.isin}
