@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AlertCircle, Check, X, ChevronUp } from 'lucide-react'
+import { AlertCircle, Check, X, Zap } from 'lucide-react'
 import { Button } from './ui/Button'
 import { useToast } from './ui/Toast'
 import { apiClient } from '../api/client'
@@ -71,114 +71,110 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 
   return (
     <>
-      {/* Overlay semi-transparente (apenas para desfoque de background) */}
+      {/* Overlay escuro (full coverage) */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-40 transition-opacity z-40"
+        className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity z-40"
         onClick={onCancel}
       />
 
-      {/* Bottom Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 bg-t212-bg-primary rounded-t-2xl shadow-2xl z-50 max-h-[80vh] overflow-y-auto">
-        {/* Handle bar (visual indicator) */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-12 h-1 bg-t212-border rounded-full" />
-        </div>
+      {/* Modal Centered (Trading 212 Style) */}
+      <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-md overflow-hidden">
 
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-t212-border sticky top-0 bg-t212-bg-primary rounded-t-2xl">
-          <div className="flex items-center justify-between">
+          {/* Header com ícone e fechar */}
+          <div className="px-6 py-5 border-b border-t212-border bg-gradient-to-r from-t212-bg-primary to-t212-bg-secondary flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <AlertCircle className="text-t212-warning flex-shrink-0" size={24} />
+              <div className="p-2 bg-t212-warning bg-opacity-20 rounded-lg">
+                <Zap className="text-t212-warning" size={20} />
+              </div>
               <div>
                 <h3 className="text-lg font-bold text-t212-primary">
                   {type === 'enable' ? 'Ativar Automação' : 'Desativar Automação'}
                 </h3>
-                <p className="text-sm text-t212-primary font-semibold mt-1">
-                  ISIN: {isin}
+                <p className="text-xs text-t212-secondary font-medium mt-0.5">
+                  {isin}
                 </p>
               </div>
             </div>
             <button
               onClick={onCancel}
               disabled={confirming}
-              className="p-2 hover:bg-t212-hover rounded-lg transition text-t212-secondary hover:text-t212-primary"
+              className="p-1.5 hover:bg-t212-hover rounded-lg transition text-t212-secondary hover:text-t212-primary"
             >
               <X size={20} />
             </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-6 py-6 space-y-6">
-          {type === 'enable' ? (
-            <>
-              <div>
-                <label className="block text-sm font-semibold text-t212-primary mb-3">
-                  Escolhe a estratégia que queres associar a este ISIN:
-                </label>
+          {/* Content */}
+          <div className="px-6 py-6">
+            {type === 'enable' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-t212-primary mb-3">
+                    Escolhe a estratégia:
+                  </label>
 
-                {loadingStrategies ? (
-                  <div className="h-10 bg-t212-hover rounded animate-pulse" />
-                ) : strategies.length > 0 ? (
-                  <select
-                    value={selectedStrategy}
-                    onChange={(e) => setSelectedStrategy(e.target.value)}
-                    disabled={confirming}
-                    className="w-full px-4 py-3 bg-t212-bg-secondary border-2 border-t212-primary rounded-lg text-t212-primary focus:outline-none focus:border-t212-warning transition font-medium"
-                  >
-                    {strategies.map((strategy) => (
-                      <option key={strategy.id} value={strategy.id}>
-                        {strategy.strategy_name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="p-4 bg-t212-bg-secondary border-2 border-t212-warning rounded-lg text-t212-warning font-medium">
-                    Nenhuma estratégia ativada disponível
-                  </div>
-                )}
+                  {loadingStrategies ? (
+                    <div className="h-11 bg-t212-hover rounded-lg animate-pulse" />
+                  ) : strategies.length > 0 ? (
+                    <select
+                      value={selectedStrategy}
+                      onChange={(e) => setSelectedStrategy(e.target.value)}
+                      disabled={confirming}
+                      className="w-full px-4 py-3 bg-t212-bg-secondary border-2 border-t212-primary rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning focus:border-transparent transition font-medium placeholder-t212-secondary"
+                    >
+                      {strategies.map((strategy) => (
+                        <option key={strategy.id} value={strategy.id}>
+                          {strategy.strategy_name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-4 bg-t212-bg-secondary border-2 border-t212-warning rounded-lg text-t212-warning font-medium text-center">
+                      Nenhuma estratégia disponível
+                    </div>
+                  )}
+                </div>
               </div>
-            </>
-          ) : (
-            <div>
-              <p className="text-t212-primary font-medium text-base leading-relaxed">
-                Tens a certeza que queres{' '}
-                <span className="text-t212-warning font-bold">desativar a automação</span> para este ISIN?
-              </p>
-              <p className="text-t212-secondary text-sm mt-2">
-                Esta ação será registada no histórico de automação.
-              </p>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-t212-primary font-semibold text-base leading-relaxed">
+                  Tens a certeza que queres{' '}
+                  <span className="text-t212-warning">desativar a automação</span>?
+                </p>
+                <p className="text-t212-secondary text-sm">
+                  Esta ação será registada no histórico de automação e nenhum trade automático será realizado.
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Footer / Actions */}
-        <div className="px-6 py-6 border-t border-t212-border bg-t212-bg-secondary sticky bottom-0 rounded-b-2xl flex gap-3">
-          <Button
-            variant="secondary"
-            size="lg"
-            icon={<X size={18} />}
-            onClick={onCancel}
-            disabled={confirming}
-            className="flex-1"
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            icon={<Check size={18} />}
-            onClick={handleConfirm}
-            isLoading={confirming}
-            disabled={
-              confirming ||
-              loadingStrategies ||
-              (type === 'enable' && strategies.length === 0)
-            }
-            className="flex-1"
-          >
-            Confirmar
-          </Button>
+          {/* Footer com botões */}
+          <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onCancel}
+              disabled={confirming}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleConfirm}
+              isLoading={confirming}
+              disabled={
+                confirming ||
+                loadingStrategies ||
+                (type === 'enable' && strategies.length === 0)
+              }
+              className="flex-1"
+            >
+              Confirmar
+            </Button>
+          </div>
         </div>
       </div>
     </>
