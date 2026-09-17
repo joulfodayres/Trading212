@@ -321,13 +321,13 @@ async def get_enabled_strategies():
         logger.info("Fetching enabled strategies...")
 
         # Buscar estratégias habilitadas
-        result = db.client.table("strategies").select("id", "name").eq("strategy_status", "E").execute()
+        result = db.client.table("strategies").select("id", "strategy_name").eq("strategy_status", "E").execute()
 
         strategies = []
         for row in result.data or []:
             strategies.append({
                 "id": row["id"],
-                "strategy_name": row.get("name", "Unnamed Strategy")
+                "strategy_name": row.get("strategy_name", "Unnamed Strategy")
             })
 
         logger.info(f"Found {len(strategies)} enabled strategies")

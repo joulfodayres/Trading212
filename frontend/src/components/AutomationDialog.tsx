@@ -70,26 +70,26 @@ export const AutomationDialog: React.FC<AutomationDialogProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-t212-bg-secondary rounded-lg shadow-lg max-w-md w-full mx-4 border border-t212-border">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-t212-bg-primary rounded-lg shadow-2xl max-w-md w-full mx-4 border-2 border-t212-primary">
         {/* Header */}
-        <div className="p-6 border-b border-t212-border">
+        <div className="p-6 border-b-2 border-t212-primary bg-t212-bg-secondary">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-t212-warning flex-shrink-0 mt-1" size={24} />
             <div>
-              <h3 className="text-lg font-semibold text-t212-primary">
+              <h3 className="text-lg font-bold text-t212-primary">
                 {type === 'enable' ? 'Ativar Automação' : 'Desativar Automação'}
               </h3>
-              <p className="text-sm text-t212-secondary mt-1">ISIN: {isin}</p>
+              <p className="text-sm text-t212-primary font-semibold mt-1">ISIN: {isin}</p>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 bg-t212-bg-primary">
           {type === 'enable' ? (
             <>
-              <p className="text-t212-primary text-sm">
+              <p className="text-t212-primary font-medium">
                 Escolhe a estratégia que queres associar a este ISIN:
               </p>
 
@@ -100,7 +100,7 @@ export const AutomationDialog: React.FC<AutomationDialogProps> = ({
                   value={selectedStrategy}
                   onChange={(e) => setSelectedStrategy(e.target.value)}
                   disabled={confirming}
-                  className="w-full px-3 py-2 bg-t212-bg-primary border border-t212-border rounded text-t212-primary focus:outline-none focus:border-t212-primary transition"
+                  className="w-full px-3 py-2 bg-t212-bg-secondary border-2 border-t212-primary rounded text-t212-primary focus:outline-none focus:border-t212-warning transition font-medium"
                 >
                   {strategies.map((strategy) => (
                     <option key={strategy.id} value={strategy.id}>
@@ -109,20 +109,20 @@ export const AutomationDialog: React.FC<AutomationDialogProps> = ({
                   ))}
                 </select>
               ) : (
-                <div className="p-3 bg-t212-hover rounded text-t212-secondary text-sm">
+                <div className="p-3 bg-t212-bg-secondary border border-t212-warning rounded text-t212-warning font-medium">
                   Nenhuma estratégia ativada disponível
                 </div>
               )}
             </>
           ) : (
-            <p className="text-t212-primary text-sm">
-              Tens a certeza que queres <strong>desativar a automação</strong> para este ISIN?
+            <p className="text-t212-primary font-medium">
+              Tens a certeza que queres <strong className="text-t212-warning">desativar a automação</strong> para este ISIN?
             </p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-t212-border flex gap-3 justify-end">
+        <div className="p-6 border-t-2 border-t212-primary bg-t212-bg-secondary flex gap-3 justify-end">
           <Button
             variant="secondary"
             size="md"
