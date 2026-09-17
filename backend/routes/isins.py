@@ -55,19 +55,6 @@ class ISINResponse(BaseModel):
     pnl_percent: float = 0.0
 
 
-class ISINConfigUpdate(BaseModel):
-    """Atualizar configurações de ISIN"""
-    automation_enabled: Optional[bool] = None
-    strategy_params: Optional[Dict[str, Any]] = None
-
-
-class ISINConfigResponse(BaseModel):
-    """Configuração de ISIN"""
-    isin: str
-    automation_enabled: bool
-    strategy_params: Dict[str, Any]
-
-
 class StrategyOption(BaseModel):
     """Opção de estratégia para seleção no dialog"""
     id: str
@@ -199,114 +186,6 @@ async def list_isins():
         )
 
 
-@router.put("/{isin}/config", response_model=ISINConfigResponse)
-async def update_isin_config(isin: str, data: ISINConfigUpdate):
-    """
-    PUT /api/isins/{isin}/config - Atualizar configurações de um ISIN
-
-    Permite mudar:
-    - automation_enabled: ativar/desativar automação
-    - strategy_params: parâmetros da estratégia
-    """
-    try:
-        logger.info(f"Updating config for ISIN: {isin}")
-
-        # Verificar se ISIN existe em T212
-        t212_client = get_t212_client()
-        positions = t212_client.get_positions()
-
-        isin_exists = any(
-            pos.get("instrument", {}).get("isin") == isin
-            for pos in positions
-        )
-
-        if not isin_exists:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ISIN {isin} não encontrado em T212"
-            )
-
-        # Preparar updates
-        updates = {}
-        if data.automation_enabled is not None:
-            updates["automation_enabled"] = data.automation_enabled
-        if data.strategy_params is not None:
-            updates["strategy_params"] = data.strategy_params
-
-        if not updates:
-            # Retornar config atual sem mudanças
-            try:
-                result = db.client.table("isin_config").select("*").eq("isin", isin).execute()
-                if result.data:
-                    config = result.data[0]
-                    return {
-                        "isin": isin,
-                        "automation_enabled": config.get("automation_enabled", False),
-                        "strategy_params": config.get("strategy_params", {})
-                    }
-            except:
-                pass
-
-            # Retornar defaults se não existe
-            return {
-                "isin": isin,
-                "automation_enabled": False,
-                "strategy_params": {}
-            }
-
-        # Fazer upsert (atualizar ou criar)
-        updates["isin"] = isin
-        db.client.table("isin_config").upsert(updates).execute()
-
-        logger.info(f"Config updated for ISIN: {isin}")
-
-        return {
-            "isin": isin,
-            "automation_enabled": updates.get("automation_enabled", False),
-            "strategy_params": updates.get("strategy_params", {})
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating ISIN config: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao atualizar configuração: {str(e)}"
-        )
-
-
-@router.get("/{isin}/config", response_model=ISINConfigResponse)
-async def get_isin_config(isin: str):
-    """
-    GET /api/isins/{isin}/config - Obter configurações de um ISIN
-    """
-    try:
-        result = db.client.table("isin_config").select("*").eq("isin", isin).execute()
-
-        if result.data:
-            config = result.data[0]
-            return {
-                "isin": isin,
-                "automation_enabled": config.get("automation_enabled", False),
-                "strategy_params": config.get("strategy_params", {})
-            }
-
-        # Retornar defaults se não existe
-        return {
-            "isin": isin,
-            "automation_enabled": False,
-            "strategy_params": {}
-        }
-
-    except Exception as e:
-        logger.error(f"Error getting ISIN config: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao obter configuração: {str(e)}"
-        )
-
-
 # ===== AUTOMATION ENDPOINTS =====
 
 @router.get("/strategies", response_model=List[StrategyOption])
@@ -397,11 +276,11 @@ async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
             # Validar strategy_id se fornecido
             if data.strategy_id:
                 try:
-                    strategy_result = db.client.table("strategies").select("id", "name").eq("id", data.strategy_id).execute()
+                    strategy_result = db.client.table("strategies").select("id", "strategy_name").eq("id", data.strategy_id).execute()
                     if strategy_result.data:
                         strategy_row = strategy_result.data[0]
                         strategy_id = data.strategy_id
-                        strategy_name = strategy_row.get("name", "Unknown")
+                        strategy_name = strategy_row.get("strategy_name", "Unknown")
                         logger.info(f"Strategy {strategy_id} ({strategy_name}) selected for automation")
                     else:
                         logger.warning(f"Strategy {data.strategy_id} not found")

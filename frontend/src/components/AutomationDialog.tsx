@@ -122,7 +122,7 @@ export const AutomationDialog: React.FC<AutomationDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t-2 border-t212-primary bg-t212-bg-secondary flex gap-3 justify-end">
+        <div className="p-6 border-t-2 border-t212-primary bg-black flex gap-3 justify-end">
           <Button
             variant="secondary"
             size="md"
