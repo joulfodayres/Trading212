@@ -44,26 +44,33 @@ npm run dev  # http://localhost:5173
 ### 🔴 Ler Primeiro (Phase 4 - API Analysis)
 | Ficheiro | Descrição |
 |----------|-----------|
-| **`docs/PHASE_4_SUMMARY.md`** | ⭐ Resumo executivo da análise T212 API |
-| **`docs/DOCUMENTATION_INDEX.md`** | 📑 Índice completo de toda documentação |
-| **`docs/T212_ORDERING_ASSUMPTION_WARNING.md`** | ⚠️ CRÍTICO: Assunção não documentada |
+| **`docs/QUICK_REFERENCE_PHASE4.md`** | ⭐ Quick start (2 min) |
+| **`docs/PHASE_4_SUMMARY.md`** | 📋 Resumo executivo |
+| **`docs/t212-api/ORDERING_WARNING.md`** | ⚠️ CRÍTICO validar |
 
 ### 📖 Documentação Completa
 | Ficheiro | Descrição |
 |----------|-----------|
-| **COMECA_AQUI.md** | Quick start + troubleshooting |
-| **CHECKLIST_FINAL.md** | Status Fase 2 + roadmap |
-| **INDEX.md** | Índice detalhado todos ficheiros |
-| **CLAUDE.md** | Arquitetura técnica + BD schema |
+| **`COMECA_AQUI.md`** | Quick start + troubleshooting |
+| **`CLAUDE.md`** | Arquitetura técnica + BD schema |
+| **`docs/README.md`** | Índice completo de docs |
+| **`docs/DOCUMENTATION_INDEX.md`** | Índice detalhado |
 
 ### 🔵 Phase 4 - T212 API (Detailed Analysis)
 | Ficheiro | Descrição |
 |----------|-----------|
-| **`docs/T212_API_ANALYSIS.md`** | Análise completa de todos endpoints |
-| **`docs/T212_HISTORY_ORDERS_PARAMS.md`** | Parâmetros GET /history/orders |
-| **`docs/T212_HISTORY_ORDERS_NO_DATE_FILTER.md`** | Limitação: sem filtro de data |
-| **`docs/T212_INCREMENTAL_SYNC_HOW_IT_WORKS.md`** | Estratégia sync incremental |
-| **`docs/T212_ORDER_HISTORY_BY_ID.md`** | Acesso a histórico ordem por ID |
+| **`docs/t212-api/API_ANALYSIS.md`** | Análise de todos endpoints |
+| **`docs/t212-api/HISTORY_ORDERS_PARAMS.md`** | Parâmetros com exemplos |
+| **`docs/t212-api/HISTORY_ORDERS_NO_DATE_FILTER.md`** | Limitações e workarounds |
+| **`docs/t212-api/INCREMENTAL_SYNC.md`** | Algoritmo + código Python |
+| **`docs/t212-api/ORDER_HISTORY_BY_ID.md`** | Acesso a histórico |
+
+### 📦 Documentação Anterior (Archive)
+| Localização | Descrição |
+|------------|-----------|
+| **`docs/_archive/phase-2/`** | Auth, CRUD, Deployment |
+| **`docs/_archive/phase-3/`** | Login fixes, ISIN updates |
+| **`docs/_archive/sessions/`** | Session reports |
 
 ---
 
