@@ -1,8 +1,12 @@
 """
 Modelos SQLAlchemy para a BD Supabase
 Simplificado para single-user (sem user_id)
+Phase 4: Grid Trading Automation
 """
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, DECIMAL, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import (
+    create_engine, Column, String, Boolean, DateTime, DECIMAL, ForeignKey,
+    JSON, UniqueConstraint, Integer, Float, CHAR
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -22,7 +26,7 @@ class User(Base):
 
 
 class ISIN(Base):
-    """Tabela de ISINs"""
+    """Tabela de ISINs - Instrumentos com dados sincronizados da API T212"""
     __tablename__ = "isins"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -32,6 +36,25 @@ class ISIN(Base):
     currency = Column(String, default="EUR")
     automation_enabled = Column(Boolean, default=False)
     strategy_id = Column(String)  # Referência a estratégia
+
+    # Campos sincronizados da API T212 (GET /equity/positions)
+    api_created_at = Column(DateTime)  # created_at da API (separado do local)
+    initial_trade = Column(Boolean, default=False)
+    trades_balance = Column(Integer, default=0)
+    average_price_paid = Column(Float)
+    current_price = Column(Float)
+    quantity = Column(Float, default=0)
+    quantity_available_for_trading = Column(Float, default=0)
+    quantity_in_pies = Column(Float, default=0)
+
+    # Wallet Impact (walletImpact da API)
+    wi_currency = Column(String)
+    wi_current_value = Column(Float)
+    wi_fx_impact = Column(Float)
+    wi_total_cost = Column(Float)
+    wi_unrealized_profit_loss = Column(Float)
+
+    # Timestamps locais
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -49,13 +72,17 @@ class Config(Base):
 
 
 class Strategy(Base):
-    """Tabela de estratégias"""
+    """Tabela de estratégias - Com suporte a Phase 4 Grid Trading"""
     __tablename__ = "strategies"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     strategy_name = Column(String, nullable=False, unique=True)
     strategy_desc = Column(String)
     strategy_status = Column(String, nullable=False, default="E")  # 'E'=Enabled, 'D'=Disabled
+
+    # Phase 4: Capital inicial da estratégia
+    initial_investment = Column(Float)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -108,6 +135,55 @@ class Log(Base):
     mensagem = Column(String)
     detalhes_json = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Order(Base):
+    """Tabela de ordens T212 - Phase 4 Grid Trading
+
+    Rastreia todas as ordens colocadas via Trading 212 API.
+    Campos sincronizados da API, com rastreamento local de automação.
+    """
+    __tablename__ = "orders"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    isin_id = Column(String, ForeignKey("isins.id", ondelete="CASCADE"), nullable=False)
+
+    # Campos da Order API T212
+    t212_order_id = Column(Integer, nullable=False)  # ID único na T212 API
+    ticker = Column(String, nullable=False)
+    instrument_isin = Column(String)
+    instrument_name = Column(String)
+    instrument_currency = Column(String)
+
+    # Tipo e quantidade
+    side = Column(String, nullable=False)  # 'BUY' ou 'SELL'
+    quantity = Column(Float, nullable=False)
+    filled_quantity = Column(Float, default=0)
+
+    # Tipo de ordem e status
+    type = Column(String, nullable=False)  # MARKET, LIMIT, STOP, STOP_LIMIT
+    status = Column(String, nullable=False)  # NEW, CONFIRMED, FILLED, PARTIALLY_FILLED, CANCELLED, REJECTED, UNCONFIRMED
+
+    # Preços (opcionais)
+    limit_price = Column(Float)
+    stop_price = Column(Float)
+
+    # Parâmetros adicionais
+    time_in_force = Column(String)  # DAY ou GOOD_TILL_CANCEL
+    initiated_from = Column(String)
+
+    # Timestamp da API T212
+    created_at = Column(DateTime, nullable=False)
+
+    # Automação Local (Phase 4)
+    automation_status = Column(CHAR(1), default='W')  # W=Watch, E=Executed, C=Canceled
+
+    # Relacionamento BUY ↔ SELL (sempre 1 de cada)
+    related_order_id = Column(String, ForeignKey("orders.id", ondelete="SET NULL"))
+
+    # Rastreamento local
+    synced_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class IsINStrategyHistory(Base):
