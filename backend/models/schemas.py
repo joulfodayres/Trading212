@@ -1,10 +1,32 @@
 """
 Schemas Pydantic para validação de requests/responses
 Simplificado para single-user (sem user_id)
+Phase 4: Grid Trading Automation
 """
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 from datetime import datetime
+
+
+class AppParametersResponse(BaseModel):
+    """Schema para resposta de parâmetros da app"""
+    scheduler_interval_seconds: int
+    scheduler_enabled: bool
+    grid_trading_enabled: bool
+    max_positions_per_isin: int
+    log_level: str
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AppParametersUpdate(BaseModel):
+    """Schema para atualizar parâmetros"""
+    scheduler_interval_seconds: Optional[int] = None
+    scheduler_enabled: Optional[bool] = None
+    grid_trading_enabled: Optional[bool] = None
+    log_level: Optional[str] = None
 
 
 class UserCreate(BaseModel):

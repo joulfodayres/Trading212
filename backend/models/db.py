@@ -15,6 +15,28 @@ import uuid
 Base = declarative_base()
 
 
+class AppParameters(Base):
+    """Tabela de parâmetros gerais da aplicação - Configuração do scheduler e automação"""
+    __tablename__ = "app_parameters"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # Scheduler configuration
+    scheduler_interval_seconds = Column(Integer, default=15)
+    scheduler_enabled = Column(Boolean, default=True)
+
+    # Grid trading configuration
+    grid_trading_enabled = Column(Boolean, default=True)
+    max_positions_per_isin = Column(Integer, default=5)
+
+    # Logging and monitoring
+    log_level = Column(String, default="INFO")
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class User(Base):
     """Tabela de utilizadores"""
     __tablename__ = "users"
