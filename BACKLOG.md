@@ -104,16 +104,30 @@
 
 ---
 
-### 6. 🏷️ Renomear Projetos no Render
+### 7. 📚 Knowledge Base + Claude.com Integration
 **Status:** TODO
 **Descrição:**
-- Renomear frontend: `trading212-1` → `Trading212-Frontend`
-- Renomear backend: `trading212-4ojx` → `Trading212-Backend`
-- Atualizar URLs em documentação
-- Verificar CORS e referências internas
+- Compilar toda documentação do projeto em Knowledge Base
+- Formato: markdown + structured data (JSON)
+- Criar ficheiro KB que pode ser usado em Claude.com
+- Permitir fazer perguntas sobre projeto (arquitetura, features, API, etc)
+- Manter KB sincronizada com mudanças (docs → KB pipeline)
 
-**Complexidade:** ⭐ Baixa
-**Tempo:** 15-30 min
+**Conteúdo KB:**
+- Architecture overview
+- Phase 1-4 completed features
+- Phase 5 backlog (5 items)
+- API endpoints (OpenAPI/Swagger)
+- Database schema (tabelas + relações)
+- Deployment architecture (Render + Supabase)
+- Code examples (backend + frontend)
+- Troubleshooting guide
+- Development workflows
+
+**Complexidade:** ⭐⭐ Média
+**Tempo:** 3-4h
+
+**Formato:** TXT ou PDF que possa fazer upload em Claude.com projects
 
 ---
 
@@ -122,13 +136,14 @@
 | Ordem | Item | Complexidade | Tempo (horas) | Dependências |
 |-------|------|-------------|--------------|-------------|
 | 0 | #6 - Renomear Render | ⭐ Baixa | 0.5h | Render dashboard |
+| 0.5 | #7 - Knowledge Base | ⭐⭐ Média | 3-4h | Compilação de docs |
 | 1 | #4 - Toggle ON/OFF | ⭐ Baixa | 2-3h | Backend endpoints simples |
 | 2 | #1 - Tabelas Parâmetros | ⭐⭐ Média | 4-6h | CRUD endpoints + UI |
 | 3 | #5 - Dialog Confirmação | ⭐⭐ Média | 3-4h | UI component + backend preview |
 | 4 | #2 - Upload Ficheiros | ⭐⭐⭐ Alta | 6-8h | Parser CSV + validação |
 | 5 | #3 - Gráficos & Stats | ⭐⭐⭐ Alta | 8-10h | Recharts + backend stats |
 
-**Total:** ~25-36 horas
+**Total:** ~28-40 horas
 
 ---
 
