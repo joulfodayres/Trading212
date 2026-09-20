@@ -25,7 +25,7 @@ export default function ISINTable() {
   const [loadingSync, setLoadingSync] = useState(false)
   const [loadingList, setLoadingList] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogType, setDialogType] = useState<'enable' | 'disable'>('enable')
+  const [dialogType, setDialogType] = useState<'enable' | 'disable' | 'edit'>('enable')
   const [selectedISIN, setSelectedISIN] = useState<ISIN | null>(null)
   const { toggleAutomation, loading: automationLoading } = useAutomation()
 

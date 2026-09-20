@@ -4,7 +4,7 @@ Phase 4: Grid Trading Automation
 """
 
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from pydantic import BaseModel
 
