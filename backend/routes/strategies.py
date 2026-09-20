@@ -43,13 +43,13 @@ class StrategyBase(BaseModel):
     """Base schema for strategy"""
     name: str
     description: Optional[str] = None
-    initial_investment: float
+    initial_investment: Optional[float] = None
     enabled: bool = False
 
 
 class StrategyCreate(StrategyBase):
-    """Create strategy request"""
-    pass
+    """Create strategy request - initial_investment is required"""
+    initial_investment: float  # Required on creation
 
 
 class StrategyUpdate(BaseModel):
