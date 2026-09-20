@@ -13,8 +13,6 @@ class AppParametersResponse(BaseModel):
     scheduler_interval_seconds: int
     scheduler_enabled: bool
     grid_trading_enabled: bool
-    max_positions_per_isin: int
-    log_level: str
     updated_at: datetime
 
     class Config:
@@ -26,7 +24,6 @@ class AppParametersUpdate(BaseModel):
     scheduler_interval_seconds: Optional[int] = None
     scheduler_enabled: Optional[bool] = None
     grid_trading_enabled: Optional[bool] = None
-    log_level: Optional[str] = None
 
 
 class UserCreate(BaseModel):

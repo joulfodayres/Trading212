@@ -27,10 +27,6 @@ class AppParameters(Base):
 
     # Grid trading configuration
     grid_trading_enabled = Column(Boolean, default=True)
-    max_positions_per_isin = Column(Integer, default=5)
-
-    # Logging and monitoring
-    log_level = Column(String, default="INFO")
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
