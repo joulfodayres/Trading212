@@ -4,7 +4,6 @@ import { Mail, Lock, UserPlus } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { useToast } from '../components/ui/Toast'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -15,7 +14,6 @@ export default function RegisterPage() {
   const [passwordConfirmError, setPasswordConfirmError] = useState('')
   const navigate = useNavigate()
   const { register, isLoading, error, clearError } = useAuthStore()
-  const toast = useToast()
 
   useEffect(() => {
     // Clear error when user starts typing
@@ -65,11 +63,11 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, passwordConfirm)
-      toast.success('Account created successfully! Redirecting...')
+      console.log('[RegisterPage] Account created successfully, redirecting')
       navigate('/dashboard')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error creating account'
-      toast.error(message)
+      console.error('[RegisterPage] Account creation error:', message)
     }
   }
 

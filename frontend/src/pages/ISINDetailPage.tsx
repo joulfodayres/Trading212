@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { useToast } from '../components/ui/Toast'
 import { apiClient } from '../api/client'
 
 interface ISINDetail {
@@ -36,7 +35,6 @@ export default function ISINDetailPage() {
   const [loading, setLoading] = useState(true)
   const [isin, setIsin] = useState<ISINDetail | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
-  const toast = useToast()
 
   useEffect(() => {
     loadISINDetail()
@@ -62,8 +60,7 @@ export default function ISINDetailPage() {
       }
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Erro ao carregar detalhes do ISIN'
-      toast.error(message)
-      console.error('Erro:', error)
+      console.error('Erro:', message, error)
     } finally {
       setLoading(false)
     }

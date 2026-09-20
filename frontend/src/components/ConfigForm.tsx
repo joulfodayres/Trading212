@@ -3,7 +3,6 @@ import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card'
-import { useToast } from './ui/Toast'
 import { apiClient } from '../api/client'
 
 export const ConfigForm = () => {
@@ -15,11 +14,10 @@ export const ConfigForm = () => {
   const [loading, setLoading] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
-  const toast = useToast()
 
   const handleSave = async () => {
     if (!apiKey || !apiSecret) {
-      toast.error('Please fill in API Key and API Secret')
+      console.warn('[ConfigForm] Missing API Key or API Secret')
       return
     }
 
@@ -31,13 +29,13 @@ export const ConfigForm = () => {
         t212_environment: environment
       })
 
-      toast.success('Configuration saved successfully!')
+      console.log('[ConfigForm] Configuration saved successfully')
       // Clear fields (don't show credentials)
       setApiKey('')
       setApiSecret('')
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error saving configuration'
-      toast.error(message)
+      console.error('[ConfigForm] Error saving configuration:', message)
     } finally {
       setLoading(false)
     }
@@ -49,11 +47,11 @@ export const ConfigForm = () => {
     try {
       const response = await apiClient.post('/config/test')
       setTestResult({ success: true, data: response.data })
-      toast.success('Connection successful!')
+      console.log('[ConfigForm] Connection test successful')
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error testing connection'
       setTestResult({ success: false, error: message })
-      toast.error(message)
+      console.error('[ConfigForm] Connection test failed:', message)
     } finally {
       setTesting(false)
     }

@@ -3,7 +3,6 @@ import { Settings } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
-import { useToast } from '../components/ui/Toast'
 import { apiClient } from '../api/client'
 import { ConfigForm } from '../components/ConfigForm'
 
@@ -12,7 +11,6 @@ export default function ConfigPage() {
   const [intervalInput, setIntervalInput] = useState<string>('15')
   const [loading, setLoading] = useState(false)
   const [loadingInterval, setLoadingInterval] = useState(true)
-  const toast = useToast()
 
   // Fetch current scheduler interval on mount
   useEffect(() => {
@@ -29,7 +27,6 @@ export default function ConfigPage() {
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error loading scheduler interval'
       console.error('[ConfigPage] Error fetching interval:', message)
-      toast.error(message)
       // Keep current values on error
     } finally {
       setLoadingInterval(false)
@@ -40,7 +37,7 @@ export default function ConfigPage() {
     const interval = parseInt(intervalInput)
 
     if (isNaN(interval) || interval < 5 || interval > 3600) {
-      toast.error('Interval must be between 5 and 3600 seconds')
+      console.warn('[ConfigPage] Invalid interval:', interval)
       return
     }
 
@@ -50,11 +47,10 @@ export default function ConfigPage() {
         scheduler_interval_seconds: interval
       })
       setSchedulerInterval(interval)
-      toast.success('Scheduler interval updated successfully!')
+      console.log('[ConfigPage] Scheduler interval saved:', interval)
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error saving interval'
       console.error('[ConfigPage] Error saving interval:', message)
-      toast.error(message)
       // Reset input on error
       setIntervalInput(String(schedulerInterval))
     } finally {

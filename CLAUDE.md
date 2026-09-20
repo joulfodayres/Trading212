@@ -528,6 +528,23 @@ ID: ab1036ff-937d-46e5-8f5b-bab07f1fb100
 
 ---
 
+## 🎨 UI/UX Requirements
+
+### **No Toast Notifications**
+- ❌ **DO NOT** show success/error popup messages (toast notifications)
+- ❌ No top-right corner notifications (e.g., "Scheduler interval updated successfully!")
+- ✅ All actions should be **silent**
+- ✅ Keep error handling and logging to console for debugging
+- ✅ User can see UI state changes indicate success (e.g., value changed, button disabled → enabled)
+
+**Implementation Notes:**
+- Removed all `toast.success()` and `toast.error()` calls from frontend
+- Errors are logged to browser console for debugging: `console.error('[ComponentName] Error message')`
+- Success actions are logged to browser console: `console.log('[ComponentName] Success message')`
+- Form validation errors are shown inline with form fields, not as toast popups
+
+---
+
 ## 📦 Dependencies
 
 ### **Backend (Python)**

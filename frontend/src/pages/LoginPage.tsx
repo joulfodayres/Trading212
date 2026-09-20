@@ -4,7 +4,6 @@ import { Mail, Lock, LogIn } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { useToast } from '../components/ui/Toast'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -13,7 +12,6 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate()
   const { login, isLoading, error, clearError } = useAuthStore()
-  const toast = useToast()
 
   useEffect(() => {
     // Clear error when user starts typing
@@ -53,7 +51,6 @@ export default function LoginPage() {
       console.log('[LoginPage] Attempting login with email:', email)
       await login(email, password)
       console.log('[LoginPage] Login successful, navigating to dashboard')
-      toast.success('Login successful!')
       navigate('/dashboard')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login error'
@@ -62,7 +59,6 @@ export default function LoginPage() {
         error: err,
         errorString: String(err)
       })
-      toast.error(message)
       // Keep error visible for 5 seconds
       setTimeout(() => {
         clearError()
