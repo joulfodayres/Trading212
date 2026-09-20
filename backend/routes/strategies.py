@@ -113,14 +113,19 @@ async def list_strategies():
 
         strategies = []
         for row in result.data or []:
-            logger.info(f"[DEBUG] Processing row: id={row.get('id')}, name='{row.get('name')}', desc='{row.get('description')}'")
+            logger.info(f"[DEBUG] Processing row: id={row.get('id')}, name='{row.get('strategy_name')}', desc='{row.get('strategy_desc')}'")
             is_valid = _check_strategy_valid(db, row["id"])
+
+            # Map DB columns to API response
+            strategy_status = row.get("strategy_status", "D")  # D = disabled, E = enabled
+            enabled = strategy_status == "E"
+
             strategies.append({
                 "id": row["id"],
-                "name": row.get("name", "") or "",
-                "description": row.get("description") or None,
-                "initial_investment": row.get("initial_investment", 0),
-                "enabled": row.get("enabled", False),
+                "name": row.get("strategy_name") or "",
+                "description": row.get("strategy_desc") or None,
+                "initial_investment": row.get("initial_investment"),
+                "enabled": enabled,
                 "is_valid": is_valid,
                 "created_at": row.get("created_at"),
                 "updated_at": row.get("updated_at")
@@ -159,10 +164,10 @@ async def get_strategy(strategy_id: str):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", "") or "",
-            "description": strategy.get("description") or None,
-            "initial_investment": strategy.get("initial_investment", 0),
-            "enabled": strategy.get("enabled", False),
+            "name": strategy.get("strategy_name") or "",
+            "description": strategy.get("strategy_desc") or None,
+            "initial_investment": strategy.get("initial_investment"),
+            "enabled": strategy.get("strategy_status") == "E",
             "is_valid": is_valid,
             "created_at": strategy.get("created_at"),
             "updated_at": strategy.get("updated_at"),
@@ -187,12 +192,10 @@ async def create_strategy(data: StrategyCreate):
         logger.info(f"Creating strategy: {data.name}...")
 
         strategy_data = {
-            "name": data.name,
-            "description": data.description,
+            "strategy_name": data.name,
+            "strategy_desc": data.description,
             "initial_investment": data.initial_investment,
-            "enabled": False,  # Always start disabled
-            "created_at": "now()",
-            "updated_at": "now()"
+            "strategy_status": "D",  # Always start disabled (D = disabled)
         }
 
         result = db.client.table("strategies").insert(strategy_data).execute()
@@ -205,10 +208,10 @@ async def create_strategy(data: StrategyCreate):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", "") or "",
-            "description": strategy.get("description") or None,
-            "initial_investment": strategy.get("initial_investment", 0),
-            "enabled": strategy.get("enabled", False),
+            "name": strategy.get("strategy_name") or "",
+            "description": strategy.get("strategy_desc") or None,
+            "initial_investment": strategy.get("initial_investment"),
+            "enabled": strategy.get("strategy_status") == "E",
             "is_valid": False,  # New strategy has no params yet
             "created_at": strategy.get("created_at"),
             "updated_at": strategy.get("updated_at")
@@ -247,15 +250,15 @@ async def update_strategy(strategy_id: str, data: StrategyUpdate):
                 )
 
         # Build update data
-        update_data = {"updated_at": "now()"}
+        update_data = {}
         if data.name is not None:
-            update_data["name"] = data.name
+            update_data["strategy_name"] = data.name
         if data.description is not None:
-            update_data["description"] = data.description
+            update_data["strategy_desc"] = data.description
         if data.initial_investment is not None:
             update_data["initial_investment"] = data.initial_investment
         if data.enabled is not None:
-            update_data["enabled"] = data.enabled
+            update_data["strategy_status"] = "E" if data.enabled else "D"
 
         result = db.client.table("strategies").update(update_data).eq("id", strategy_id).execute()
 
@@ -269,10 +272,10 @@ async def update_strategy(strategy_id: str, data: StrategyUpdate):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", "") or "",
-            "description": strategy.get("description") or None,
-            "initial_investment": strategy.get("initial_investment", 0),
-            "enabled": strategy.get("enabled", False),
+            "name": strategy.get("strategy_name") or "",
+            "description": strategy.get("strategy_desc") or None,
+            "initial_investment": strategy.get("initial_investment"),
+            "enabled": strategy.get("strategy_status") == "E",
             "is_valid": is_valid,
             "created_at": strategy.get("created_at"),
             "updated_at": strategy.get("updated_at")
