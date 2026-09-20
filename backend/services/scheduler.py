@@ -47,10 +47,16 @@ class SchedulerService:
 
             # Wrapper for async run_cycle (APScheduler runs sync jobs only)
             def run_cycle_wrapper():
-                """Wrapper to run async function in sync context"""
+                """Wrapper to run async function in sync context from scheduler background thread"""
                 import asyncio
                 try:
-                    asyncio.run(self.automation_engine.run_cycle())
+                    # APScheduler runs this in a background thread, so we can safely create a new event loop
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        loop.run_until_complete(self.automation_engine.run_cycle())
+                    finally:
+                        loop.close()
                 except Exception as e:
                     self.logger.error(f"❌ Erro ao executar ciclo: {e}", exc_info=True)
 
