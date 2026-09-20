@@ -65,6 +65,7 @@ class AutomationToggleRequest(BaseModel):
     """Request para alternar automação"""
     automation_enabled: bool
     strategy_id: Optional[str] = None
+    initial_investment: Optional[float] = None
 
 
 class AutomationUpdateResponse(BaseModel):
@@ -73,6 +74,7 @@ class AutomationUpdateResponse(BaseModel):
     automation_enabled: bool
     strategy_id: Optional[str] = None
     strategy_name: Optional[str] = None
+    initial_investment: Optional[float] = None
 
 
 # ===== HELPERS =====
@@ -433,6 +435,11 @@ async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
             "updated_at": "now()"
         }
 
+        # Adicionar initial_investment se fornecido
+        if data.initial_investment is not None:
+            isin_data["initial_investment"] = data.initial_investment
+            logger.info(f"Setting initial_investment={data.initial_investment} for ISIN {isin_id}")
+
         # Tentar encontrar ISIN existente
         existing_result = db.client.table("isins").select("id").eq("isin", isin_id).execute()
 
@@ -471,7 +478,8 @@ async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
             "isin_id": isin_row_id,
             "automation_enabled": data.automation_enabled,
             "strategy_id": strategy_id,
-            "strategy_name": strategy_name
+            "strategy_name": strategy_name,
+            "initial_investment": data.initial_investment
         }
 
         logger.info(f"Automation toggle completed for ISIN {isin_id}: {response}")

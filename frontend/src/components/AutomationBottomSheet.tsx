@@ -10,9 +10,9 @@ interface Strategy {
 
 interface AutomationBottomSheetProps {
   isOpen: boolean
-  type: 'enable' | 'disable'
+  type: 'enable' | 'disable' | 'edit'
   isin: string
-  onConfirm: (strategyId?: string) => Promise<void>
+  onConfirm: (strategyId?: string, initialInvestment?: number) => Promise<void>
   onCancel: () => void
 }
 
@@ -25,12 +25,13 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 }) => {
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
+  const [initialInvestment, setInitialInvestment] = useState<string>('')
   const [loadingStrategies, setLoadingStrategies] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
-  // Load enabled strategies when sheet opens for enable
+  // Load enabled strategies when sheet opens for enable or edit
   useEffect(() => {
-    if (isOpen && type === 'enable') {
+    if (isOpen && (type === 'enable' || type === 'edit')) {
       loadStrategies()
     }
   }, [isOpen, type])
@@ -51,13 +52,17 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
   }
 
   const handleConfirm = async () => {
-    if (type === 'enable' && !selectedStrategy) {
+    if ((type === 'enable' || type === 'edit') && !selectedStrategy) {
       return
     }
 
     setConfirming(true)
     try {
-      await onConfirm(type === 'enable' ? selectedStrategy : undefined)
+      const investment = type === 'edit' || type === 'enable' ? parseFloat(initialInvestment) || undefined : undefined
+      await onConfirm(
+        (type === 'enable' || type === 'edit') ? selectedStrategy : undefined,
+        investment
+      )
     } finally {
       setConfirming(false)
     }
@@ -85,7 +90,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-t212-primary">
-                  {type === 'enable' ? 'Ativar Automação' : 'Desativar Automação'}
+                  {type === 'enable' ? 'Ativar Automação' : type === 'edit' ? 'Editar Automação' : 'Desativar Automação'}
                 </h3>
                 <p className="text-xs text-t212-secondary font-medium mt-0.5">
                   {isin}
@@ -103,8 +108,9 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 
           {/* Content */}
           <div className="px-6 py-6">
-            {type === 'enable' ? (
-              <div className="space-y-4">
+            {type === 'enable' || type === 'edit' ? (
+              <div className="space-y-5">
+                {/* Strategy Selection */}
                 <div>
                   <label className="block text-sm font-semibold text-t212-primary mb-3">
                     Escolhe a estratégia:
@@ -130,6 +136,24 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
                       Nenhuma estratégia disponível
                     </div>
                   )}
+                </div>
+
+                {/* Initial Investment */}
+                <div>
+                  <label className="block text-sm font-semibold text-t212-primary mb-3">
+                    Investimento Inicial (EUR):
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Ex: 10.00"
+                    value={initialInvestment}
+                    onChange={(e) => setInitialInvestment(e.target.value)}
+                    disabled={confirming}
+                    className="w-full px-4 py-3 bg-t212-bg-secondary border-2 border-t212-primary rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning focus:border-transparent transition font-medium placeholder-t212-secondary"
+                  />
                 </div>
               </div>
             ) : (
@@ -164,11 +188,11 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
               disabled={
                 confirming ||
                 loadingStrategies ||
-                (type === 'enable' && strategies.length === 0)
+                ((type === 'enable' || type === 'edit') && strategies.length === 0)
               }
               className="flex-1"
             >
-              Confirmar
+              {type === 'edit' ? 'Guardar Mudanças' : 'Confirmar'}
             </Button>
           </div>
         </div>

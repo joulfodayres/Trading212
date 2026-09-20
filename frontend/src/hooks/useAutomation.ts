@@ -6,18 +6,42 @@ interface AutomationConfig {
   automation_enabled: boolean
   strategy_id: string | null
   strategy_name: string | null
+  initial_investment?: number
+}
+
+interface Strategy {
+  id: string
+  strategy_name: string
 }
 
 export const useAutomation = () => {
   const [loading, setLoading] = useState(false)
+  const [strategies, setStrategies] = useState<Strategy[]>([])
+
+  const fetchStrategies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/isins/strategies')
+      setStrategies(response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('Erro ao buscar estratégias:', error)
+      return []
+    }
+  }, [])
 
   const toggleAutomation = useCallback(
-    async (isin: string, automationEnabled: boolean, strategyId?: string): Promise<AutomationConfig | null> => {
+    async (
+      isin: string,
+      automationEnabled: boolean,
+      strategyId?: string,
+      initialInvestment?: number
+    ): Promise<AutomationConfig | null> => {
       setLoading(true)
       try {
         const response = await apiClient.put(`/isins/${isin}/automation`, {
           automation_enabled: automationEnabled,
-          strategy_id: strategyId || null
+          strategy_id: strategyId || null,
+          initial_investment: initialInvestment || null
         })
 
         return response.data
@@ -33,6 +57,8 @@ export const useAutomation = () => {
 
   return {
     toggleAutomation,
+    fetchStrategies,
+    strategies,
     loading
   }
 }

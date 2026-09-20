@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, Edit2 } from 'lucide-react'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
 import { AutomationBottomSheet } from './AutomationBottomSheet'
@@ -86,13 +86,21 @@ export default function ISINTable() {
     }
   }
 
-  async function handleDialogConfirm(strategyId?: string) {
+  // Handler para abrir dialog de edição (clique no edit icon)
+  async function handleEditAutomation(isin: ISIN) {
+    setSelectedISIN(isin)
+    setDialogType('edit')
+    setDialogOpen(true)
+  }
+
+  async function handleDialogConfirm(strategyId?: string, initialInvestment?: number) {
     if (!selectedISIN) return
 
     const result = await toggleAutomation(
       selectedISIN.isin,
-      dialogType === 'enable',
-      strategyId
+      dialogType !== 'disable',
+      strategyId,
+      initialInvestment
     )
 
     if (result) {
@@ -170,6 +178,7 @@ export default function ISINTable() {
                 <th>P&L</th>
                 <th>Automação</th>
                 <th>Estratégia</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -234,6 +243,17 @@ export default function ISINTable() {
                       </span>
                     ) : (
                       <span className="text-t212-muted text-sm">-</span>
+                    )}
+                  </td>
+                  <td>
+                    {isin.automation_enabled && (
+                      <button
+                        onClick={() => handleEditAutomation(isin)}
+                        className="text-t212-secondary hover:text-t212-primary transition-colors"
+                        title="Editar automação"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                     )}
                   </td>
                 </tr>
