@@ -89,13 +89,20 @@ async def enable_global_automation():
 
         logger.info("Enabling global automation...")
 
-        # Update app_parameters (singleton table - filter by 1=1 or limit 1)
-        result = db.client.table("app_parameters").update({
+        # Get the singleton row first
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+
+        param_id = result.data[0]["id"]
+
+        # Update with WHERE clause
+        update_result = db.client.table("app_parameters").update({
             "grid_trading_enabled": True,
             "updated_at": "now()"
-        }).limit(1).execute()
+        }).eq("id", param_id).execute()
 
-        if result.data:
+        if update_result.data:
             logger.info("✅ Global automation enabled")
             return {
                 "success": True,
@@ -122,13 +129,20 @@ async def disable_global_automation():
 
         logger.info("Disabling global automation...")
 
-        # Update app_parameters (singleton table - filter by 1=1 or limit 1)
-        result = db.client.table("app_parameters").update({
+        # Get the singleton row first
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+
+        param_id = result.data[0]["id"]
+
+        # Update with WHERE clause
+        update_result = db.client.table("app_parameters").update({
             "grid_trading_enabled": False,
             "updated_at": "now()"
-        }).limit(1).execute()
+        }).eq("id", param_id).execute()
 
-        if result.data:
+        if update_result.data:
             logger.info("✅ Global automation disabled")
             return {
                 "success": True,
