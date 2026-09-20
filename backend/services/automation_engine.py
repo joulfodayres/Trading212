@@ -137,11 +137,8 @@ class AutomationEngine:
                 return
 
             # Load strategy parameters for current position (trades_balance)
-            params = (
-                self.db_session.query(StrategyParameters)
-                .filter_by(strategy_id=strategy.id, pos=str(isin.trades_balance))
-                .first()
-            )
+            params = self._get_strategy_parameters(strategy.id, isin.trades_balance)
+
             if not params:
                 self.logger.warning(
                     f"Parâmetros não encontrados para {isin.ticker} pos={isin.trades_balance}"
@@ -374,11 +371,8 @@ class AutomationEngine:
                 return
 
             # Load new parameters for new trades_balance position
-            params = (
-                self.db_session.query(StrategyParameters)
-                .filter_by(strategy_id=strategy.id, pos=str(isin.trades_balance))
-                .first()
-            )
+            params = self._get_strategy_parameters(strategy.id, isin.trades_balance)
+
             if not params:
                 self.logger.warning(
                     f"Parâmetros não encontrados para {isin.ticker} pos={isin.trades_balance}"
@@ -446,6 +440,116 @@ class AutomationEngine:
     # =========================================================================
     # HELPER METHODS
     # =========================================================================
+
+    def _get_strategy_parameters(self, strategy_id: str, trades_balance: int) -> Optional[StrategyParameters]:
+        """
+        Buscar strategy_parameters com fallback inteligente.
+
+        Lógica:
+        1. Tenta buscar exata: pos = trades_balance
+        2. Se não encontrar:
+           - Se trades_balance positivo: busca máximo pos <= trades_balance
+           - Se trades_balance negativo: busca mínimo pos >= trades_balance
+
+        Significado: A última 'pos' colocada (extremo) é usada mesmo que trades_balance ultrapasse.
+        """
+        try:
+            # Step 1: Tentar exato
+            params = (
+                self.db_session.query(StrategyParameters)
+                .filter_by(strategy_id=strategy_id, pos=str(trades_balance))
+                .first()
+            )
+
+            if params:
+                self.logger.debug(
+                    f"Strategy parameters encontrados exato: pos={trades_balance}"
+                )
+                return params
+
+            # Step 2: Fallback baseado na direção
+            all_params = (
+                self.db_session.query(StrategyParameters)
+                .filter_by(strategy_id=strategy_id)
+                .all()
+            )
+
+            if not all_params:
+                self.logger.warning(
+                    f"Nenhuns strategy_parameters encontrados para strategy={strategy_id}"
+                )
+                return None
+
+            # Converter pos strings para ints
+            params_list = []
+            for p in all_params:
+                try:
+                    pos_int = int(p.pos)
+                    params_list.append((pos_int, p))
+                except (ValueError, TypeError):
+                    self.logger.warning(f"Pos inválida: {p.pos}, ignorando")
+                    continue
+
+            if not params_list:
+                return None
+
+            # Selecionar baseado em trades_balance
+            if trades_balance > 0:
+                # Positivo: buscar máximo pos <= trades_balance
+                valid = [p for p in params_list if p[0] <= trades_balance]
+                if valid:
+                    valid.sort(key=lambda x: x[0], reverse=True)
+                    selected = valid[0][1]
+                    self.logger.debug(
+                        f"Strategy parameters fallback (positivo): pos={trades_balance} → pos={valid[0][0]}"
+                    )
+                    return selected
+                else:
+                    # Nenhum <= trades_balance, usar o máximo negativo/zero disponível
+                    params_list.sort(key=lambda x: x[0], reverse=True)
+                    selected = params_list[0][1]
+                    self.logger.debug(
+                        f"Strategy parameters fallback (positivo, nenhum válido): pos={trades_balance} → pos={params_list[0][0]}"
+                    )
+                    return selected
+
+            elif trades_balance < 0:
+                # Negativo: buscar mínimo pos >= trades_balance
+                valid = [p for p in params_list if p[0] >= trades_balance]
+                if valid:
+                    valid.sort(key=lambda x: x[0])
+                    selected = valid[0][1]
+                    self.logger.debug(
+                        f"Strategy parameters fallback (negativo): pos={trades_balance} → pos={valid[0][0]}"
+                    )
+                    return selected
+                else:
+                    # Nenhum >= trades_balance, usar o mínimo positivo/zero disponível
+                    params_list.sort(key=lambda x: x[0])
+                    selected = params_list[0][1]
+                    self.logger.debug(
+                        f"Strategy parameters fallback (negativo, nenhum válido): pos={trades_balance} → pos={params_list[0][0]}"
+                    )
+                    return selected
+
+            else:  # trades_balance == 0
+                # Zero: buscar exato pos=0
+                for pos_int, param in params_list:
+                    if pos_int == 0:
+                        self.logger.debug("Strategy parameters encontrados: pos=0")
+                        return param
+
+                # Se não existir pos=0, usar o mais próximo
+                params_list.sort(key=lambda x: abs(x[0]))
+                selected = params_list[0][1]
+                self.logger.debug(
+                    f"Strategy parameters fallback (zero): pos=0 não existe → pos={params_list[0][0]}"
+                )
+                return selected
+
+        except Exception as e:
+            self.logger.error(f"Erro buscando strategy_parameters: {e}", exc_info=True)
+            return None
 
     def _create_order_from_response(
         self,
