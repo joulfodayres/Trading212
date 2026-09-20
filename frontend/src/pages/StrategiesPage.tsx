@@ -326,13 +326,15 @@ export default function StrategiesPage() {
                     placeholder="Name"
                     value={strategyForm.name}
                     onChange={(e) => setStrategyForm({ ...strategyForm, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    style={{ color: '#000000' }}
                   />
                   <textarea
                     placeholder="Description"
                     value={strategyForm.description}
                     onChange={(e) => setStrategyForm({ ...strategyForm, description: e.target.value })}
-                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    style={{ color: '#000000' }}
                     rows={3}
                   />
                   <input
@@ -340,7 +342,8 @@ export default function StrategiesPage() {
                     placeholder="Initial Investment (EUR)"
                     value={strategyForm.initial_investment ?? ''}
                     onChange={(e) => setStrategyForm({ ...strategyForm, initial_investment: e.target.value ? parseFloat(e.target.value) : null })}
-                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                    style={{ color: '#000000' }}
                   />
                 </div>
                 <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
