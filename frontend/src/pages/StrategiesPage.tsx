@@ -49,7 +49,7 @@ export default function StrategiesPage() {
   const [strategyForm, setStrategyForm] = useState({
     name: '',
     description: '',
-    initial_investment: 0,
+    initial_investment: null as number | null,
   })
 
   const [strategyEditForm, setStrategyEditForm] = useState({
@@ -111,16 +111,40 @@ export default function StrategiesPage() {
   }
 
   const handleCreateStrategy = async () => {
-    if (!strategyForm.name.trim()) return
+    // Validation
+    if (!strategyForm.name.trim()) {
+      console.warn('[handleCreateStrategy] Name is required')
+      return
+    }
+
+    if (!strategyForm.initial_investment || strategyForm.initial_investment <= 0) {
+      console.warn('[handleCreateStrategy] Initial investment must be > 0')
+      return
+    }
+
+    // Check for duplicate names
+    const duplicateExists = strategies.some(
+      s => s.name && s.name.toLowerCase().trim() === strategyForm.name.toLowerCase().trim()
+    )
+    if (duplicateExists) {
+      console.warn('[handleCreateStrategy] Strategy with this name already exists')
+      return
+    }
 
     try {
-      const response = await apiClient.post('/v1/strategies', strategyForm)
+      console.log('[handleCreateStrategy] Creating strategy:', strategyForm)
+      const response = await apiClient.post('/v1/strategies', {
+        name: strategyForm.name.trim(),
+        description: strategyForm.description.trim() || null,
+        initial_investment: strategyForm.initial_investment,
+      })
+      console.log('[handleCreateStrategy] Success, response:', response.data)
       setStrategies([...strategies, response.data])
-      setStrategyForm({ name: '', description: '', initial_investment: 0 })
+      setStrategyForm({ name: '', description: '', initial_investment: null })
       setShowCreateStrategy(false)
       loadStrategies()
     } catch (error) {
-      console.error('Error creating strategy:', error)
+      console.error('[handleCreateStrategy] Error:', error)
     }
   }
 
@@ -239,54 +263,51 @@ export default function StrategiesPage() {
                 {strategies.map((strategy) => {
                   const name = strategy.name && strategy.name.trim() ? strategy.name.trim() : null
                   const description = strategy.description && strategy.description.trim() && strategy.description !== 'None' ? strategy.description.trim() : null
-                  const hasValidData = name || description
 
                   console.log('[StrategiesPage] Rendering strategy:', {
                     id: strategy.id,
                     name,
                     description,
-                    hasValidData,
                     enabled: strategy.enabled,
                     is_valid: strategy.is_valid
                   })
 
-                  // Skip strategies without name or description
-                  if (!hasValidData) {
-                    return null
-                  }
+                  // Show strategy if it has name OR description (at least one)
+                  const shouldShow = name || description
 
                   return (
-                  <button
-                    key={strategy.id}
-                    onClick={() => handleStrategyClick(strategy)}
-                    className="w-full p-4 rounded-lg border border-t212-border hover:border-t212-primary hover:bg-t212-hover transition flex items-center justify-between"
-                  >
-                    <div className="flex-1 text-left">
-                      {name && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-t212-primary">
-                            {name}
-                          </h3>
-                        </div>
-                      )}
-                      {description && (
-                        <p className="text-sm text-t212-secondary mb-1">{description}</p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${strategy.enabled ? 'text-t212-success' : 'text-t212-muted'}`}>
-                          {strategy.enabled ? '🟢 Active' : '🔴 Inactive'}
-                        </span>
-                        {!strategy.is_valid && (
-                          <span className="text-xs text-t212-warning flex items-center gap-1">
-                            <AlertCircle size={12} /> Missing parameters
-                          </span>
+                    <button
+                      key={strategy.id}
+                      onClick={() => handleStrategyClick(strategy)}
+                      className="w-full p-4 rounded-lg border border-t212-border hover:border-t212-primary hover:bg-t212-hover transition flex items-center justify-between"
+                      style={{ display: shouldShow ? 'flex' : 'none' }}
+                    >
+                      <div className="flex-1 text-left">
+                        {name && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-t212-primary">
+                              {name}
+                            </h3>
+                          </div>
                         )}
+                        {description && (
+                          <p className="text-sm text-t212-secondary mb-1">{description}</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold ${strategy.enabled ? 'text-t212-success' : 'text-t212-muted'}`}>
+                            {strategy.enabled ? '🟢 Active' : '🔴 Inactive'}
+                          </span>
+                          {!strategy.is_valid && (
+                            <span className="text-xs text-t212-warning flex items-center gap-1">
+                              <AlertCircle size={12} /> Missing parameters
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight size={20} className="text-t212-secondary" />
-                  </button>
+                      <ChevronRight size={20} className="text-t212-secondary" />
+                    </button>
                   )
-                })}
+                }).filter(Boolean)}
               </div>
             ) : (
               <p className="text-t212-secondary text-center py-8">No strategies created</p>
@@ -321,8 +342,8 @@ export default function StrategiesPage() {
                   <input
                     type="number"
                     placeholder="Initial Investment (EUR)"
-                    value={strategyForm.initial_investment}
-                    onChange={(e) => setStrategyForm({ ...strategyForm, initial_investment: parseFloat(e.target.value) })}
+                    value={strategyForm.initial_investment ?? ''}
+                    onChange={(e) => setStrategyForm({ ...strategyForm, initial_investment: e.target.value ? parseFloat(e.target.value) : null })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                   />
                 </div>
@@ -339,7 +360,7 @@ export default function StrategiesPage() {
                     variant="primary"
                     size="md"
                     onClick={handleCreateStrategy}
-                    disabled={!strategyForm.name.trim()}
+                    disabled={!strategyForm.name.trim() || !strategyForm.initial_investment || strategyForm.initial_investment <= 0}
                     className="flex-1"
                   >
                     Create
