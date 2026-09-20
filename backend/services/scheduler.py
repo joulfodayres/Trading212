@@ -77,18 +77,28 @@ class SchedulerService:
 
     async def _get_scheduler_interval(self) -> int:
         """
-        Read scheduler interval from app_parameters table.
+        Read scheduler interval from app_parameters table (Supabase).
         Falls back to 15 seconds if error.
         """
         try:
-            from models.db import AppParameters
+            from db.supabase_client import get_db
 
-            result = self.db_session.query(AppParameters).first()
-            if result and result.scheduler_interval_seconds >= 5:
-                return result.scheduler_interval_seconds
+            db = get_db()
+            result = db.client.table("app_parameters").select("scheduler_interval_seconds").execute()
+
+            if result.data and len(result.data) > 0:
+                interval = result.data[0].get("scheduler_interval_seconds", 15)
+                if interval >= 5:
+                    self.logger.info(f"[DEBUG] Loaded scheduler interval from BD: {interval}s")
+                    return interval
+                else:
+                    self.logger.warning(
+                        f"Intervalo inválido na BD ({interval}), usando 15s default"
+                    )
+                    return 15
             else:
                 self.logger.warning(
-                    "app_parameters não encontrada ou intervalo inválido, usando 15s"
+                    "app_parameters não encontrada na BD, usando 15s default"
                 )
                 return 15
 
@@ -113,17 +123,30 @@ class SchedulerService:
             raise ValueError("Intervalo mínimo é 5 segundos")
 
         try:
-            from models.db import AppParameters
+            from db.supabase_client import get_db
 
-            # Update database
-            param = self.db_session.query(AppParameters).first()
-            if param:
-                param.scheduler_interval_seconds = new_interval
-                param.updated_at = datetime.utcnow()
-                self.db_session.commit()
-            else:
+            db = get_db()
+
+            # Get the singleton row first
+            result = db.client.table("app_parameters").select("id").execute()
+            if not result.data:
                 self.logger.error("app_parameters não encontrada na BD")
                 raise ValueError("app_parameters não encontrada")
+
+            param_id = result.data[0]["id"]
+
+            # Update database via Supabase
+            update_result = db.client.table("app_parameters").update({
+                "scheduler_interval_seconds": new_interval
+            }).eq("id", param_id).execute()
+
+            if not update_result.data:
+                self.logger.error("Falha ao atualizar app_parameters")
+                raise ValueError("Falha ao atualizar app_parameters")
+
+            self.logger.info(
+                f"[DEBUG] Updated app_parameters in Supabase: {new_interval}s"
+            )
 
             # Reschedule job if scheduler is running
             if self.scheduler.running:
@@ -137,7 +160,6 @@ class SchedulerService:
 
         except Exception as e:
             self.logger.error(f"❌ Erro ao atualizar intervalo: {e}", exc_info=True)
-            self.db_session.rollback()
             raise
 
     def get_status(self) -> dict:
