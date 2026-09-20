@@ -26,41 +26,6 @@ export default function DashboardPage() {
 
           {activeView === 'isins' && (
             <div>
-              {/* KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <Card>
-                  <div className="kpi-card">
-                    <div className="kpi-label">Saldo Total</div>
-                    <div className="kpi-value">€5.889,99</div>
-                    <div className="kpi-change kpi-positive">+2.3% hoje</div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="kpi-card">
-                    <div className="kpi-label">P&L Geral</div>
-                    <div className="kpi-value text-t212-success">+€124,50</div>
-                    <div className="kpi-change kpi-positive">+2.1%</div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="kpi-card">
-                    <div className="kpi-label">Posições Abertas</div>
-                    <div className="kpi-value">12</div>
-                    <div className="kpi-change text-t212-info">2 com automação</div>
-                  </div>
-                </Card>
-
-                <Card>
-                  <div className="kpi-card">
-                    <div className="kpi-label">Trades Hoje</div>
-                    <div className="kpi-value">5</div>
-                    <div className="kpi-change kpi-positive">4 ganhos</div>
-                  </div>
-                </Card>
-              </div>
-
               {/* ISINs Table */}
               <Card>
                 <CardHeader>
