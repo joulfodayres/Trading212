@@ -309,6 +309,10 @@ async def sync_positions():
                     # Timestamps
                     "api_created_at": position.get("createdAt"),
                     "position_created_at": position.get("createdAt"),
+
+                    # JSON backup (completo)
+                    "instrument_json": instrument,
+
                     "updated_at": "now()"
                 }
 
