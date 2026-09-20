@@ -64,7 +64,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose 
   );
 };
 
-// Hook para usar toasts
+// Hook to use toasts
 let toastId = 0;
 let listeners: ((toasts: Toast[]) => void)[] = [];
 let toasts: Toast[] = [];
@@ -103,7 +103,7 @@ export const useToast = () => {
   };
 };
 
-// Componente wrapper para disponibilizar toasts no app
+// Wrapper component to provide toasts in the app
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 

@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       console.log('[authStore.login] Login response received:', response.status, response.data)
 
-      // Backend retorna: { access_token, token_type, user_id, email, message }
+      // Backend returns: { access_token, token_type, user_id, email, message }
       const { access_token, user_id, email: userEmail } = response.data
 
       if (!access_token) {
@@ -48,10 +48,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       console.log('[authStore.login] Token received, saving to localStorage', { user_id, userEmail })
 
-      // Guardar token no localStorage
+      // Save token to localStorage
       localStorage.setItem('token', access_token)
 
-      // Adicionar token ao header do axios
+      // Add token to axios header
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
 
       set({
@@ -67,7 +67,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       console.log('[authStore.login] Login state updated successfully')
     } catch (error: any) {
-      const message = error?.response?.data?.detail || error?.message || 'Erro ao fazer login'
+      const message = error?.response?.data?.detail || error?.message || 'Error logging in'
       console.error('[authStore.login] Login error:', {
         status: error?.response?.status,
         detail: error?.response?.data?.detail,
@@ -91,13 +91,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         password_confirm: passwordConfirm
       })
 
-      // Backend retorna: { access_token, token_type, user_id, email, message }
+      // Backend returns: { access_token, token_type, user_id, email, message }
       const { access_token, user_id, email: userEmail } = response.data
 
-      // Guardar token no localStorage
+      // Save token to localStorage
       localStorage.setItem('token', access_token)
 
-      // Adicionar token ao header do axios
+      // Add token to axios header
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
 
       set({
@@ -111,7 +111,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isLoading: false
       })
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao criar conta'
+      const message = error?.response?.data?.detail || 'Error creating account'
       set({
         isLoading: false,
         error: message
@@ -124,9 +124,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       await apiClient.post('/auth/logout')
     } catch (error) {
-      console.error('Erro ao fazer logout:', error)
+      console.error('Error logging out:', error)
     } finally {
-      // Remover token do localStorage e headers
+      // Remove token from localStorage and headers
       localStorage.removeItem('token')
       delete apiClient.defaults.headers.common['Authorization']
 
@@ -159,7 +159,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isAuthenticated: true
       })
     } catch (error) {
-      // Token inválido ou expirado
+      // Invalid or expired token
       localStorage.removeItem('token')
       delete apiClient.defaults.headers.common['Authorization']
 
@@ -176,7 +176,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   }
 }))
 
-// Restaurar token do localStorage e adicionar ao header do axios ao inicializar
+// Restore token from localStorage and add to axios header on initialization
 const token = localStorage.getItem('token')
 if (token) {
   apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`

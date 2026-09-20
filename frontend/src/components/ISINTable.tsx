@@ -29,13 +29,13 @@ export default function ISINTable() {
   const [selectedISIN, setSelectedISIN] = useState<ISIN | null>(null)
   const { toggleAutomation, loading: automationLoading } = useAutomation()
 
-  // Fetch ISINs na primeira carga
+  // Fetch ISINs on first load
   useEffect(() => {
     // Auto-load ISINs on component mount
     loadISINs()
   }, [])
 
-  // Carregar ISINs da API (dados frescos da T212)
+  // Load ISINs from API (fresh data from T212)
   const loadISINs = async () => {
     setLoadingList(true)
     setLoadingSync(true)
@@ -45,7 +45,7 @@ export default function ISINTable() {
       console.log('[ISINTable] ISINs received:', response.data)
       setIsins(response.data)
     } catch (error) {
-      console.error('Erro ao carregar ISINs:', error)
+      console.error('Error loading ISINs:', error)
       setIsins([])
     } finally {
       setLoadingList(false)
@@ -53,7 +53,7 @@ export default function ISINTable() {
     }
   }
 
-  // Sincronizar carteira com T212
+  // Sync portfolio with T212
   const handleSync = async () => {
     setLoadingSync(true)
     try {
@@ -62,31 +62,31 @@ export default function ISINTable() {
       console.log('[ISINTable] Sync response:', response.data)
 
       if (response.data.success) {
-        // Após sync bem-sucedido, recarregar ISINs
+        // After successful sync, reload ISINs
         await loadISINs()
       }
     } catch (error) {
-      console.error('Erro ao sincronizar carteira:', error)
+      console.error('Error syncing portfolio:', error)
     } finally {
       setLoadingSync(false)
     }
   }
 
-  // Handler para toggle automação
+  // Handler for toggle automation
   function handleToggleAutomation(isin: ISIN, currentState: boolean) {
     setSelectedISIN(isin)
     if (currentState) {
-      // Desativar - pedir confirmação
+      // Disable - ask for confirmation
       setDialogType('disable')
       setDialogOpen(true)
     } else {
-      // Ativar - mostrar dialog de escolha de estratégia
+      // Enable - show strategy selection dialog
       setDialogType('enable')
       setDialogOpen(true)
     }
   }
 
-  // Handler para abrir dialog de edição (clique no edit icon)
+  // Handler to open edit dialog (click on edit icon)
   async function handleEditAutomation(isin: ISIN) {
     setSelectedISIN(isin)
     setDialogType('edit')
@@ -103,7 +103,7 @@ export default function ISINTable() {
     )
 
     if (result) {
-      // Atualizar o ISIN na lista local
+      // Update the ISIN in local list
       setIsins((prev) =>
         prev.map((item) =>
           item.isin === selectedISIN.isin
@@ -147,7 +147,7 @@ export default function ISINTable() {
           disabled={loadingSync}
           isLoading={loadingSync}
         >
-          Sincronizar Carteira
+          Sync Portfolio
         </Button>
       </div>
 
@@ -170,14 +170,14 @@ export default function ISINTable() {
               <tr>
                 <th>ISIN</th>
                 <th>Ticker</th>
-                <th>Nome</th>
-                <th>Quantidade</th>
-                <th>Preço Atual</th>
-                <th>Preço Médio</th>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Current Price</th>
+                <th>Average Price</th>
                 <th>P&L</th>
-                <th>Automação</th>
-                <th>Estratégia</th>
-                <th>Ações</th>
+                <th>Automation</th>
+                <th>Strategy</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -249,7 +249,7 @@ export default function ISINTable() {
                       <button
                         onClick={() => handleEditAutomation(isin)}
                         className="text-t212-secondary hover:text-t212-primary transition-colors"
-                        title="Editar automação"
+                        title="Edit automation"
                       >
                         <Edit2 size={16} />
                       </button>
@@ -262,9 +262,9 @@ export default function ISINTable() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-t212-secondary mb-4">Nenhuma posição aberta</p>
+          <p className="text-t212-secondary mb-4">No open positions</p>
           <p className="text-t212-muted text-sm">
-            Clique em "Sincronizar Carteira" acima para carregares as tuas posições do Trading 212
+            Click "Sync Portfolio" above to load your positions from Trading 212
           </p>
         </div>
       )}

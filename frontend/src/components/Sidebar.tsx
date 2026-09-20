@@ -40,9 +40,9 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
 
   const menuItems = [
     { id: 'isins', label: 'ISINs', icon: BarChart3 },
-    { id: 'strategies', label: 'Estratégias', icon: Sliders },
-    { id: 'config', label: 'Configuração', icon: Settings },
-    { id: 'history', label: 'Histórico', icon: History },
+    { id: 'strategies', label: 'Strategies', icon: Sliders },
+    { id: 'config', label: 'Configuration', icon: Settings },
+    { id: 'history', label: 'History', icon: History },
   ]
 
   return (
@@ -68,9 +68,9 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               <Power size={16} className={status?.grid_trading_enabled ? 'text-t212-success' : 'text-t212-error'} />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-t212-muted">Automação</p>
+              <p className="text-xs text-t212-muted">Automation</p>
               <p className="text-sm font-semibold text-t212-primary">
-                {status?.grid_trading_enabled ? '🟢 Ativa' : '🔴 Inativa'}
+                {status?.grid_trading_enabled ? '🟢 Active' : '🔴 Inactive'}
               </p>
             </div>
           </div>
@@ -105,8 +105,8 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       {/* User Info & Logout */}
       <div className="p-4 border-t border-t212-border">
         <div className="mb-4 p-3 rounded-lg bg-t212-hover border border-t212-border">
-          <p className="text-xs text-t212-muted mb-1">Logado como</p>
-          <p className="text-sm text-t212-primary truncate">teste@trading212.com</p>
+          <p className="text-xs text-t212-muted mb-1">Logged in as</p>
+          <p className="text-sm text-t212-primary truncate">test@trading212.com</p>
         </div>
 
         <Button
@@ -116,7 +116,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           icon={<LogOut size={16} />}
           className="w-full"
         >
-          Sair
+          Sign Out
         </Button>
       </div>
 
@@ -128,18 +128,18 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
             <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-sm overflow-hidden">
               <div className="px-6 py-5 border-b border-t212-border">
                 <h3 className="text-lg font-bold text-t212-primary">
-                  {pendingAction === 'enable' ? 'Ativar Automação' : 'Desativar Automação'}
+                  {pendingAction === 'enable' ? 'Enable Automation' : 'Disable Automation'}
                 </h3>
-                <p className="text-sm text-t212-secondary mt-1">Ação Global</p>
+                <p className="text-sm text-t212-secondary mt-1">Global Action</p>
               </div>
               <div className="px-6 py-5">
                 <p className="text-t212-primary font-semibold mb-2">
-                  Tens a certeza que queres {pendingAction === 'enable' ? 'ativar' : 'desativar'} a automação?
+                  Are you sure you want to {pendingAction === 'enable' ? 'enable' : 'disable'} automation?
                 </p>
                 <p className="text-sm text-t212-secondary">
                   {pendingAction === 'enable'
-                    ? 'Isto irá iniciar o processamento automático de ISINs com automação ativada.'
-                    : 'Isto irá parar o processamento automático de todas os ISINs.'}
+                    ? 'This will start automatic processing of ISINs with automation enabled.'
+                    : 'This will stop automatic processing of all ISINs.'}
                 </p>
               </div>
               <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
@@ -150,7 +150,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                   disabled={loading}
                   className="flex-1"
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button
                   variant={pendingAction === 'enable' ? 'primary' : 'danger'}
@@ -160,7 +160,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                   disabled={loading}
                   className="flex-1"
                 >
-                  Confirmar
+                  Confirm
                 </Button>
               </div>
             </div>

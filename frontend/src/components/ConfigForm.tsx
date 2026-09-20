@@ -19,7 +19,7 @@ export const ConfigForm = () => {
 
   const handleSave = async () => {
     if (!apiKey || !apiSecret) {
-      toast.error('Por favor, preencha API Key e API Secret')
+      toast.error('Please fill in API Key and API Secret')
       return
     }
 
@@ -31,12 +31,12 @@ export const ConfigForm = () => {
         t212_environment: environment
       })
 
-      toast.success('Configuração guardada com sucesso!')
-      // Limpar campos (não mostrar credenciais)
+      toast.success('Configuration saved successfully!')
+      // Clear fields (don't show credentials)
       setApiKey('')
       setApiSecret('')
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao guardar configuração'
+      const message = error?.response?.data?.detail || 'Error saving configuration'
       toast.error(message)
     } finally {
       setLoading(false)
@@ -49,9 +49,9 @@ export const ConfigForm = () => {
     try {
       const response = await apiClient.post('/config/test')
       setTestResult({ success: true, data: response.data })
-      toast.success('Conexão bem-sucedida!')
+      toast.success('Connection successful!')
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao testar conexão'
+      const message = error?.response?.data?.detail || 'Error testing connection'
       setTestResult({ success: false, error: message })
       toast.error(message)
     } finally {
@@ -61,10 +61,10 @@ export const ConfigForm = () => {
 
   return (
     <div className="space-y-6">
-      {/* Credenciais */}
+      {/* Credentials */}
       <Card>
         <CardHeader>
-          <CardTitle>Credenciais Trading 212</CardTitle>
+          <CardTitle>Trading 212 Credentials</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -74,12 +74,12 @@ export const ConfigForm = () => {
               onChange={(e) => setEnvironment(e.target.value)}
               className="input"
             >
-              <option value="demo">🧪 Demo (Teste)</option>
-              <option value="live">🔴 Live (Real Money - CUIDADO!)</option>
+              <option value="demo">🧪 Demo (Test)</option>
+              <option value="live">🔴 Live (Real Money - CAUTION!)</option>
             </select>
             {environment === 'live' && (
               <div className="mt-2 p-3 rounded-lg bg-t212-error bg-opacity-20 border border-t212-error text-t212-error text-sm">
-                ⚠️ ATENÇÃO: Estás a usar dinheiro REAL! Apenas para utilizadores experientes.
+                ⚠️ WARNING: You are using REAL money! Only for experienced users.
               </div>
             )}
           </div>
@@ -91,7 +91,7 @@ export const ConfigForm = () => {
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Cole aqui a sua API Key"
+                placeholder="Paste your API Key here"
                 className="input flex-1"
               />
               <button
@@ -110,7 +110,7 @@ export const ConfigForm = () => {
                 type={showSecret ? 'text' : 'password'}
                 value={apiSecret}
                 onChange={(e) => setApiSecret(e.target.value)}
-                placeholder="Cole aqui o seu API Secret"
+                placeholder="Paste your API Secret here"
                 className="input flex-1"
               />
               <button
@@ -123,7 +123,7 @@ export const ConfigForm = () => {
           </div>
 
           <div className="p-3 rounded-lg bg-t212-info bg-opacity-10 border border-t212-info text-t212-info text-sm">
-            💡 Você pode encontrar suas credenciais em: Trading 212 → Settings → API
+            💡 You can find your credentials at: Trading 212 → Settings → API
           </div>
         </CardContent>
         <CardFooter>
@@ -133,7 +133,7 @@ export const ConfigForm = () => {
             isLoading={testing}
             disabled={!apiKey || !apiSecret}
           >
-            Testar Conexão
+            Test Connection
           </Button>
           <Button
             variant="primary"
@@ -141,7 +141,7 @@ export const ConfigForm = () => {
             isLoading={loading}
             disabled={!apiKey || !apiSecret}
           >
-            Guardar Configuração
+            Save Configuration
           </Button>
         </CardFooter>
       </Card>
@@ -158,11 +158,11 @@ export const ConfigForm = () => {
               )}
               <div className="flex-1">
                 <h3 className={testResult.success ? 'text-t212-success font-semibold' : 'text-t212-error font-semibold'}>
-                  {testResult.success ? 'Conexão Bem-Sucedida!' : 'Erro na Conexão'}
+                  {testResult.success ? 'Connection Successful!' : 'Connection Error'}
                 </h3>
                 {testResult.success && testResult.data?.account && (
                   <div className="mt-2 space-y-1 text-sm text-t212-secondary">
-                    <p>📊 Saldo: €{testResult.data.account.balance?.toFixed(2)}</p>
+                    <p>📊 Balance: €{testResult.data.account.balance?.toFixed(2)}</p>
                     <p>📈 P&L: €{testResult.data.account.pnl?.toFixed(2)}</p>
                   </div>
                 )}

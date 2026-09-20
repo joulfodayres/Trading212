@@ -27,7 +27,7 @@ export default function ConfigPage() {
       setSchedulerInterval(interval)
       setIntervalInput(String(interval))
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao carregar intervalo do scheduler'
+      const message = error?.response?.data?.detail || 'Error loading scheduler interval'
       toast.error(message)
       // Keep current values on error
     } finally {
@@ -39,7 +39,7 @@ export default function ConfigPage() {
     const interval = parseInt(intervalInput)
 
     if (isNaN(interval) || interval < 5 || interval > 300) {
-      toast.error('Intervalo deve estar entre 5 e 300 segundos')
+      toast.error('Interval must be between 5 and 300 seconds')
       return
     }
 
@@ -49,9 +49,9 @@ export default function ConfigPage() {
         scheduler_interval_seconds: interval
       })
       setSchedulerInterval(interval)
-      toast.success('Intervalo do scheduler atualizado com sucesso!')
+      toast.success('Scheduler interval updated successfully!')
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao guardar intervalo'
+      const message = error?.response?.data?.detail || 'Error saving interval'
       toast.error(message)
       // Reset input on error
       setIntervalInput(String(schedulerInterval))
@@ -65,13 +65,13 @@ export default function ConfigPage() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Settings size={24} className="text-t212-primary" />
-        <h2 className="text-2xl font-bold text-t212-primary">Configuração</h2>
+        <h2 className="text-2xl font-bold text-t212-primary">Configuration</h2>
       </div>
 
-      {/* Geral Section */}
+      {/* General Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Geral</CardTitle>
+          <CardTitle>General</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Trading 212 Config */}
@@ -87,38 +87,38 @@ export default function ConfigPage() {
             {loadingInterval ? (
               <div className="flex items-center justify-center py-4 text-t212-secondary">
                 <div className="animate-spin w-4 h-4 border-2 border-t212-primary border-t-transparent rounded-full mr-2" />
-                Carregando intervalo...
+                Loading interval...
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Current Interval Display */}
                 <div className="p-4 rounded-lg bg-t212-primary bg-opacity-5 border border-t212-primary border-opacity-20">
-                  <div className="text-sm text-t212-secondary mb-1">Intervalo Atual</div>
+                  <div className="text-sm text-t212-secondary mb-1">Current Interval</div>
                   <div className="text-2xl font-bold text-t212-primary">
                     {schedulerInterval}s
                   </div>
                   <div className="text-xs text-t212-secondary mt-1">
-                    (~{Math.round(schedulerInterval / 60 * 10) / 10} minuto{schedulerInterval >= 60 ? 's' : ''})
+                    (~{Math.round(schedulerInterval / 60 * 10) / 10} minute{schedulerInterval >= 60 ? 's' : ''})
                   </div>
                 </div>
 
                 {/* Interval Input */}
                 <Input
-                  label="Novo Intervalo (segundos)"
+                  label="New Interval (seconds)"
                   type="number"
                   step="5"
                   min="5"
                   max="300"
                   value={intervalInput}
                   onChange={(e) => setIntervalInput(e.target.value)}
-                  hint="Intervalo entre ciclos de automação. Mín: 5s, Máx: 300s"
+                  hint="Interval between automation cycles. Min: 5s, Max: 300s"
                 />
 
                 {/* Info Messages */}
                 <div className="space-y-2 text-xs text-t212-secondary">
-                  <p>📌 <strong>Intervalo recomendado:</strong> 15 segundos (padrão)</p>
-                  <p>⚡ <strong>Menor intervalo:</strong> Mais responsivo, mais requisições à API</p>
-                  <p>🔋 <strong>Maior intervalo:</strong> Menos requisições, resposta mais lenta</p>
+                  <p>📌 <strong>Recommended interval:</strong> 15 seconds (default)</p>
+                  <p>⚡ <strong>Lower interval:</strong> More responsive, more API requests</p>
+                  <p>🔋 <strong>Higher interval:</strong> Fewer requests, slower response</p>
                 </div>
 
                 {/* Save Button */}
@@ -128,7 +128,7 @@ export default function ConfigPage() {
                   isLoading={loading}
                   className="w-full"
                 >
-                  {loading ? 'Guardando...' : 'Guardar Intervalo'}
+                  {loading ? 'Saving...' : 'Save Interval'}
                 </Button>
               </div>
             )}
@@ -140,9 +140,9 @@ export default function ConfigPage() {
       <Card className="border-t212-info border-opacity-30">
         <CardContent className="pt-6">
           <div className="space-y-3 text-sm text-t212-secondary">
-            <p>💡 <strong>Dica:</strong> Utilize o intervalo do scheduler para controlar a frequência de execução da automação.</p>
-            <p>🔒 <strong>Segurança:</strong> Suas credenciais são encriptadas e nunca são expostas.</p>
-            <p>⚙️ <strong>Atualizações:</strong> As alterações ao intervalo entram em vigor imediatamente.</p>
+            <p>💡 <strong>Tip:</strong> Use the scheduler interval to control the automation execution frequency.</p>
+            <p>🔒 <strong>Security:</strong> Your credentials are encrypted and never exposed.</p>
+            <p>⚙️ <strong>Updates:</strong> Changes to the interval take effect immediately.</p>
           </div>
         </CardContent>
       </Card>

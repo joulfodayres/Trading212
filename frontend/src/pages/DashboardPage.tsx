@@ -19,10 +19,10 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="page-header">
-              {activeView === 'isins' && '📊 Meus ISINs'}
-              {activeView === 'strategies' && '⚙️ Estratégias'}
-              {activeView === 'config' && '⚙️ Configuração'}
-              {activeView === 'history' && '📈 Histórico'}
+              {activeView === 'isins' && '📊 My ISINs'}
+              {activeView === 'strategies' && '⚙️ Strategies'}
+              {activeView === 'config' && '⚙️ Configuration'}
+              {activeView === 'history' && '📈 History'}
             </h1>
           </div>
 
@@ -31,7 +31,7 @@ export default function DashboardPage() {
               {/* ISINs Table */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Tabela de ISINs</CardTitle>
+                  <CardTitle>ISINs Table</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ISINTable />
@@ -50,10 +50,10 @@ export default function DashboardPage() {
             <div>
               <Card>
                 <CardHeader>
-                  <CardTitle>Histórico de Trades</CardTitle>
+                  <CardTitle>Trade History</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-t212-secondary">Em construção...</p>
+                  <p className="text-t212-secondary">Under construction...</p>
                 </CardContent>
               </Card>
             </div>

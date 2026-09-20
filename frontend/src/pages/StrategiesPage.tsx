@@ -148,7 +148,7 @@ export default function StrategiesPage() {
       loadStrategies()
     } catch (error) {
       console.error('Error updating strategy:', error)
-      alert('Erro ao atualizar estratégia')
+      alert('Error updating strategy')
     }
   }
 
@@ -202,7 +202,7 @@ export default function StrategiesPage() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A'
-    return new Date(dateStr).toLocaleString('pt-PT')
+    return new Date(dateStr).toLocaleString('en-US')
   }
 
   // ===== RENDER LIST VIEW =====
@@ -211,14 +211,14 @@ export default function StrategiesPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader className="flex items-center justify-between">
-            <CardTitle>Estratégias</CardTitle>
+            <CardTitle>Strategies</CardTitle>
             <Button
               variant="primary"
               size="sm"
               icon={<Plus size={16} />}
               onClick={() => setShowCreateStrategy(true)}
             >
-              Nova Estratégia
+              New Strategy
             </Button>
           </CardHeader>
           <CardContent>
@@ -247,11 +247,11 @@ export default function StrategiesPage() {
                       )}
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-semibold ${strategy.enabled ? 'text-t212-success' : 'text-t212-muted'}`}>
-                          {strategy.enabled ? '🟢 Ativa' : '🔴 Inativa'}
+                          {strategy.enabled ? '🟢 Active' : '🔴 Inactive'}
                         </span>
                         {!strategy.is_valid && (
                           <span className="text-xs text-t212-warning flex items-center gap-1">
-                            <AlertCircle size={12} /> Faltam parâmetros
+                            <AlertCircle size={12} /> Missing parameters
                           </span>
                         )}
                       </div>
@@ -261,7 +261,7 @@ export default function StrategiesPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-t212-secondary text-center py-8">Nenhuma estratégia criada</p>
+              <p className="text-t212-secondary text-center py-8">No strategies created</p>
             )}
           </CardContent>
         </Card>
@@ -273,18 +273,18 @@ export default function StrategiesPage() {
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-md">
                 <div className="px-6 py-5 border-b border-t212-border">
-                  <h3 className="text-lg font-bold text-t212-primary">Nova Estratégia</h3>
+                  <h3 className="text-lg font-bold text-t212-primary">New Strategy</h3>
                 </div>
                 <div className="px-6 py-5 space-y-4">
                   <input
                     type="text"
-                    placeholder="Nome"
+                    placeholder="Name"
                     value={strategyForm.name}
                     onChange={(e) => setStrategyForm({ ...strategyForm, name: e.target.value })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                   />
                   <textarea
-                    placeholder="Descrição"
+                    placeholder="Description"
                     value={strategyForm.description}
                     onChange={(e) => setStrategyForm({ ...strategyForm, description: e.target.value })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
@@ -292,7 +292,7 @@ export default function StrategiesPage() {
                   />
                   <input
                     type="number"
-                    placeholder="Investimento Inicial (EUR)"
+                    placeholder="Initial Investment (EUR)"
                     value={strategyForm.initial_investment}
                     onChange={(e) => setStrategyForm({ ...strategyForm, initial_investment: parseFloat(e.target.value) })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
@@ -305,7 +305,7 @@ export default function StrategiesPage() {
                     onClick={() => setShowCreateStrategy(false)}
                     className="flex-1"
                   >
-                    Cancelar
+                    Cancel
                   </Button>
                   <Button
                     variant="primary"
@@ -314,7 +314,7 @@ export default function StrategiesPage() {
                     disabled={!strategyForm.name.trim()}
                     className="flex-1"
                   >
-                    Criar
+                    Create
                   </Button>
                 </div>
               </div>
@@ -335,17 +335,17 @@ export default function StrategiesPage() {
           icon={<ArrowLeft size={16} />}
           onClick={() => setViewMode('list')}
         >
-          Voltar
+          Back
         </Button>
 
         <Card>
           <CardHeader>
-            <CardTitle>Detalhe da Estratégia</CardTitle>
+            <CardTitle>Strategy Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Name */}
             <div>
-              <label className="block text-sm font-semibold text-t212-primary mb-2">Nome</label>
+              <label className="block text-sm font-semibold text-t212-primary mb-2">Name</label>
               <input
                 type="text"
                 value={strategyEditForm.name}
@@ -356,7 +356,7 @@ export default function StrategiesPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-t212-primary mb-2">Descrição</label>
+              <label className="block text-sm font-semibold text-t212-primary mb-2">Description</label>
               <textarea
                 value={strategyEditForm.description}
                 onChange={(e) => setStrategyEditForm({ ...strategyEditForm, description: e.target.value })}
@@ -367,7 +367,7 @@ export default function StrategiesPage() {
 
             {/* Initial Investment */}
             <div>
-              <label className="block text-sm font-semibold text-t212-primary mb-2">Investimento Inicial (EUR)</label>
+              <label className="block text-sm font-semibold text-t212-primary mb-2">Initial Investment (EUR)</label>
               <input
                 type="number"
                 value={strategyEditForm.initial_investment}
@@ -381,7 +381,7 @@ export default function StrategiesPage() {
               <label className="block text-sm font-semibold text-t212-primary mb-2">Status</label>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-t212-bg-secondary border border-t212-border">
                 <span className={`text-sm font-semibold ${strategyEditForm.enabled ? 'text-t212-success' : 'text-t212-muted'}`}>
-                  {strategyEditForm.enabled ? '🟢 Ativa' : '🔴 Inativa'}
+                  {strategyEditForm.enabled ? '🟢 Active' : '🔴 Inactive'}
                 </span>
                 <ToggleSwitch
                   checked={strategyEditForm.enabled}
@@ -389,7 +389,7 @@ export default function StrategiesPage() {
                   disabled={!selectedStrategy.is_valid}
                 />
                 {!selectedStrategy.is_valid && (
-                  <span className="text-xs text-t212-warning">Precisa dos parâmetros -1, 0, 1</span>
+                  <span className="text-xs text-t212-warning">Requires parameters -1, 0, 1</span>
                 )}
               </div>
             </div>
@@ -397,11 +397,11 @@ export default function StrategiesPage() {
             {/* Timestamps (read-only) */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-t212-muted mb-1">Criado em</label>
+                <label className="block text-xs font-semibold text-t212-muted mb-1">Created</label>
                 <p className="text-sm text-t212-secondary">{formatDate(selectedStrategy.created_at)}</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-t212-muted mb-1">Última edição</label>
+                <label className="block text-xs font-semibold text-t212-muted mb-1">Last edited</label>
                 <p className="text-sm text-t212-secondary">{formatDate(selectedStrategy.updated_at)}</p>
               </div>
             </div>
@@ -411,12 +411,12 @@ export default function StrategiesPage() {
               {selectedStrategy.is_valid ? (
                 <>
                   <CheckCircle size={16} className="text-t212-success" />
-                  <span className="text-sm text-t212-success font-semibold">Estratégia válida</span>
+                  <span className="text-sm text-t212-success font-semibold">Valid strategy</span>
                 </>
               ) : (
                 <>
                   <AlertCircle size={16} className="text-t212-warning" />
-                  <span className="text-sm text-t212-warning font-semibold">Faltam parâmetros (-1, 0, 1)</span>
+                  <span className="text-sm text-t212-warning font-semibold">Missing parameters (-1, 0, 1)</span>
                 </>
               )}
             </div>
@@ -430,7 +430,7 @@ export default function StrategiesPage() {
                 onClick={() => setViewMode('list')}
                 className="flex-1"
               >
-                Cancelar
+                Cancel
               </Button>
               <Button
                 variant="primary"
@@ -439,7 +439,7 @@ export default function StrategiesPage() {
                 onClick={handleSaveStrategyEdit}
                 className="flex-1"
               >
-                Guardar Mudanças
+                Save Changes
               </Button>
             </div>
 
@@ -450,7 +450,7 @@ export default function StrategiesPage() {
               onClick={handleEditParameters}
               className="w-full"
             >
-              Editar Parâmetros
+              Edit Parameters
             </Button>
           </CardContent>
         </Card>
@@ -468,19 +468,19 @@ export default function StrategiesPage() {
           icon={<ArrowLeft size={16} />}
           onClick={() => setViewMode('detail')}
         >
-          Voltar
+          Back
         </Button>
 
         <Card>
           <CardHeader className="flex items-center justify-between">
-            <CardTitle>Parâmetros - {selectedStrategy.name || `Strategy ${selectedStrategy.id.substring(0, 8)}`}</CardTitle>
+            <CardTitle>Parameters - {selectedStrategy.name || `Strategy ${selectedStrategy.id.substring(0, 8)}`}</CardTitle>
             <Button
               variant="primary"
               size="sm"
               icon={<Plus size={16} />}
               onClick={() => setShowCreateParameter(true)}
             >
-              Novo Parâmetro
+              New Parameter
             </Button>
           </CardHeader>
           <CardContent>
@@ -500,7 +500,7 @@ export default function StrategiesPage() {
                       <th>Param8</th>
                       <th>Param9</th>
                       <th>Param10</th>
-                      <th>Ações</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -531,7 +531,7 @@ export default function StrategiesPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-t212-secondary text-center py-8">Nenhum parâmetro</p>
+              <p className="text-t212-secondary text-center py-8">No parameters</p>
             )}
           </CardContent>
         </Card>
@@ -543,18 +543,18 @@ export default function StrategiesPage() {
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-2xl max-h-[80vh] overflow-y-auto">
                 <div className="px-6 py-5 border-b border-t212-border sticky top-0 bg-t212-bg-primary">
-                  <h3 className="text-lg font-bold text-t212-primary">Novo Parâmetro</h3>
+                  <h3 className="text-lg font-bold text-t212-primary">New Parameter</h3>
                 </div>
                 <div className="px-6 py-5 space-y-4">
                   <input
                     type="text"
-                    placeholder="Posição (ex: -1, 0, 1)"
+                    placeholder="Position (ex: -1, 0, 1)"
                     value={parameterForm.pos}
                     onChange={(e) => setParameterForm({ ...parameterForm, pos: e.target.value })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                   />
 
-                  {/* Grid de parâmetros */}
+                  {/* Parameters grid */}
                   <div className="grid grid-cols-2 gap-3">
                     {['param1', 'param2', 'param3', 'param4', 'param5', 'param6', 'param7', 'param8', 'param9', 'param10'].map((param) => (
                       <input
@@ -579,7 +579,7 @@ export default function StrategiesPage() {
                     onClick={() => setShowCreateParameter(false)}
                     className="flex-1"
                   >
-                    Cancelar
+                    Cancel
                   </Button>
                   <Button
                     variant="primary"
@@ -588,7 +588,7 @@ export default function StrategiesPage() {
                     disabled={!parameterForm.pos}
                     className="flex-1"
                   >
-                    Criar
+                    Create
                   </Button>
                 </div>
               </div>

@@ -18,7 +18,7 @@ export default function RegisterPage() {
   const toast = useToast()
 
   useEffect(() => {
-    // Limpar erro quando o utilizador começar a digitar
+    // Clear error when user starts typing
     if (error) {
       clearError()
       setEmailError('')
@@ -34,22 +34,22 @@ export default function RegisterPage() {
     setPasswordConfirmError('')
 
     if (!email || !email.includes('@')) {
-      setEmailError('Email inválido')
+      setEmailError('Invalid email')
       isValid = false
     }
 
     if (!password || password.length < 6) {
-      setPasswordError('Password deve ter mínimo 6 caracteres')
+      setPasswordError('Password must be at least 6 characters')
       isValid = false
     }
 
     if (!passwordConfirm || passwordConfirm.length < 6) {
-      setPasswordConfirmError('Confirmação de password inválida')
+      setPasswordConfirmError('Password confirmation is invalid')
       isValid = false
     }
 
     if (password !== passwordConfirm) {
-      setPasswordConfirmError('Passwords não coincidem')
+      setPasswordConfirmError('Passwords do not match')
       isValid = false
     }
 
@@ -65,10 +65,10 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, passwordConfirm)
-      toast.success('Conta criada com sucesso! Redirecionando...')
+      toast.success('Account created successfully! Redirecting...')
       navigate('/dashboard')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar conta'
+      const message = err instanceof Error ? err.message : 'Error creating account'
       toast.error(message)
     }
   }
@@ -93,7 +93,7 @@ export default function RegisterPage() {
               Trading 212 Bot
             </h1>
             <p className="text-t212-secondary text-sm mt-1">
-              Criar Nova Conta
+              Create New Account
             </p>
           </div>
 
@@ -104,13 +104,13 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
+              placeholder="your@email.com"
               error={emailError}
               required
             />
 
             <Input
-              label="Senha"
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -120,7 +120,7 @@ export default function RegisterPage() {
             />
 
             <Input
-              label="Confirmar Senha"
+              label="Confirm Password"
               type="password"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
@@ -144,25 +144,25 @@ export default function RegisterPage() {
               icon={<UserPlus size={18} />}
               disabled={isLoading}
             >
-              Criar Conta
+              Create Account
             </Button>
           </form>
 
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-t212-border">
             <p className="text-center text-t212-secondary text-sm mb-4">
-              Já tem conta?{' '}
+              Already have an account?{' '}
               <Link to="/login" className="text-t212-primary hover:text-t212-primary-light font-medium transition">
-                Fazer Login
+                Sign In
               </Link>
             </p>
 
             <div className="p-3 rounded-lg bg-t212-info bg-opacity-10 border border-t212-info border-opacity-20">
-              <p className="text-t212-info text-xs font-medium mb-2">ℹ️ Requisitos:</p>
+              <p className="text-t212-info text-xs font-medium mb-2">ℹ️ Requirements:</p>
               <ul className="text-t212-secondary text-xs space-y-1">
-                <li>✓ Email válido</li>
-                <li>✓ Senha mínimo 6 caracteres</li>
-                <li>✓ Passwords devem coincidir</li>
+                <li>✓ Valid email</li>
+                <li>✓ Password minimum 6 characters</li>
+                <li>✓ Passwords must match</li>
               </ul>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function RegisterPage() {
 
         {/* Footer Text */}
         <p className="text-center text-t212-muted text-xs mt-6">
-          © 2026 Trading 212 Bot. Todos os direitos reservados.
+          © 2026 Trading 212 Bot. All rights reserved.
         </p>
       </div>
     </div>

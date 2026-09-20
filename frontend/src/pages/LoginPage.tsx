@@ -16,7 +16,7 @@ export default function LoginPage() {
   const toast = useToast()
 
   useEffect(() => {
-    // Limpar erro quando o utilizador começar a digitar
+    // Clear error when user starts typing
     if (error) {
       clearError()
       setEmailError('')
@@ -30,12 +30,12 @@ export default function LoginPage() {
     setPasswordError('')
 
     if (!email || !email.includes('@')) {
-      setEmailError('Email inválido')
+      setEmailError('Invalid email')
       isValid = false
     }
 
     if (!password || password.length < 6) {
-      setPasswordError('Password deve ter mínimo 6 caracteres')
+      setPasswordError('Password must be at least 6 characters')
       isValid = false
     }
 
@@ -53,10 +53,10 @@ export default function LoginPage() {
       console.log('[LoginPage] Attempting login with email:', email)
       await login(email, password)
       console.log('[LoginPage] Login successful, navigating to dashboard')
-      toast.success('Login realizado com sucesso!')
+      toast.success('Login successful!')
       navigate('/dashboard')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao fazer login'
+      const message = err instanceof Error ? err.message : 'Login error'
       console.error('[LoginPage] Login error:', {
         message,
         error: err,
@@ -90,7 +90,7 @@ export default function LoginPage() {
               Trading 212 Bot
             </h1>
             <p className="text-t212-secondary text-sm mt-1">
-              Automação de Trading Inteligente
+              Intelligent Trading Automation
             </p>
           </div>
 
@@ -101,13 +101,13 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
+              placeholder="your@email.com"
               error={emailError}
               required
             />
 
             <Input
-              label="Senha"
+              label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -131,26 +131,26 @@ export default function LoginPage() {
               icon={<LogIn size={18} />}
               disabled={isLoading}
             >
-              Entrar
+              Sign In
             </Button>
           </form>
 
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-t212-border">
             <p className="text-center text-t212-secondary text-sm mb-4">
-              Não tem conta?{' '}
+              Don't have an account?{' '}
               <Link to="/register" className="text-t212-primary hover:text-t212-primary-light font-medium transition">
-                Criar conta
+                Create account
               </Link>
             </p>
 
             <div className="p-3 rounded-lg bg-t212-primary bg-opacity-10 border border-t212-primary border-opacity-20">
               <p className="text-t212-primary text-xs font-medium mb-2">Demo Account:</p>
               <p className="text-t212-secondary text-xs">
-                Email: <span className="text-t212-text-primary font-mono">teste@trading212.com</span>
+                Email: <span className="text-t212-text-primary font-mono">test@trading212.com</span>
               </p>
               <p className="text-t212-secondary text-xs">
-                Senha: <span className="text-t212-text-primary font-mono">teste123</span>
+                Password: <span className="text-t212-text-primary font-mono">test123</span>
               </p>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function LoginPage() {
 
         {/* Footer Text */}
         <p className="text-center text-t212-muted text-xs mt-6">
-          © 2026 Trading 212 Bot. Todos os direitos reservados.
+          © 2026 Trading 212 Bot. All rights reserved.
         </p>
       </div>
     </div>

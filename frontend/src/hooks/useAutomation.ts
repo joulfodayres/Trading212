@@ -24,7 +24,7 @@ export const useAutomation = () => {
       setStrategies(response.data)
       return response.data
     } catch (error: any) {
-      console.error('Erro ao buscar estratégias:', error)
+      console.error('Error fetching strategies:', error)
       return []
     }
   }, [])
@@ -44,7 +44,7 @@ export const useAutomation = () => {
 
         return response.data
       } catch (error: any) {
-        console.error('Erro ao alternar automação:', error)
+        console.error('Error toggling automation:', error)
         return null
       } finally {
         setLoading(false)

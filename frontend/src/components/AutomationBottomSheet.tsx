@@ -44,7 +44,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
         setSelectedStrategy(response.data[0].id)
       }
     } catch (error) {
-      console.error('Erro ao carregar estratégias:', error)
+      console.error('Error loading strategies:', error)
     } finally {
       setLoadingStrategies(false)
     }
@@ -67,7 +67,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 
   return (
     <>
-      {/* Overlay escuro (full coverage) */}
+      {/* Dark overlay (full coverage) */}
       <div
         className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity z-40"
         onClick={onCancel}
@@ -77,7 +77,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-md overflow-hidden">
 
-          {/* Header com ícone e fechar */}
+          {/* Header with icon and close */}
           <div className="px-6 py-5 border-b border-t212-border bg-gradient-to-r from-t212-bg-primary to-t212-bg-secondary flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-t212-warning bg-opacity-20 rounded-lg">
@@ -85,7 +85,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-t212-primary">
-                  {type === 'enable' ? 'Ativar Automação' : type === 'edit' ? 'Editar Automação' : 'Desativar Automação'}
+                  {type === 'enable' ? 'Enable Automation' : type === 'edit' ? 'Edit Automation' : 'Disable Automation'}
                 </h3>
                 <p className="text-xs text-t212-secondary font-medium mt-0.5">
                   {isin}
@@ -108,7 +108,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
                 {/* Strategy Selection */}
                 <div>
                   <label className="block text-sm font-semibold text-t212-primary mb-3">
-                    Escolhe a estratégia:
+                    Select strategy:
                   </label>
 
                   {loadingStrategies ? (
@@ -128,7 +128,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
                     </select>
                   ) : (
                     <div className="p-4 bg-t212-bg-secondary border-2 border-t212-warning rounded-lg text-t212-warning font-medium text-center">
-                      Nenhuma estratégia disponível
+                      No strategies available
                     </div>
                   )}
                 </div>
@@ -136,17 +136,17 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
             ) : (
               <div className="space-y-3">
                 <p className="text-t212-primary font-semibold text-base leading-relaxed">
-                  Tens a certeza que queres{' '}
-                  <span className="text-t212-warning">desativar a automação</span>?
+                  Are you sure you want to{' '}
+                  <span className="text-t212-warning">disable automation</span>?
                 </p>
                 <p className="text-t212-secondary text-sm">
-                  Esta ação será registada no histórico de automação e nenhum trade automático será realizado.
+                  This action will be recorded in the automation history and no automatic trades will be executed.
                 </p>
               </div>
             )}
           </div>
 
-          {/* Footer com botões */}
+          {/* Footer with buttons */}
           <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
             <Button
               variant="secondary"
@@ -155,7 +155,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
               disabled={confirming}
               className="flex-1"
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               variant="primary"
@@ -169,7 +169,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
               }
               className="flex-1"
             >
-              {type === 'edit' ? 'Guardar Mudanças' : 'Confirmar'}
+              {type === 'edit' ? 'Save Changes' : 'Confirm'}
             </Button>
           </div>
         </div>

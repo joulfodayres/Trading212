@@ -18,7 +18,7 @@ export const useGlobalAutomation = () => {
       setStatus(response.data)
       return response.data
     } catch (error: any) {
-      console.error('Erro ao buscar status global:', error)
+      console.error('Error fetching global status:', error)
       return null
     }
   }, [])
@@ -33,7 +33,7 @@ export const useGlobalAutomation = () => {
       }
       return false
     } catch (error: any) {
-      console.error('Erro ao ativar automação global:', error)
+      console.error('Error enabling global automation:', error)
       return false
     } finally {
       setLoading(false)
@@ -50,7 +50,7 @@ export const useGlobalAutomation = () => {
       }
       return false
     } catch (error: any) {
-      console.error('Erro ao desativar automação global:', error)
+      console.error('Error disabling global automation:', error)
       return false
     } finally {
       setLoading(false)

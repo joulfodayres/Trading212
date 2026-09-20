@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading ? (
           <>
             <Loader className="animate-spin" size={16} />
-            Carregando...
+            Loading...
           </>
         ) : (
           <>
