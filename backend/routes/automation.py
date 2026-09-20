@@ -4,12 +4,143 @@ Phase 4: Grid Trading Automation
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from typing import Optional
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/automation", tags=["automation"])
+
+
+# ===== SCHEMAS =====
+
+class AutomationEnableRequest(BaseModel):
+    """Request para ativar automação global"""
+    pass
+
+
+class AutomationDisableRequest(BaseModel):
+    """Request para desativar automação global"""
+    pass
+
+
+class AutomationStatusResponse(BaseModel):
+    """Response com status de automação global"""
+    grid_trading_enabled: bool
+    scheduler_running: bool
+    cycle_count: int
+    last_cycle_duration: Optional[float] = None
+
+
+# ===== HELPERS =====
+
+def _get_db():
+    """Get Supabase DB instance"""
+    from db.supabase_client import get_db
+    return get_db()
+
+
+# ===== ENDPOINTS =====
+
+@router.get("/global-status", response_model=AutomationStatusResponse)
+async def get_global_automation_status():
+    """
+    GET /api/v1/automation/global-status
+
+    Retorna status global da automação
+    """
+    try:
+        from main import scheduler_service, automation_engine
+        from db.supabase_client import get_db
+
+        db = get_db()
+
+        # Buscar app_parameters
+        result = db.client.table("app_parameters").select("grid_trading_enabled").execute()
+        grid_trading_enabled = result.data[0].get("grid_trading_enabled", True) if result.data else True
+
+        scheduler_status = scheduler_service.get_status() if scheduler_service else {}
+        scheduler_running = scheduler_status.get("running", False)
+        cycle_count = automation_engine.cycle_count if automation_engine else 0
+        last_cycle_duration = automation_engine.last_cycle_duration if automation_engine else None
+
+        return {
+            "grid_trading_enabled": grid_trading_enabled,
+            "scheduler_running": scheduler_running,
+            "cycle_count": cycle_count,
+            "last_cycle_duration": last_cycle_duration
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter status global: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/enable")
+async def enable_global_automation():
+    """
+    PUT /api/v1/automation/enable
+
+    Ativa automação global (grid_trading_enabled=TRUE em app_parameters)
+    """
+    try:
+        db = _get_db()
+
+        logger.info("Enabling global automation...")
+
+        # Update app_parameters
+        result = db.client.table("app_parameters").update({
+            "grid_trading_enabled": True,
+            "updated_at": "now()"
+        }).execute()
+
+        if result.data:
+            logger.info("✅ Global automation enabled")
+            return {
+                "success": True,
+                "grid_trading_enabled": True,
+                "message": "Automação global ativada"
+            }
+        else:
+            raise Exception("Failed to update app_parameters")
+
+    except Exception as e:
+        logger.error(f"Erro ao ativar automação global: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/disable")
+async def disable_global_automation():
+    """
+    PUT /api/v1/automation/disable
+
+    Desativa automação global (grid_trading_enabled=FALSE em app_parameters)
+    """
+    try:
+        db = _get_db()
+
+        logger.info("Disabling global automation...")
+
+        # Update app_parameters
+        result = db.client.table("app_parameters").update({
+            "grid_trading_enabled": False,
+            "updated_at": "now()"
+        }).execute()
+
+        if result.data:
+            logger.info("✅ Global automation disabled")
+            return {
+                "success": True,
+                "grid_trading_enabled": False,
+                "message": "Automação global desativada"
+            }
+        else:
+            raise Exception("Failed to update app_parameters")
+
+    except Exception as e:
+        logger.error(f"Erro ao desativar automação global: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/status")

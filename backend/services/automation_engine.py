@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from models.db import ISIN, Strategy, StrategyParameters, Order
+from models.db import ISIN, Strategy, StrategyParameters, Order, AppParameters
 from services.t212_service import T212Service
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,8 @@ class AutomationEngine:
         """
         Main cycle function - called every 15 seconds by scheduler.
         Executes 3 phases of automation.
+
+        Checks grid_trading_enabled flag before running.
         """
         self.cycle_count += 1
         cycle_start = datetime.utcnow()
@@ -54,6 +56,12 @@ class AutomationEngine:
         self.logger.info(f"🔄 Ciclo #{self.cycle_count} iniciado")
 
         try:
+            # Check if global automation is enabled
+            grid_trading_enabled = self._check_grid_trading_enabled()
+            if not grid_trading_enabled:
+                self.logger.debug("⏸️ Grid trading está desativado globalmente, ciclo ignorado")
+                return
+
             # PHASE 1: Setup initial BUY/SELL pairs
             self.logger.debug("Fase 1: Setup Inicial")
             await self._phase_1_initial_setup()
@@ -440,6 +448,20 @@ class AutomationEngine:
     # =========================================================================
     # HELPER METHODS
     # =========================================================================
+
+    def _check_grid_trading_enabled(self) -> bool:
+        """
+        Verifica se grid_trading_enabled está ativo em app_parameters.
+        """
+        try:
+            result = self.db_session.query(AppParameters).first()
+            if result:
+                # Assumes AppParameters model has grid_trading_enabled attribute
+                return getattr(result, 'grid_trading_enabled', True)
+            return True
+        except Exception as e:
+            self.logger.warning(f"Erro verificando grid_trading_enabled: {e}, assumindo True")
+            return True
 
     def _get_strategy_parameters(self, strategy_id: str, trades_balance: int) -> Optional[StrategyParameters]:
         """
