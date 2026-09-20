@@ -163,7 +163,11 @@ async def get_strategy(strategy_id: str):
 
         # Get parameters
         params_result = db.client.table("strategy_parameters").select("*").eq("strategy_id", strategy_id).execute()
-        parameters = params_result.data or []
+        parameters = []
+        for param in params_result.data or []:
+            # Convert pos from integer to string for Pydantic validation
+            param['pos'] = str(param['pos'])
+            parameters.append(param)
 
         logger.info(f"[DEBUG] Raw parameters from DB for strategy {strategy_id}: {parameters}")
         if parameters:
