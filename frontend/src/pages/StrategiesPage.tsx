@@ -170,6 +170,28 @@ export default function StrategiesPage() {
   const handleSaveStrategyEdit = async () => {
     if (!selectedStrategy) return
 
+    // VALIDATION 1: Check for duplicate name
+    const isDuplicate = strategies.some(
+      s => s.id !== selectedStrategy.id &&
+           s.name.toLowerCase().trim() === strategyEditForm.name.toLowerCase().trim()
+    )
+    if (isDuplicate) {
+      console.error('[handleSaveStrategyEdit] Duplicate name error: A strategy with this name already exists')
+      return
+    }
+
+    // VALIDATION 2: Check investment value
+    if (!strategyEditForm.initial_investment || strategyEditForm.initial_investment <= 0) {
+      console.error('[handleSaveStrategyEdit] Investment value error: Initial investment must be greater than 0')
+      return
+    }
+
+    // VALIDATION 3: Check parameters if enabling
+    if (strategyEditForm.enabled && !selectedStrategy.is_valid) {
+      console.error('[handleSaveStrategyEdit] Parameters error: Cannot enable strategy. Must have parameters for positions -1, 0, and 1')
+      return
+    }
+
     try {
       const response = await apiClient.put(`/v1/strategies/${selectedStrategy.id}`, {
         name: strategyEditForm.name,
@@ -185,7 +207,7 @@ export default function StrategiesPage() {
       loadStrategies()
     } catch (error: any) {
       const errorDetail = error?.response?.data?.detail || error?.message || 'Unknown error'
-      console.error('[handleSaveStrategyEdit] Error:', errorDetail)
+      console.error('[handleSaveStrategyEdit] API error:', errorDetail)
     }
   }
 
