@@ -104,17 +104,31 @@
 
 ---
 
+### 6. 🏷️ Renomear Projetos no Render
+**Status:** TODO
+**Descrição:**
+- Renomear frontend: `trading212-1` → `Trading212-Frontend`
+- Renomear backend: `trading212-4ojx` → `Trading212-Backend`
+- Atualizar URLs em documentação
+- Verificar CORS e referências internas
+
+**Complexidade:** ⭐ Baixa
+**Tempo:** 15-30 min
+
+---
+
 ## 📅 Timeline Estimada
 
 | Ordem | Item | Complexidade | Tempo (horas) | Dependências |
 |-------|------|-------------|--------------|-------------|
+| 0 | #6 - Renomear Render | ⭐ Baixa | 0.5h | Render dashboard |
 | 1 | #4 - Toggle ON/OFF | ⭐ Baixa | 2-3h | Backend endpoints simples |
 | 2 | #1 - Tabelas Parâmetros | ⭐⭐ Média | 4-6h | CRUD endpoints + UI |
 | 3 | #5 - Dialog Confirmação | ⭐⭐ Média | 3-4h | UI component + backend preview |
 | 4 | #2 - Upload Ficheiros | ⭐⭐⭐ Alta | 6-8h | Parser CSV + validação |
 | 5 | #3 - Gráficos & Stats | ⭐⭐⭐ Alta | 8-10h | Recharts + backend stats |
 
-**Total:** ~25-35 horas
+**Total:** ~25-36 horas
 
 ---
 
