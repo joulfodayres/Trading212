@@ -199,7 +199,9 @@ export default function StrategiesPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-t212-primary">{strategy.name}</h3>
+                        <h3 className="font-semibold text-t212-primary">
+                          {strategy.name && strategy.name.trim() ? strategy.name : `Strategy ${strategy.id.substring(0, 8)}`}
+                        </h3>
                         {strategy.is_valid ? (
                           <div title="Válida">
                             <CheckCircle size={16} className="text-t212-success" />
@@ -214,7 +216,7 @@ export default function StrategiesPage() {
                         <p className="text-sm text-t212-secondary mb-1">{strategy.description}</p>
                       )}
                       <p className="text-xs text-t212-muted">
-                        Investimento: €{strategy.initial_investment.toFixed(2)}
+                        Investimento: €{strategy.initial_investment ? strategy.initial_investment.toFixed(2) : 'N/A'}
                       </p>
                     </div>
 
