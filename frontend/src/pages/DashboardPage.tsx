@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import ISINTable from '../components/ISINTable'
+import StrategiesPage from './StrategiesPage'
 import ConfigPage from './ConfigPage'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 
 export default function DashboardPage() {
-  const [activeView, setActiveView] = useState('isins') // 'isins', 'config', 'history'
+  const [activeView, setActiveView] = useState('isins') // 'isins', 'strategies', 'config', 'history'
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
@@ -19,6 +20,7 @@ export default function DashboardPage() {
           <div className="mb-8">
             <h1 className="page-header">
               {activeView === 'isins' && '📊 Meus ISINs'}
+              {activeView === 'strategies' && '⚙️ Estratégias'}
               {activeView === 'config' && '⚙️ Configuração'}
               {activeView === 'history' && '📈 Histórico'}
             </h1>
@@ -37,6 +39,8 @@ export default function DashboardPage() {
               </Card>
             </div>
           )}
+
+          {activeView === 'strategies' && <StrategiesPage />}
 
           {activeView === 'config' && (
             <ConfigPage />
