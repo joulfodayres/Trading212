@@ -45,9 +45,18 @@ class SchedulerService:
             # Get scheduler interval from database
             interval = await self._get_scheduler_interval()
 
+            # Wrapper for async run_cycle (APScheduler runs sync jobs only)
+            def run_cycle_wrapper():
+                """Wrapper to run async function in sync context"""
+                import asyncio
+                try:
+                    asyncio.run(self.automation_engine.run_cycle())
+                except Exception as e:
+                    self.logger.error(f"❌ Erro ao executar ciclo: {e}", exc_info=True)
+
             # Register the job
             self.scheduler.add_job(
-                func=self.automation_engine.run_cycle,
+                func=run_cycle_wrapper,
                 trigger=IntervalTrigger(seconds=interval),
                 id="automation_cycle",
                 name="Automation Engine Cycle",
