@@ -45,3 +45,17 @@ export const automationAPI = {
   toggle: (isinId: string, enabled: boolean) =>
     api.put(`/isins/${isinId}/automation/toggle`, { enabled })
 }
+
+export const reportsAPI = {
+  upload: (files: File[]) => {
+    const form = new FormData()
+    files.forEach((f) => form.append('files', f))
+    return api.post('/reports/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  listFiles: () => api.get('/reports/files'),
+
+  summary: () => api.get('/reports/summary')
+}

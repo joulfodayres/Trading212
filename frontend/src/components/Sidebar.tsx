@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LogOut, Settings, BarChart3, History, TrendingUp, Power, Sliders } from 'lucide-react'
+import { LogOut, Settings, BarChart3, History, TrendingUp, Power, Sliders, FileText } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useGlobalAutomation } from '../hooks/useGlobalAutomation'
 import { Button } from './ui/Button'
@@ -42,6 +42,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
     { id: 'isins', label: 'ISINs', icon: BarChart3 },
     { id: 'strategies', label: 'Strategies', icon: Sliders },
     { id: 'config', label: 'Configuration', icon: Settings },
+    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'history', label: 'History', icon: History },
   ]
 

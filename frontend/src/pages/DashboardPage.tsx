@@ -3,6 +3,7 @@ import Sidebar from '../components/Sidebar'
 import ISINTable from '../components/ISINTable'
 import StrategiesPage from './StrategiesPage'
 import ConfigPage from './ConfigPage'
+import ReportsPage from './ReportsPage'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 
 export default function DashboardPage() {
@@ -22,6 +23,7 @@ export default function DashboardPage() {
               {activeView === 'isins' && '📊 My ISINs'}
               {activeView === 'strategies' && '⚙️ Strategies'}
               {activeView === 'config' && '⚙️ Configuration'}
+              {activeView === 'reports' && '📄 Reports'}
               {activeView === 'history' && '📈 History'}
             </h1>
           </div>
@@ -45,6 +47,8 @@ export default function DashboardPage() {
           {activeView === 'config' && (
             <ConfigPage />
           )}
+
+          {activeView === 'reports' && <ReportsPage />}
 
           {activeView === 'history' && (
             <div>
