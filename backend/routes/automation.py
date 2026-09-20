@@ -6,7 +6,7 @@ Phase 4: Grid Trading Automation
 import logging
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,9 @@ class AutomationStatusResponse(BaseModel):
 
 class SchedulerIntervalRequest(BaseModel):
     """Request para atualizar intervalo do scheduler"""
-    scheduler_interval_seconds: int
-# ===== HELPERS =====
+    scheduler_interval_seconds: int = Field(..., ge=5, le=300)
+
+
 
 def _get_db():
     """Get Supabase DB instance"""
@@ -101,8 +102,7 @@ async def enable_global_automation():
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "grid_trading_enabled": True,
-            "updated_at": "now()"
+            "grid_trading_enabled": True
         }).eq("id", param_id).execute()
 
         if update_result.data:
@@ -141,8 +141,7 @@ async def disable_global_automation():
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "grid_trading_enabled": False,
-            "updated_at": "now()"
+            "grid_trading_enabled": False
         }).eq("id", param_id).execute()
 
         if update_result.data:
@@ -200,6 +199,9 @@ async def get_scheduler_interval():
 
         # Buscar app_parameters
         result = db.client.table("app_parameters").select("scheduler_interval_seconds").execute()
+        logger.info(f"Query result: {result}")
+        logger.info(f"Query result data: {result.data}")
+
         scheduler_interval_seconds = result.data[0].get("scheduler_interval_seconds", 15) if result.data else 15
 
         return {
@@ -208,7 +210,7 @@ async def get_scheduler_interval():
         }
 
     except Exception as e:
-        logger.error(f"Erro ao obter intervalo do scheduler: {e}")
+        logger.error(f"Erro ao obter intervalo do scheduler: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -243,12 +245,15 @@ async def update_scheduler_interval(request: SchedulerIntervalRequest):
             raise Exception("app_parameters table is empty")
 
         param_id = result.data[0]["id"]
+        logger.info(f"Updating app_parameters id={param_id} with interval={scheduler_interval_seconds}s")
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "scheduler_interval_seconds": scheduler_interval_seconds,
-            "updated_at": "now()"
+            "scheduler_interval_seconds": scheduler_interval_seconds
         }).eq("id", param_id).execute()
+
+        logger.info(f"Update result: {update_result}")
+        logger.info(f"Update result data: {update_result.data}")
 
         if update_result.data:
             logger.info(f"✅ Scheduler interval updated to {scheduler_interval_seconds}s")
@@ -266,7 +271,9 @@ async def update_scheduler_interval(request: SchedulerIntervalRequest):
                 "scheduler_interval_seconds": scheduler_interval_seconds,
             }
         else:
-            raise Exception("Failed to update app_parameters")
+            error_msg = f"Failed to update app_parameters. Response: {update_result}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
 
     except HTTPException:
         raise
