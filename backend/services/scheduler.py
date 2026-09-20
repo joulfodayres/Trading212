@@ -73,6 +73,14 @@ class SchedulerService:
                 f"✅ Scheduler iniciado com sucesso. Intervalo: {interval}s"
             )
 
+            # [NEW] Run first cycle immediately on startup
+            self.logger.info("🚀 Executando primeira ciclo imediatamente no arranque")
+            try:
+                run_cycle_wrapper()
+            except Exception as e:
+                self.logger.error(f"❌ Erro ao executar primeira ciclo: {e}", exc_info=True)
+                # Don't fail startup if first cycle fails, just log error
+
         except Exception as e:
             self.logger.error(f"❌ Erro ao iniciar scheduler: {e}", exc_info=True)
             raise
