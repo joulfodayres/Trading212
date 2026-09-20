@@ -104,6 +104,8 @@ export default function StrategiesPage() {
   const loadParameters = async (strategyId: string) => {
     try {
       const response = await apiClient.get(`/v1/strategies/${strategyId}`)
+      console.log(`[loadParameters] Full response for strategy ${strategyId}:`, response.data)
+      console.log(`[loadParameters] Parameters array:`, response.data.parameters)
       setParameters(response.data.parameters || [])
     } catch (error) {
       console.error('Error loading parameters:', error)
@@ -113,17 +115,17 @@ export default function StrategiesPage() {
   const handleCreateStrategy = async () => {
     // Validation
     if (!strategyForm.name.trim()) {
-      console.warn('[handleCreateStrategy] Name is required')
+      console.error('[handleCreateStrategy] Error: Name is required')
       return
     }
 
     if (!strategyForm.initial_investment || strategyForm.initial_investment <= 0) {
-      console.warn('[handleCreateStrategy] Initial investment must be > 0')
+      console.error('[handleCreateStrategy] Error: Initial investment must be greater than 0')
       return
     }
 
     if (strategyForm.initial_investment < 0) {
-      console.warn('[handleCreateStrategy] Initial investment cannot be negative')
+      console.error('[handleCreateStrategy] Error: Initial investment cannot be negative')
       return
     }
 
@@ -132,7 +134,7 @@ export default function StrategiesPage() {
       s => s.name && s.name.toLowerCase().trim() === strategyForm.name.toLowerCase().trim()
     )
     if (duplicateExists) {
-      console.warn('[handleCreateStrategy] Strategy with this name already exists')
+      console.error('[handleCreateStrategy] Error: A strategy with this name already exists')
       return
     }
 
@@ -223,10 +225,17 @@ export default function StrategiesPage() {
   const handleCreateParameter = async () => {
     if (!selectedStrategy || !parameterForm.pos) return
 
+    // Validate Position is integer
+    const posValue = parseInt(parameterForm.pos, 10)
+    if (isNaN(posValue) || posValue.toString() !== parameterForm.pos.trim()) {
+      console.error('Error: Position must be an integer (e.g., -1, 0, 1)')
+      return
+    }
+
     try {
       const response = await apiClient.post(
         `/v1/strategies/${selectedStrategy.id}/parameters`,
-        parameterForm
+        { ...parameterForm, pos: parameterForm.pos.trim() }
       )
       setParameters([...parameters, response.data])
       setParameterForm({
@@ -717,6 +726,7 @@ export default function StrategiesPage() {
                     placeholder="Position (ex: -1, 0, 1)"
                     value={parameterForm.pos}
                     onChange={(e) => setParameterForm({ ...parameterForm, pos: e.target.value })}
+                    style={{ color: '#000000' }}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                   />
 
@@ -733,6 +743,7 @@ export default function StrategiesPage() {
                           ...parameterForm,
                           [param]: e.target.value ? parseFloat(e.target.value) : undefined
                         })}
+                        style={{ color: '#000000' }}
                         className="px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                       />
                     ))}

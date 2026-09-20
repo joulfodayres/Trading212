@@ -165,6 +165,11 @@ async def get_strategy(strategy_id: str):
         params_result = db.client.table("strategy_parameters").select("*").eq("strategy_id", strategy_id).execute()
         parameters = params_result.data or []
 
+        logger.info(f"[DEBUG] Raw parameters from DB for strategy {strategy_id}: {parameters}")
+        if parameters:
+            logger.info(f"[DEBUG] Parameters column names: {list(parameters[0].keys())}")
+            logger.info(f"[DEBUG] Number of parameters: {len(parameters)}")
+
         return {
             "id": strategy["id"],
             "name": strategy.get("strategy_name") or "",
