@@ -15,7 +15,7 @@ from routes.auth import router as auth_router
 from routes.isins import router as isins_router
 from routes.config import router as config_router
 from routes.automation import router as automation_router
-from db.supabase_client import SessionLocal
+from db.supabase_client import get_db
 from services.scheduler import SchedulerService
 from services.automation_engine import AutomationEngine
 from services.t212_service import T212Service
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     # ===== STARTUP =====
     try:
         # Create database session
-        db_session = SessionLocal()
+        db = get_db()
         logger.info("✅ Conexão com Supabase estabelecida")
 
         # Create T212 client
@@ -67,11 +67,11 @@ async def lifespan(app: FastAPI):
         logger.info("✅ T212Service inicializado")
 
         # Create automation engine
-        automation_engine = AutomationEngine(db_session, t212_service)
+        automation_engine = AutomationEngine(db, t212_service)
         logger.info("✅ AutomationEngine inicializado")
 
         # Create scheduler service
-        scheduler_service = SchedulerService(db_session, automation_engine)
+        scheduler_service = SchedulerService(db, automation_engine)
         logger.info("✅ SchedulerService criado")
 
         # Start scheduler (background thread)

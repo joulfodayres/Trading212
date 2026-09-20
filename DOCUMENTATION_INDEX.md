@@ -1,7 +1,7 @@
 # Documentation Index
 
-**Updated:** 2026-09-17  
-**Phase:** 3 (UI & Automation)
+**Updated:** 2026-09-20  
+**Phase:** 4 (Automation Engine) ✅ COMPLETE
 
 ---
 
@@ -26,21 +26,32 @@
 
 ## 🎯 Phase Documentation
 
-### Phase 3 (Current): UI & Automation Toggle
-- Automation toggle implementation ✅
-- Strategy selection dialog ✅
-- Modal UI (Trading 212 style) ✅
-- Audit trail (isin_strategy_history) ✅
-
-### Phase 4 (Next): Grid Trading Automation
-- [ ] OrderHistoryManager
-- [ ] APScheduler setup
-- [ ] Grid Trading logic
-- [ ] Trade execution
+### Phase 4 (Complete): Grid Trading Automation ✅
+- ✅ APScheduler setup (embedded in FastAPI)
+- ✅ SchedulerService lifecycle management
+- ✅ AutomationEngine 3-phase cycle
+- ✅ T212Service API wrapper
+- ✅ Portfolio sync endpoint
+- ✅ Automation monitoring
 
 **Files:**
-- `docs/t212-api/` - Trading 212 API analysis
-- `docs/PHASE_4_GUIDE.md` - Implementation guide (to create)
+- `PHASE4_ARCHITECTURE.txt` - Architectural decisions
+- `PHASE4_IMPLEMENTATION_PLAN.md` - Implementation guide
+- `STATUS.md` - Phase 4 status (see section)
+- `backend/services/scheduler.py`
+- `backend/services/automation_engine.py`
+- `backend/services/t212_service.py`
+- `backend/routes/automation.py`
+
+### Phase 5 (Next): Features & Backlog 🚧
+- [ ] Global Automation Toggle
+- [ ] Strategy Parameter Tables
+- [ ] Automation Preview Dialog
+- [ ] Upload Real T212 Data
+- [ ] Charts & Statistics
+
+**Files:**
+- `BACKLOG.md` - 5 prioritized features with timelines
 
 ---
 
@@ -58,7 +69,7 @@
 
 ### Backend (`backend/`)
 ```
-├── main.py                      # FastAPI entry point
+├── main.py                      # FastAPI entry point (with lifespan)
 ├── requirements.txt             # Python dependencies
 ├── config/settings.py           # Environment settings
 ├── auth/crypto.py              # Encryption (Fernet)
@@ -70,9 +81,14 @@
 │   ├── isins.py
 │   ├── config.py
 │   ├── positions.py
-│   └── orders.py
+│   ├── orders.py
+│   └── automation.py          # ✅ NEW (Phase 4)
+├── services/                   # ✅ NEW (Phase 4)
+│   ├── scheduler.py           # SchedulerService
+│   ├── automation_engine.py   # AutomationEngine
+│   └── t212_service.py        # T212 wrapper
 ├── db/supabase_client.py       # Supabase wrapper
-└── engine/                     # Scheduler & strategy (TODO)
+└── engine/                     # (Legacy, see services/)
 ```
 
 ### Frontend (`frontend/`)
@@ -93,12 +109,13 @@
 ### Database (`db/`)
 ```
 ├── supabase_schema.sql          # Table definitions
-└── simplify_to_singleuser.sql  # Single-user migration
-```
+├── simplify_to_singleuser.sql  # Single-user migration
+├── app_parameters_table.sql    # ✅ NEW (Phase 4)
+└── migrations/                 # (Not used - Supabase manages schema)
 
 ### Documentation (`docs/`)
 ```
-├── README.md                    # Docs index
+├── README.md                    # Docs index (updated Phase 4)
 ├── t212-api/                    # Trading 212 API analysis
 │   ├── API_ANALYSIS.md
 │   ├── HISTORY_ORDERS_PARAMS.md
@@ -106,6 +123,19 @@
 │   └── ... (more API docs)
 └── _archive/                    # Old documentation
 ```
+
+### Root Documentation
+```
+├── README.md                           # ✅ Updated
+├── STATUS.md                           # ✅ Updated (Phase 4)
+├── CLAUDE.md                           # ✅ Updated (Phase 4)
+├── BACKLOG.md                          # ✅ NEW (Phase 5 priorities)
+├── DOCUMENTATION_INDEX.md              # ← This file
+├── PHASE4_ARCHITECTURE.txt             # ✅ NEW (Decisions)
+├── PHASE4_IMPLEMENTATION_PLAN.md       # ✅ NEW (Guide)
+├── COMECA_AQUI.md                      # Quick start
+├── render.yaml                         # Render config
+└── .gitignore                          # Git rules
 
 ---
 
@@ -131,6 +161,12 @@
   2. Check `backend/api/trading212.py` for implementation
   3. Review `docs/t212-api/HISTORY_ORDERS_PARAMS.md` for specific endpoints
 
+- **Understand the Scheduler:**
+  1. Read `PHASE4_ARCHITECTURE.txt` (questions 1-6)
+  2. Check `backend/services/scheduler.py` (SchedulerService)
+  3. Review `backend/services/automation_engine.py` (3-phase cycle)
+  4. Test: `GET /api/v1/automation/status`
+
 - **Deploy a change:**
   1. Commit to `main` branch
   2. GitHub auto-triggers Render
@@ -143,10 +179,12 @@
   3. Run queries in Query Editor
   4. Review table schemas
 
-- **Implement Grid Trading:**
-  1. Read Phase 4 docs (to be created)
-  2. Check `docs/t212-api/INCREMENTAL_SYNC.md`
-  3. Implement `backend/engine/strategy.py`
+- **Implement Phase 5 feature:**
+  1. Check `BACKLOG.md` for detailed requirements
+  2. Create branch: `feature/phase5-xyz`
+  3. Update backend, frontend, database as needed
+  4. Test locally before deploying
+  5. Create PR with reference to backlog item
   4. Setup APScheduler in `backend/engine/scheduler.py`
 
 ---

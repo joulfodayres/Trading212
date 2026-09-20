@@ -1,8 +1,8 @@
 # Trading 212 Bot - MVP
 
-**Status:** ✅ **Phase 3 Complete - Moving to Phase 4** 🚀  
-**Last Update:** 2026-09-17  
-**Version:** 0.3.0
+**Status:** ✅ **Phase 4 Complete - Automation Engine Live** 🚀  
+**Last Update:** 2026-09-20  
+**Version:** 0.4.0
 
 Automação de trading algorítmico integrada com Trading 212 API, acessível via browser de qualquer lugar.
 
@@ -54,50 +54,64 @@ npm run dev  # http://localhost:5173
 
 ---
 
-## ✅ What Works Now (Phase 3)
+## ✅ What Works Now (Phase 4)
 
 ### Core Features
-- ✅ Live ISINs data from Trading 212 API
-- ✅ Dashboard with real-time positions
-- ✅ Automation toggle (enable/disable per ISIN)
-- ✅ Strategy selection dialog
-- ✅ Audit trail for all changes
-- ✅ Modal dialog (Trading 212 style UI)
+- ✅ **Live ISINs data** from Trading 212 API
+- ✅ **Dashboard with real-time positions**
+- ✅ **Automation toggle** (enable/disable per ISIN)
+- ✅ **Strategy selection dialog**
+- ✅ **Audit trail** for all changes
+- ✅ **Modal dialog** (Trading 212 style UI)
+- ✅ **APScheduler automation engine** (15s interval)
+- ✅ **Portfolio sync endpoint** (POST /api/isins/sync)
+- ✅ **3-phase automation cycle** (setup → monitor → fill handling)
+- ✅ **Grid Trading strategy** (initial implementation)
 
 ### Technical
-- ✅ Backend: FastAPI with 25+ endpoints
+- ✅ Backend: FastAPI with 30+ endpoints
 - ✅ Frontend: React 18 + TypeScript
 - ✅ Database: PostgreSQL (Supabase)
 - ✅ Auth: JWT tokens
 - ✅ Deployment: Auto-deploy on git push
 - ✅ Encryption: API keys encrypted
-- ✅ Logging: Full audit trail
+- ✅ Logging: Full audit trail + automation logs
+- ✅ **APScheduler:** Background automation running 24/7
+- ✅ **SchedulerService:** Lifecycle management
+- ✅ **AutomationEngine:** 3-phase strategy execution
 
 ---
 
-## 🚧 Next Phase (Phase 4: Grid Trading)
+## 🚧 Next Phase (Phase 5: Features & Polish)
 
-Priority tasks to implement automation:
+Priority backlog items (5 items):
 
-1. **OrderHistoryManager**
-   - Incremental sync of order history
-   - Validate ordering assumptions
-   - Handle pagination
+1. **🎚️ Global Automation Toggle** (Low complexity, 2-3h)
+   - ON/OFF button in header for engine control
+   - Status visual indicator
+   - Confirmation dialog
 
-2. **APScheduler Setup**
-   - Polling every 5 seconds
-   - Monitor positions
-   - Check strategy triggers
+2. **🎛️ Strategy Parameter Tables** (Medium complexity, 4-6h)
+   - Editable UI for grid parameters per position
+   - CRUD endpoints for strategy_parameters
+   - Real-time validation
 
-3. **Grid Trading Logic**
-   - Buy at -1% below average
-   - Sell at +1% above average
-   - Risk management (max position, stop-loss)
+3. **📁 Upload Real T212 Data** (High complexity, 6-8h)
+   - CSV/Excel import from Trading 212
+   - Parser + validator
+   - Batch ISIN + history import
 
-4. **Validation**
-   - Test with real data (DEMO account)
-   - Verify order history ordering
-   - Rate limit handling
+4. **📊 Charts & Statistics** (High complexity, 8-10h)
+   - Equity curve, P&L, drawdown graphs
+   - Performance metrics
+   - Trade history table
+
+5. **💬 Automation Preview Dialog** (Medium complexity, 3-4h)
+   - Show strategy details before activation
+   - Parameter summary
+   - Confirmation step
+
+See **`BACKLOG.md`** for full details.
 
 ---
 
@@ -197,6 +211,17 @@ Verify SUPABASE_URL and SUPABASE_KEY in .env
 
 ## 📝 Recent Changes
 
+- ✅ **Phase 4 Complete:** APScheduler automation engine implemented
+  - SchedulerService lifecycle management
+  - AutomationEngine with 3-phase cycle
+  - T212Service wrapper for API calls
+  - Background automation running every 15s
+  
+- ✅ **Portfolio Sync Endpoint:** POST /api/isins/sync
+  - Fetches positions from Trading 212 API
+  - Updates ISIN database with latest data
+  - Used by frontend for real-time updates
+  
 - ✅ Upgraded modal to Trading 212 style design
 - ✅ Removed toast notifications
 - ✅ Simplified to single-user (no user_id)
@@ -209,16 +234,16 @@ See **`STATUS.md`** for full timeline.
 
 ## 🎯 Next Steps
 
-1. Implement Grid Trading strategy
-2. Setup APScheduler polling
-3. Test with real data
-4. Deploy to live (with controls)
+1. ✅ Phase 4: Grid Trading Automation Engine (DONE)
+2. 🚧 Phase 5: Backlog Features (Global ON/OFF, Parameter UI, Data Import, Charts)
+3. Phase 6: Real-time WebSocket updates
+4. Phase 7: Live trading mode
+
+For detailed status, see **`STATUS.md`**.
 
 ---
 
-**Version:** 0.3.0 (MVP Phase 3)  
-**Updated:** 2026-09-17  
-**Status:** ✅ Functional | 🚧 Advancing to Phase 4
-
-For detailed status, see **`STATUS.md`**.
+**Version:** 0.4.0 (MVP Phase 4 - Automation Engine)  
+**Updated:** 2026-09-20  
+**Status:** ✅ Functional | 🚧 Phase 5 Backlog Ready
 

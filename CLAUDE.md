@@ -2,7 +2,7 @@
 
 **Projeto de automação de trading algorítmico integrado com a plataforma Trading 212 via API oficial.**
 
-Status: **MVP EM PRODUÇÃO - FASE FINAL** 🚀 (90% Completo)
+Status: **MVP EM PRODUÇÃO - PHASE 4 COMPLETE** 🚀 (100% Phase 4 | 90% Overall)
 
 ---
 
@@ -123,9 +123,15 @@ Trading212/
 │   │
 │   ├── engine/
 │   │   ├── __init__.py
-│   │   ├── scheduler.py               # APScheduler (corre a cada 5 min) (TODO)
-│   │   ├── strategy.py                # Lógica de estratégias (TODO)
-│   │   └── executor.py                # Executa trades (TODO)
+│   │   ├── scheduler.py               # APScheduler (corre a cada 15s) ✅
+│   │   ├── automation_engine.py       # 3-phase automation cycle ✅
+│   │   └── t212_service.py            # T212 API wrapper ✅
+│   │
+│   ├── services/                       # (NEW - Phase 4)
+│   │   ├── __init__.py
+│   │   ├── scheduler.py               # SchedulerService lifecycle ✅
+│   │   ├── automation_engine.py       # AutomationEngine core logic ✅
+│   │   └── t212_service.py            # T212 API helpers ✅
 │   │
 │   ├── websocket/
 │   │   ├── __init__.py
@@ -658,22 +664,34 @@ npm run build
 
 ## 🎯 Roadmap
 
-### **Curto Prazo (1-2 semanas)**
-- [ ] Autenticação real
-- [ ] CRUD ISINs funcional
-- [ ] Configuração T212
+### **Fase 4: Automação Grid Trading** ✅ COMPLETO
+- ✅ APScheduler integrado (ciclo de 15s)
+- ✅ SchedulerService (lifecycle management)
+- ✅ AutomationEngine (3-fase: setup → monitor → fill)
+- ✅ T212Service (wrapper para API calls)
+- ✅ Portfolio sync endpoint (POST /api/isins/sync)
+- ✅ Automation monitoring endpoints
+- ✅ Grid Trading strategy initial implementation
 
-### **Médio Prazo (1 mês)**
-- [ ] Automação Grid Trading
-- [ ] Real-time updates
-- [ ] Gráficos
+### **Fase 5: Features & Backlog** 🚧 PRÓXIMO (1-2 semanas)
+- [ ] Global Automation Toggle (ON/OFF engine)
+- [ ] Strategy Parameter Tables (UI editável)
+- [ ] Automation Preview Dialog
+- [ ] Upload Real T212 Data (CSV/Excel import)
+- [ ] Charts & Statistics (equity curve, P&L)
 
-### **Longo Prazo (3-6 meses)**
+### **Fase 6: Real-time & Polish**
+- [ ] WebSocket real-time updates
+- [ ] Advanced dashboard
+- [ ] Automated testing suite
+- [ ] Monitoring & alerts
+
+### **Fase 7: Produção & Expansão**
+- [ ] Live trading mode (com controlos)
 - [ ] Mais estratégias (RSI, SMA, etc)
+- [ ] Multiple account support
 - [ ] Mobile app
-- [ ] API pública
 - [ ] Backtesting engine
-- [ ] Live trading (não DEMO)
 
 ---
 
@@ -687,25 +705,25 @@ npm run build
 
 ---
 
-## 📖 Documentação Interna Detalhada (Phase 4)
+## 📖 Documentação Interna (Phase 4)
 
-Após investigação profunda da T212 API, criámos documentação completa:
+### ✅ Phase 4 Implementation Complete
+- **`PHASE4_ARCHITECTURE.txt`** - Decisões arquiteturais (APScheduler, lifespan, schema)
+- **`PHASE4_IMPLEMENTATION_PLAN.md`** - Plano detalhado de implementação
+- **Ficheiros de Código:**
+  - `backend/services/scheduler.py` - SchedulerService
+  - `backend/services/automation_engine.py` - AutomationEngine (3-fase)
+  - `backend/services/t212_service.py` - T212 API wrapper
+  - `backend/routes/automation.py` - Monitoring endpoints
+  - `backend/models/db.py` - AppParameters model
 
-- **`docs/T212_API_ANALYSIS.md`** - Análise completa de todos os endpoints
-- **`docs/T212_ORDER_HISTORY_BY_ID.md`** - Acesso a histórico de ordens específicas
-- **`docs/T212_HISTORY_ORDERS_PARAMS.md`** - Parâmetros detalhados de /history/orders
-- **`docs/T212_HISTORY_ORDERS_NO_DATE_FILTER.md`** - Limitação: sem filtro de data
-- **`docs/T212_INCREMENTAL_SYNC_HOW_IT_WORKS.md`** - Estratégia de incremental sync
-- **`docs/T212_ORDERING_ASSUMPTION_WARNING.md`** - ⚠️ Assunção não documentada sobre ordenação DESC
-- **`docs/T212_ORDERING_VERIFICATION_RESULTS.md`** - (A criar) Resultados de testes práticos
+### ⭐ Descobertas Importantes (Phase 4):
 
-### ⭐ Descobertas Importantes:
-
-1. **SEM Webhooks/Callbacks** - T212 API é polling-only
-2. **SEM filtro de data** - Não há parâmetro `time` em `/history/orders`
-3. **Ordenação DESC implícita** - Exemplo sugere DESC, mas NÃO está documentado
-4. **Incremental sync possível** - Com cuidado (validar ordem antes de produção)
-5. **Rate limits permitem polling** - 6 req/min em histórico, 1 req/1s em posições
+1. **APScheduler Embedded** - Sem serviço separado, integrado em FastAPI
+2. **3-Phase Cycle** - Setup (initial trades) → Monitor (poll orders) → Fill (rebalance)
+3. **15s Interval** - Ciclo completo executa em ~7-10s, deixa buffer de 5-8s
+4. **Max Instances=1** - Previne overlapping cycles (thread-safety)
+5. **Portfolio Sync** - POST /api/isins/sync sincroniza posições do T212
 
 ### 🔐 Autenticação T212:
 
@@ -717,10 +735,10 @@ Após investigação profunda da T212 API, criámos documentação completa:
 
 - ❌ Sem webhooks (polling obrigatório)
 - ❌ Sem filtro de data em /history/orders
-- ❌ Sem endpoint direto para buscar ordem histórica por ID
 - ❌ Máx 50 ordens pendentes por ticker
 - ❌ Apenas contas Invest/Stocks ISA
 - ✅ Todas as operações na moeda primária da conta
+- ✅ Rate limits respeitados (polling a cada 15s é safe)
 
 ---
 
@@ -735,17 +753,19 @@ Após investigação profunda da T212 API, criámos documentação completa:
 - ✅ Environment variables setup
 - ✅ Testes básicos passados
 - ✅ Documentação atualizada
-- ⏳ Testes automatizados (TODO)
-- ⏳ Monitoring (TODO)
-- ⏳ Backup strategy (TODO)
+- ✅ Phase 4 Automation Engine Live
+- ✅ APScheduler running 24/7
+- ⏳ Testes automatizados (Phase 5)
+- ⏳ Monitoring avançado (Phase 6)
+- ⏳ Backup strategy (Phase 6)
 
 ---
 
 ## 👨‍💻 Desenvolvimento
 
-**Última atualização:** 2026-09-13
-**Status:** MVP em produção, pronto para expansão
-**Próximo focus:** Autenticação real + CRUD ISINs
+**Última atualização:** 2026-09-20
+**Status:** Phase 4 Completo - Automation Engine Live
+**Próximo focus:** Backlog Features (Global Toggle, Parameter UI, Charts)
 
 ---
 

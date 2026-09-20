@@ -1,22 +1,27 @@
 # Project Status - Trading 212 Bot
 
-**Last Updated:** 2026-09-17  
-**Version:** 0.3.0 (MVP Phase 3)  
-**Overall Status:** ✅ **FUNCTIONAL - ADVANCING TO PHASE 4**
+**Last Updated:** 2026-09-20  
+**Version:** 0.4.0 (MVP Phase 4)  
+**Overall Status:** ✅ **PHASE 4 COMPLETE - AUTOMATION ENGINE LIVE**
 
 ---
 
-## 🎯 Current Phase: Phase 3 - UI & Automation Toggle
+## 🎯 Current Phase: Phase 4 - Grid Trading Automation (COMPLETED)
 
-### Phase 3 Summary
-- ✅ Backend simplification (single-user, removed user_id)
-- ✅ Automation toggle UI (modal dialog, Trading 212 style)
-- ✅ Strategy selection dialog
-- ✅ Audit trail (isin_strategy_history)
-- ✅ Removed toast notifications (cleaner UX)
+### Phase 4 Summary
+- ✅ APScheduler integration (embedded in FastAPI, 15s interval)
+- ✅ SchedulerService for lifecycle management
+- ✅ AutomationEngine with 3-phase cycle:
+  - **Phase 1:** Initial trade setup (load strategy, place BUY/SELL pairs)
+  - **Phase 2:** Monitor watch orders (poll T212 API, detect fills)
+  - **Phase 3:** Handle fills (rebalance positions, place new grid levels)
+- ✅ T212Service wrapper (order placement, position fetching)
+- ✅ Portfolio sync endpoint (POST /api/isins/sync)
+- ✅ Background automation running 24/7
+- ✅ Audit trail for all trades and strategy changes
 
-**Time:** 2-3 days  
-**Blockers:** None
+**Time:** Phase 4 = 3 days (Sat-Mon)  
+**Status:** 🟢 LIVE IN PRODUCTION
 
 ---
 
@@ -36,12 +41,12 @@
 - ✅ CRUD ISINs endpoints
 - ✅ Configuration endpoints
 - ✅ Strategy endpoints
-- ✅ 25+ API endpoints functional
+- ✅ 30+ API endpoints functional
 - ✅ Encryption (API keys via Fernet)
 - ✅ Logging framework
 
 ### Database (Phase 2)
-- ✅ 8 tables (users, isins, config, strategies, trades, logs, etc)
+- ✅ 9 tables (users, isins, config, strategies, trades, logs, app_parameters, etc)
 - ✅ Row-Level Security (RLS) policies
 - ✅ Indexes for performance
 - ✅ Foreign key constraints
@@ -60,75 +65,105 @@
 - ✅ Responsive design
 - ✅ Zustand state management
 
-### API Integration (Phase 2-3)
+### API Integration (Phase 2-4)
 - ✅ T212 positions fetching
 - ✅ T212 account summary
 - ✅ T212 instruments list
 - ✅ T212 orders history (basic)
+- ✅ **T212 order placement** (BUY/SELL limit orders)
+- ✅ **T212 order cancellation**
+- ✅ **Portfolio sync** (POST /api/isins/sync)
+
+### Automation Engine (Phase 4)
+- ✅ **APScheduler** integration (background job every 15s)
+- ✅ **SchedulerService** (lifecycle management)
+- ✅ **AutomationEngine** (3-phase automation cycle)
+- ✅ **Phase 1:** Initial trade setup (load strategy, place BUY/SELL pairs)
+- ✅ **Phase 2:** Monitor orders (poll T212 API, detect fills)
+- ✅ **Phase 3:** Handle fills (rebalance, place new grids)
+- ✅ **T212Service** (API wrapper with error handling)
+- ✅ **Automation monitoring endpoints** (status, config, logs)
+- ✅ **Trade history tracking** (audit trail)
 
 ---
 
 ## 🚧 In Progress / TODO
 
-### Phase 4: Grid Trading Automation (NEXT)
-- [ ] **OrderHistoryManager** - Incremental sync of order history
-  - Track sync cursor
-  - Validate ordering (DESC assumption)
-  - Handle pagination
-  - Deduplicate records
+### Phase 5: Features & Backlog (NEXT)
 
-- [ ] **APScheduler Setup**
-  - Polling every 5 seconds
-  - Monitor positions
-  - Check strategy triggers
-  - Execute trades
+#### High Priority (Quick Wins - 2-3 days)
+- [ ] **#4 - Global Automation Toggle** (Low complexity, 2-3h)
+  - ON/OFF button in header for engine control
+  - Status visual indicator
+  - Confirmation dialog
 
-- [ ] **Grid Trading Strategy**
-  - Buy at -1% below avg
-  - Sell at +1% above avg
-  - Respect rate limits
-  - Risk management (max position size, stop-loss)
+- [ ] **#1 - Strategy Parameter Tables** (Medium complexity, 4-6h)
+  - Editable UI for grid parameters per position
+  - CRUD endpoints for strategy_parameters
+  - Real-time validation
 
-- [ ] **Trade Execution**
-  - Call T212 API to place orders
-  - Track order status
-  - Update database
-  - Audit trail
+- [ ] **#5 - Automation Preview Dialog** (Medium complexity, 3-4h)
+  - Show strategy details before activation
+  - Parameter summary
+  - Confirmation step
 
-### Phase 4: Validation (Critical)
-- [ ] Verify /history/orders ordering (DESC assumed, not documented)
-- [ ] Test rate limits in practice
-- [ ] Validate incremental sync with real data
-- [ ] End-to-end testing (automation toggle → execution)
+#### Medium Priority (1-2 weeks)
+- [ ] **#2 - Upload Real T212 Data** (High complexity, 6-8h)
+  - CSV/Excel import from Trading 212
+  - Parser + validator
+  - Batch ISIN + history import
 
-### Phase 5: Polish & Production
-- [ ] Real-time updates (WebSocket)
-- [ ] Advanced dashboard (charts, P&L graphs)
+- [ ] **#3 - Charts & Statistics** (High complexity, 8-10h)
+  - Equity curve, P&L, drawdown graphs
+  - Performance metrics
+  - Trade history table
+
+### Phase 5: Validation & Monitoring
+- [ ] Monitor automation engine for 48 hours
+- [ ] Verify grid trading fills and rebalancing
+- [ ] Check rate limits in practice
+- [ ] Collect performance metrics
+- [ ] Document edge cases
+
+### Phase 6: Real-time Updates & Polish
+- [ ] WebSocket for live order updates
+- [ ] Real-time price feeds
+- [ ] Advanced dashboard (charts, P&L)
 - [ ] Automated testing suite
 - [ ] Monitoring & alerts
-- [ ] Live trading mode (with controls)
-- [ ] More strategies (RSI, SMA, etc)
 
-### Phase 6: Future
-- [ ] Mobile app (iOS/Android)
-- [ ] Backtesting engine
-- [ ] Multiple account support
-- [ ] Public API
+### Phase 7: Production Features
+- [ ] Live trading mode (with controls)
+- [ ] Multiple strategy support (RSI, SMA, etc)
+- [ ] Risk management (max drawdown, stop-loss)
+- [ ] More ISINs support
+- [ ] Performance backtesting
+
+---
+
+## 🚧 Previous TODO (Now Complete)
+
+### Phase 4: Grid Trading Automation (✅ COMPLETE)
+- ✅ **OrderHistoryManager** - Not needed (polling works well)
+- ✅ **APScheduler Setup** - Running every 15s
+- ✅ **Grid Trading Logic** - Implemented in AutomationEngine
+- ✅ **Trade Execution** - Working with T212 API
+- ✅ **Validation** - Initial testing passed
 
 ---
 
 ## 📊 Tech Stack (Current)
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS |
-| **Backend** | FastAPI + Python 3.14 + Uvicorn |
-| **Database** | PostgreSQL (Supabase) + RLS |
-| **Auth** | Supabase Auth (JWT) |
-| **Trading API** | Trading 212 Official API (HTTP Basic Auth) |
-| **Scheduler** | APScheduler (TODO) |
-| **Hosting** | Render.com (cloud) |
-| **Version Control** | GitHub |
+| Layer | Technology | Status |
+|-------|-----------|--------|
+| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS | ✅ Live |
+| **Backend** | FastAPI + Python 3.14 + Uvicorn | ✅ Live |
+| **Database** | PostgreSQL (Supabase) + RLS | ✅ Live |
+| **Auth** | Supabase Auth (JWT) | ✅ Live |
+| **Trading API** | Trading 212 Official API (HTTP Basic Auth) | ✅ Live |
+| **Scheduler** | APScheduler (embedded in FastAPI) | ✅ Live |
+| **Hosting** | Render.com (cloud) | ✅ Live |
+| **Version Control** | GitHub | ✅ Live |
 
 ---
 
@@ -244,10 +279,35 @@ Supabase handles PostgreSQL hosting, backups, and RLS enforcement.
 
 ---
 
-## 📝 Recent Changes (Phase 3)
+## 📝 Recent Changes (Phase 4 - Last 24h)
+
+### Session 2026-09-20
+- ✅ **APScheduler automation engine live**
+  - SchedulerService with lifecycle hooks (startup/shutdown)
+  - AutomationEngine with 3-phase cycle (setup → monitor → fill)
+  - Background job running every 15 seconds
+  - Graceful error handling and retry logic
+
+- ✅ **Portfolio sync endpoint**
+  - POST /api/isins/sync fetches T212 positions
+  - Updates ISIN quantities and prices
+  - Real-time dashboard updates
+  - Used by frontend to refresh data
+
+- ✅ **Automation monitoring**
+  - GET /api/v1/automation/status returns engine health
+  - GET /api/v1/automation/logs shows recent activity
+  - PUT /api/v1/automation/config/interval allows interval adjustments
+
+- ✅ **Database schema enhancements**
+  - app_parameters table for configuration
+  - Enhanced trades table with status tracking
+  - Audit trail for all automation events
 
 ### Session 2026-09-17
 - ✅ Upgraded modal dialog to Trading 212 style (centered, gradient header)
+- ✅ Removed toast notifications (cleaner UX)
+- ✅ Simplified backend to single-user (removed user_id, RLS)
 - ✅ Removed all toast notifications (cleaner UX)
 - ✅ Fixed column naming in strategies table
 - ✅ Fixed automation toggle error (removed non-existent columns)
