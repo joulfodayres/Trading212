@@ -151,16 +151,21 @@ class AutomationEngine:
                 )
                 return
 
+            # [NEW] Calculate investment with adjustment based on param2/param3
+            initial_investment = strategy.get("initial_investment", 0)
+            param2 = params.get("param2", 0)
+            param3 = params.get("param3", 0)
+            buy_investment = initial_investment * (1 + param2 / 100)
+            sell_investment = initial_investment * (1 + param3 / 100)
+
             # Calculate prices
             param1 = params.get("param1", 0)
-            param2 = params.get("param2", 0)
             buy_price = current_price * (1 + param1 / 100)
             sell_price = current_price * (1 + param2 / 100)
 
-            # Calculate quantities
-            initial_investment = strategy.get("initial_investment", 0)
-            buy_quantity = initial_investment / buy_price if buy_price > 0 else 0
-            sell_quantity = initial_investment / sell_price if sell_price > 0 else 0
+            # [NEW] Calculate quantities using investment (not just initial_investment)
+            buy_quantity = buy_investment / buy_price if buy_price > 0 else 0
+            sell_quantity = sell_investment / sell_price if sell_price > 0 else 0
 
             self.logger.debug(
                 f"BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
@@ -397,24 +402,30 @@ class AutomationEngine:
                 )
                 return
 
-            # Calculate new prices
+            # [NEW] Recalculate investment with new position
+            initial_investment = strategy.get("initial_investment", 0)
+            param2 = params.get("param2", 0)
+            param3 = params.get("param3", 0)
+            new_buy_investment = initial_investment * (1 + param2 / 100)
+            new_sell_investment = initial_investment * (1 + param3 / 100)
+
+            # Calculate new prices with new position
             current_price = isin_data.get("current_price")
             param1 = params.get("param1", 0)
-            param2 = params.get("param2", 0)
-            buy_price = current_price * (1 + param1 / 100)
-            sell_price = current_price * (1 + param2 / 100)
+            new_buy_price = current_price * (1 + param1 / 100)
+            new_sell_price = current_price * (1 + param2 / 100)
 
-            initial_investment = strategy.get("initial_investment", 0)
-            buy_quantity = initial_investment / buy_price if buy_price > 0 else 0
-            sell_quantity = initial_investment / sell_price if sell_price > 0 else 0
+            # [NEW] Calculate quantities with new investment
+            new_buy_quantity = new_buy_investment / new_buy_price if new_buy_price > 0 else 0
+            new_sell_quantity = new_sell_investment / new_sell_price if new_sell_price > 0 else 0
 
             self.logger.debug(
-                f"Novo pair: BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
+                f"Novo pair: BUY @ {new_buy_price:.2f} qty={new_buy_quantity:.2f}, SELL @ {new_sell_price:.2f} qty={new_sell_quantity:.2f}"
             )
 
             # Place BUY order
             buy_response = await self.t212_service.place_buy_limit_order(
-                ticker=isin_data.get("ticker"), quantity=buy_quantity, limit_price=buy_price
+                ticker=isin_data.get("ticker"), quantity=new_buy_quantity, limit_price=new_buy_price
             )
             if not buy_response:
                 self.logger.error(f"Falha ao colocar novo BUY order para {isin_data.get('ticker')}")
@@ -422,7 +433,7 @@ class AutomationEngine:
 
             # Place SELL order
             sell_response = await self.t212_service.place_sell_limit_order(
-                ticker=isin_data.get("ticker"), quantity=sell_quantity, limit_price=sell_price
+                ticker=isin_data.get("ticker"), quantity=new_sell_quantity, limit_price=new_sell_price
             )
             if not sell_response:
                 self.logger.error(f"Falha ao colocar novo SELL order para {isin_data.get('ticker')}")
