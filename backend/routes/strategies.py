@@ -109,8 +109,11 @@ async def list_strategies():
         logger.info("Fetching strategies...")
         result = db.client.table("strategies").select("*").execute()
 
+        logger.info(f"[DEBUG] Raw DB result: {result.data}")
+
         strategies = []
         for row in result.data or []:
+            logger.info(f"[DEBUG] Processing row: id={row.get('id')}, name='{row.get('name')}', desc='{row.get('description')}'")
             is_valid = _check_strategy_valid(db, row["id"])
             strategies.append({
                 "id": row["id"],
@@ -124,6 +127,7 @@ async def list_strategies():
             })
 
         logger.info(f"Returned {len(strategies)} strategies")
+        logger.info(f"[DEBUG] Final response: {strategies}")
         return strategies
 
     except Exception as e:
