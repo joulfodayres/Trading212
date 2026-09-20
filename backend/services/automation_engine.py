@@ -6,10 +6,9 @@ Phase 4: Grid Trading Automation
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+import uuid
 
-from models.db import ISIN, Strategy, StrategyParameters, Order, AppParameters
+from db.supabase_client import get_db
 from services.t212_service import T212Service
 
 logger = logging.getLogger(__name__)
@@ -25,15 +24,15 @@ class AutomationEngine:
     3. Handle Fills - Rebalance when orders execute
     """
 
-    def __init__(self, db_session: Session, t212_service: T212Service):
+    def __init__(self, db, t212_service: T212Service):
         """
         Initialize automation engine
 
         Args:
-            db_session: SQLAlchemy session (Supabase)
+            db: Supabase DB instance
             t212_service: T212Service instance for API calls
         """
-        self.db_session = db_session
+        self.db = db
         self.t212_service = t212_service
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -106,16 +105,9 @@ class AutomationEngine:
         """
         try:
             # Query ISINs ready for automation setup
-            isins = (
-                self.db_session.query(ISIN)
-                .filter(
-                    and_(
-                        ISIN.initial_trade == True,
-                        ISIN.automation_enabled == True,
-                    )
-                )
-                .all()
-            )
+            db = get_db()
+            result = db.client.table("isins").select("*").eq("initial_trade", True).eq("automation_enabled", True).execute()
+            isins = result.data or []
 
             if not isins:
                 self.logger.debug("Nenhum ISIN com initial_trade=TRUE encontrado")
@@ -123,43 +115,52 @@ class AutomationEngine:
 
             self.logger.info(f"Fase 1: {len(isins)} ISINs para setup inicial")
 
-            for isin in isins:
-                await self._phase_1_setup_isin(isin)
+            for isin_data in isins:
+                await self._phase_1_setup_isin(isin_data)
 
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 1: {e}", exc_info=True)
 
-    async def _phase_1_setup_isin(self, isin: ISIN):
+    async def _phase_1_setup_isin(self, isin_data: Dict):
         """
         Setup initial orders for a single ISIN.
         """
         try:
+            db = get_db()
+            ticker = isin_data.get("ticker")
+            current_price = isin_data.get("current_price")
             self.logger.info(
-                f"Fase 1: Setup {isin.ticker} (current_price={isin.current_price})"
+                f"Fase 1: Setup {ticker} (current_price={current_price})"
             )
 
             # Load strategy
-            strategy = self.db_session.query(Strategy).filter_by(id=isin.strategy_id).first()
+            strategy_id = isin_data.get("strategy_id")
+            strategy_result = db.client.table("strategies").select("*").eq("id", strategy_id).execute()
+            strategy = strategy_result.data[0] if strategy_result.data else None
             if not strategy:
-                self.logger.warning(f"Strategy não encontrada para {isin.ticker}")
+                self.logger.warning(f"Strategy não encontrada para {ticker}")
                 return
 
             # Load strategy parameters for current position (trades_balance)
-            params = self._get_strategy_parameters(strategy.id, isin.trades_balance)
+            trades_balance = isin_data.get("trades_balance", 0)
+            params = self._get_strategy_parameters(strategy_id, trades_balance)
 
             if not params:
                 self.logger.warning(
-                    f"Parâmetros não encontrados para {isin.ticker} pos={isin.trades_balance}"
+                    f"Parâmetros não encontrados para {ticker} pos={trades_balance}"
                 )
                 return
 
             # Calculate prices
-            buy_price = isin.current_price * (1 + params.param1 / 100)
-            sell_price = isin.current_price * (1 + params.param2 / 100)
+            param1 = params.get("param1", 0)
+            param2 = params.get("param2", 0)
+            buy_price = current_price * (1 + param1 / 100)
+            sell_price = current_price * (1 + param2 / 100)
 
             # Calculate quantities
-            buy_quantity = strategy.initial_investment / buy_price
-            sell_quantity = strategy.initial_investment / sell_price
+            initial_investment = strategy.get("initial_investment", 0)
+            buy_quantity = initial_investment / buy_price if buy_price > 0 else 0
+            sell_quantity = initial_investment / sell_price if sell_price > 0 else 0
 
             self.logger.debug(
                 f"BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
@@ -167,18 +168,18 @@ class AutomationEngine:
 
             # Place BUY order
             buy_response = await self.t212_service.place_buy_limit_order(
-                ticker=isin.ticker, quantity=buy_quantity, limit_price=buy_price
+                ticker=ticker, quantity=buy_quantity, limit_price=buy_price
             )
             if not buy_response:
-                self.logger.error(f"Falha ao colocar BUY order para {isin.ticker}")
+                self.logger.error(f"Falha ao colocar BUY order para {ticker}")
                 return
 
             # Place SELL order
             sell_response = await self.t212_service.place_sell_limit_order(
-                ticker=isin.ticker, quantity=sell_quantity, limit_price=sell_price
+                ticker=ticker, quantity=sell_quantity, limit_price=sell_price
             )
             if not sell_response:
-                self.logger.error(f"Falha ao colocar SELL order para {isin.ticker}")
+                self.logger.error(f"Falha ao colocar SELL order para {ticker}")
                 # TODO: Cancela BUY order? (Por agora não, Phase 5)
                 return
 
@@ -186,40 +187,36 @@ class AutomationEngine:
             buy_order_id = buy_response.get("id")
             sell_order_id = sell_response.get("id")
 
-            buy_order = self._create_order_from_response(
-                isin_id=isin.id,
+            buy_order_data = self._create_order_from_response(
+                isin_id=isin_data.get("id"),
                 api_response=buy_response,
                 automation_status="W",
-                related_order_id=None,  # Will update after SELL order created
+                related_order_id=None,
             )
 
-            sell_order = self._create_order_from_response(
-                isin_id=isin.id,
+            sell_order_data = self._create_order_from_response(
+                isin_id=isin_data.get("id"),
                 api_response=sell_response,
                 automation_status="W",
-                related_order_id=None,  # Will update after SELL order created
+                related_order_id=None,
             )
 
             # Link orders together
-            buy_order.related_order_id = sell_order.id
-            sell_order.related_order_id = buy_order.id
+            buy_order_data["related_order_id"] = sell_order_data["id"]
+            sell_order_data["related_order_id"] = buy_order_data["id"]
 
             # Save to DB
-            self.db_session.add(buy_order)
-            self.db_session.add(sell_order)
+            db.client.table("orders").insert([buy_order_data, sell_order_data]).execute()
 
             # Mark ISIN as setup done
-            isin.initial_trade = False
-
-            self.db_session.commit()
+            db.client.table("isins").update({"initial_trade": False}).eq("id", isin_data.get("id")).execute()
 
             self.logger.info(
-                f"✅ {isin.ticker}: Ordens criadas (BUY id={buy_order_id}, SELL id={sell_order_id})"
+                f"✅ {ticker}: Ordens criadas (BUY id={buy_order_id}, SELL id={sell_order_id})"
             )
 
         except Exception as e:
-            self.logger.error(f"❌ Erro setup {isin.ticker}: {e}", exc_info=True)
-            self.db_session.rollback()
+            self.logger.error(f"❌ Erro setup {isin_data.get('ticker', 'unknown')}: {e}", exc_info=True)
 
     # =========================================================================
     # PHASE 2: MONITOR ORDERS
@@ -232,7 +229,9 @@ class AutomationEngine:
         """
         try:
             # Query orders with automation_status='W'
-            watch_orders = self.db_session.query(Order).filter_by(automation_status="W").all()
+            db = get_db()
+            result = db.client.table("orders").select("*").eq("automation_status", "W").execute()
+            watch_orders = result.data or []
 
             if not watch_orders:
                 self.logger.debug("Nenhuma ordem 'W' para monitorar")
@@ -246,35 +245,37 @@ class AutomationEngine:
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 2: {e}", exc_info=True)
 
-    async def _phase_2_monitor_order(self, order: Order):
+    async def _phase_2_monitor_order(self, order_data: Dict):
         """
         Monitor a single order - poll T212 for status.
         """
         try:
+            db = get_db()
             # Poll T212 API
-            t212_order = await self.t212_service.get_pending_order(order.t212_order_id)
+            t212_order = await self.t212_service.get_pending_order(order_data.get("t212_order_id"))
 
             if not t212_order:
-                self.logger.debug(f"Ordem {order.t212_order_id} não encontrada em T212 (pode estar FILLED)")
+                self.logger.debug(f"Ordem {order_data.get('t212_order_id')} não encontrada em T212 (pode estar FILLED)")
                 return
 
             # Update order status from T212 response
-            order.status = t212_order.get("status", order.status)
-            order.filled_quantity = t212_order.get("filledQuantity", order.filled_quantity)
-            order.synced_at = datetime.utcnow()
+            update_data = {
+                "status": t212_order.get("status", order_data.get("status")),
+                "filled_quantity": t212_order.get("filledQuantity", order_data.get("filled_quantity")),
+                "synced_at": datetime.utcnow().isoformat()
+            }
 
             # If FILLED, mark as 'E' (Executed)
-            if order.status == "FILLED":
-                order.automation_status = "E"
-                self.logger.info(f"✅ Ordem {order.t212_order_id} FILLED")
+            if update_data["status"] == "FILLED":
+                update_data["automation_status"] = "E"
+                self.logger.info(f"✅ Ordem {order_data.get('t212_order_id')} FILLED")
 
-            self.db_session.commit()
+            db.client.table("orders").update(update_data).eq("id", order_data.get("id")).execute()
 
         except Exception as e:
             self.logger.error(
-                f"❌ Erro monitorando ordem {order.t212_order_id}: {e}", exc_info=True
+                f"❌ Erro monitorando ordem {order_data.get('t212_order_id')}: {e}", exc_info=True
             )
-            self.db_session.rollback()
 
     # =========================================================================
     # PHASE 3: HANDLE FILLS
@@ -293,9 +294,9 @@ class AutomationEngine:
         """
         try:
             # Query FILLED orders (status='FILLED', automation_status='E')
-            filled_orders = self.db_session.query(Order).filter(
-                and_(Order.status == "FILLED", Order.automation_status == "E")
-            ).all()
+            db = get_db()
+            result = db.client.table("orders").select("*").eq("status", "FILLED").eq("automation_status", "E").execute()
+            filled_orders = result.data or []
 
             if not filled_orders:
                 self.logger.debug("Nenhuma ordem FILLED para processar")
@@ -309,90 +310,103 @@ class AutomationEngine:
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 3: {e}", exc_info=True)
 
-    async def _phase_3_handle_filled_order(self, order: Order):
+    async def _phase_3_handle_filled_order(self, order_data: Dict):
         """
         Handle a single filled order.
         """
         try:
+            db = get_db()
             # Load ISIN
-            isin = self.db_session.query(ISIN).filter_by(id=order.isin_id).first()
+            isin_result = db.client.table("isins").select("*").eq("id", order_data.get("isin_id")).execute()
+            isin = isin_result.data[0] if isin_result.data else None
             if not isin:
-                self.logger.error(f"ISIN não encontrado para ordem {order.id}")
+                self.logger.error(f"ISIN não encontrado para ordem {order_data.get('id')}")
                 return
 
-            self.logger.info(f"Fase 3: Processando {isin.ticker} fill (side={order.side})")
+            ticker = isin.get("ticker")
+            self.logger.info(f"Fase 3: Processando {ticker} fill (side={order_data.get('side')})")
 
             # Get latest position from T212
-            position = await self.t212_service.get_position(isin.ticker)
+            position = await self.t212_service.get_position(ticker)
             if position:
                 # Update ISIN with position data
-                isin.quantity = position.get("quantity", isin.quantity)
-                isin.current_price = position.get("currentPrice", isin.current_price)
-                isin.average_price_paid = position.get("averagePricePaid", isin.average_price_paid)
-                isin.quantity_available_for_trading = position.get(
-                    "quantityAvailableForTrading", isin.quantity_available_for_trading
-                )
+                update_isin = {
+                    "quantity": position.get("quantity", isin.get("quantity")),
+                    "current_price": position.get("currentPrice", isin.get("current_price")),
+                    "average_price_paid": position.get("averagePricePaid", isin.get("average_price_paid")),
+                    "quantity_available_for_trading": position.get("quantityAvailableForTrading", isin.get("quantity_available_for_trading")),
+                }
 
                 # Wallet impact
                 wi = position.get("walletImpact", {})
-                isin.wi_current_value = wi.get("currentValue", isin.wi_current_value)
-                isin.wi_total_cost = wi.get("totalCost", isin.wi_total_cost)
-                isin.wi_unrealized_profit_loss = wi.get("unrealizedProfitLoss", isin.wi_unrealized_profit_loss)
+                update_isin["wi_current_value"] = wi.get("currentValue", isin.get("wi_current_value"))
+                update_isin["wi_total_cost"] = wi.get("totalCost", isin.get("wi_total_cost"))
+                update_isin["wi_unrealized_profit_loss"] = wi.get("unrealizedProfitLoss", isin.get("wi_unrealized_profit_loss"))
 
-            # Adjust trades_balance based on order side
-            if order.side == "BUY":
-                isin.trades_balance -= 1
-                self.logger.debug(f"BUY fill: trades_balance {isin.trades_balance + 1} → {isin.trades_balance}")
-            elif order.side == "SELL":
-                isin.trades_balance += 1
-                self.logger.debug(f"SELL fill: trades_balance {isin.trades_balance - 1} → {isin.trades_balance}")
+                # Adjust trades_balance based on order side
+                trades_balance = isin.get("trades_balance", 0)
+                if order_data.get("side") == "BUY":
+                    update_isin["trades_balance"] = trades_balance - 1
+                    self.logger.debug(f"BUY fill: trades_balance {trades_balance} → {trades_balance - 1}")
+                elif order_data.get("side") == "SELL":
+                    update_isin["trades_balance"] = trades_balance + 1
+                    self.logger.debug(f"SELL fill: trades_balance {trades_balance} → {trades_balance + 1}")
 
-            # Save position update
-            self.db_session.commit()
+                # Save position update
+                db.client.table("isins").update(update_isin).eq("id", isin.get("id")).execute()
 
             # Cancel related order
-            if order.related_order_id:
-                related_order = self.db_session.query(Order).filter_by(id=order.related_order_id).first()
-                if related_order and related_order.t212_order_id:
-                    cancel_success = await self.t212_service.cancel_order(related_order.t212_order_id)
+            if order_data.get("related_order_id"):
+                related_result = db.client.table("orders").select("*").eq("id", order_data.get("related_order_id")).execute()
+                related_order = related_result.data[0] if related_result.data else None
+                if related_order and related_order.get("t212_order_id"):
+                    cancel_success = await self.t212_service.cancel_order(related_order.get("t212_order_id"))
                     if cancel_success:
-                        related_order.automation_status = "C"
-                        related_order.status = "CANCELLED"
-                        self.db_session.commit()
+                        db.client.table("orders").update({
+                            "automation_status": "C",
+                            "status": "CANCELLED"
+                        }).eq("id", related_order.get("id")).execute()
 
             # Place new BUY/SELL pair at new grid level
             await self._phase_3_place_new_pair(isin)
 
         except Exception as e:
             self.logger.error(f"❌ Erro processando filled order: {e}", exc_info=True)
-            self.db_session.rollback()
 
-    async def _phase_3_place_new_pair(self, isin: ISIN):
+    async def _phase_3_place_new_pair(self, isin_data: Dict):
         """
         Place new BUY/SELL pair at new grid level (after fill).
         """
         try:
+            db = get_db()
             # Load strategy
-            strategy = self.db_session.query(Strategy).filter_by(id=isin.strategy_id).first()
+            strategy_id = isin_data.get("strategy_id")
+            strategy_result = db.client.table("strategies").select("*").eq("id", strategy_id).execute()
+            strategy = strategy_result.data[0] if strategy_result.data else None
             if not strategy:
-                self.logger.warning(f"Strategy não encontrada para {isin.ticker}")
+                self.logger.warning(f"Strategy não encontrada para {isin_data.get('ticker')}")
                 return
 
             # Load new parameters for new trades_balance position
-            params = self._get_strategy_parameters(strategy.id, isin.trades_balance)
+            trades_balance = isin_data.get("trades_balance", 0)
+            params = self._get_strategy_parameters(strategy_id, trades_balance)
 
             if not params:
                 self.logger.warning(
-                    f"Parâmetros não encontrados para {isin.ticker} pos={isin.trades_balance}"
+                    f"Parâmetros não encontrados para {isin_data.get('ticker')} pos={trades_balance}"
                 )
                 return
 
             # Calculate new prices
-            buy_price = isin.current_price * (1 + params.param1 / 100)
-            sell_price = isin.current_price * (1 + params.param2 / 100)
+            current_price = isin_data.get("current_price")
+            param1 = params.get("param1", 0)
+            param2 = params.get("param2", 0)
+            buy_price = current_price * (1 + param1 / 100)
+            sell_price = current_price * (1 + param2 / 100)
 
-            buy_quantity = strategy.initial_investment / buy_price
-            sell_quantity = strategy.initial_investment / sell_price
+            initial_investment = strategy.get("initial_investment", 0)
+            buy_quantity = initial_investment / buy_price if buy_price > 0 else 0
+            sell_quantity = initial_investment / sell_price if sell_price > 0 else 0
 
             self.logger.debug(
                 f"Novo pair: BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
@@ -400,50 +414,47 @@ class AutomationEngine:
 
             # Place BUY order
             buy_response = await self.t212_service.place_buy_limit_order(
-                ticker=isin.ticker, quantity=buy_quantity, limit_price=buy_price
+                ticker=isin_data.get("ticker"), quantity=buy_quantity, limit_price=buy_price
             )
             if not buy_response:
-                self.logger.error(f"Falha ao colocar novo BUY order para {isin.ticker}")
+                self.logger.error(f"Falha ao colocar novo BUY order para {isin_data.get('ticker')}")
                 return
 
             # Place SELL order
             sell_response = await self.t212_service.place_sell_limit_order(
-                ticker=isin.ticker, quantity=sell_quantity, limit_price=sell_price
+                ticker=isin_data.get("ticker"), quantity=sell_quantity, limit_price=sell_price
             )
             if not sell_response:
-                self.logger.error(f"Falha ao colocar novo SELL order para {isin.ticker}")
+                self.logger.error(f"Falha ao colocar novo SELL order para {isin_data.get('ticker')}")
                 return
 
             # Create order records
             buy_order = self._create_order_from_response(
-                isin_id=isin.id,
+                isin_id=isin_data.get("id"),
                 api_response=buy_response,
                 automation_status="W",
                 related_order_id=None,
             )
 
             sell_order = self._create_order_from_response(
-                isin_id=isin.id,
+                isin_id=isin_data.get("id"),
                 api_response=sell_response,
                 automation_status="W",
                 related_order_id=None,
             )
 
             # Link orders
-            buy_order.related_order_id = sell_order.id
-            sell_order.related_order_id = buy_order.id
+            buy_order["related_order_id"] = sell_order.get("id")
+            sell_order["related_order_id"] = buy_order.get("id")
 
-            self.db_session.add(buy_order)
-            self.db_session.add(sell_order)
-            self.db_session.commit()
+            db.client.table("orders").insert([buy_order, sell_order]).execute()
 
             self.logger.info(
-                f"✅ Novo pair para {isin.ticker} @ level {isin.trades_balance} (BUY id={buy_response.get('id')}, SELL id={sell_response.get('id')})"
+                f"✅ Novo pair para {isin_data.get('ticker')} @ level {trades_balance} (BUY id={buy_response.get('id')}, SELL id={sell_response.get('id')})"
             )
 
         except Exception as e:
             self.logger.error(f"❌ Erro criando novo pair: {e}", exc_info=True)
-            self.db_session.rollback()
 
     # =========================================================================
     # HELPER METHODS
@@ -454,16 +465,16 @@ class AutomationEngine:
         Verifica se grid_trading_enabled está ativo em app_parameters.
         """
         try:
-            result = self.db_session.query(AppParameters).first()
-            if result:
-                # Assumes AppParameters model has grid_trading_enabled attribute
-                return getattr(result, 'grid_trading_enabled', True)
+            db = get_db()
+            result = db.client.table("app_parameters").select("grid_trading_enabled").execute()
+            if result.data:
+                return result.data[0].get("grid_trading_enabled", True)
             return True
         except Exception as e:
             self.logger.warning(f"Erro verificando grid_trading_enabled: {e}, assumindo True")
             return True
 
-    def _get_strategy_parameters(self, strategy_id: str, trades_balance: int) -> Optional[StrategyParameters]:
+    def _get_strategy_parameters(self, strategy_id: str, trades_balance: int) -> Optional[Dict]:
         """
         Buscar strategy_parameters com fallback inteligente.
 
@@ -476,40 +487,30 @@ class AutomationEngine:
         Significado: A última 'pos' colocada (extremo) é usada mesmo que trades_balance ultrapasse.
         """
         try:
+            db = get_db()
             # Step 1: Tentar exato
-            params = (
-                self.db_session.query(StrategyParameters)
-                .filter_by(strategy_id=strategy_id, pos=str(trades_balance))
-                .first()
-            )
+            result = db.client.table("strategy_parameters").select("*").eq("strategy_id", strategy_id).eq("pos", str(trades_balance)).execute()
 
-            if params:
-                self.logger.debug(
-                    f"Strategy parameters encontrados exato: pos={trades_balance}"
-                )
-                return params
+            if result.data:
+                self.logger.debug(f"Strategy parameters encontrados exato: pos={trades_balance}")
+                return result.data[0]
 
             # Step 2: Fallback baseado na direção
-            all_params = (
-                self.db_session.query(StrategyParameters)
-                .filter_by(strategy_id=strategy_id)
-                .all()
-            )
+            all_result = db.client.table("strategy_parameters").select("*").eq("strategy_id", strategy_id).execute()
+            all_params = all_result.data or []
 
             if not all_params:
-                self.logger.warning(
-                    f"Nenhuns strategy_parameters encontrados para strategy={strategy_id}"
-                )
+                self.logger.warning(f"Nenhuns strategy_parameters encontrados para strategy={strategy_id}")
                 return None
 
             # Converter pos strings para ints
             params_list = []
             for p in all_params:
                 try:
-                    pos_int = int(p.pos)
+                    pos_int = int(p.get("pos", 0))
                     params_list.append((pos_int, p))
                 except (ValueError, TypeError):
-                    self.logger.warning(f"Pos inválida: {p.pos}, ignorando")
+                    self.logger.warning(f"Pos inválida: {p.get('pos')}, ignorando")
                     continue
 
             if not params_list:
@@ -578,29 +579,29 @@ class AutomationEngine:
         api_response: Dict[str, Any],
         automation_status: str,
         related_order_id: Optional[str] = None,
-    ) -> Order:
+    ) -> Dict:
         """
         Create an Order record from T212 API response.
         """
-        return Order(
-            id=str(__import__("uuid").uuid4()),
-            isin_id=isin_id,
-            t212_order_id=api_response.get("id"),
-            ticker=api_response.get("ticker", ""),
-            instrument_isin=api_response.get("instrument", {}).get("isin"),
-            instrument_name=api_response.get("instrument", {}).get("name"),
-            instrument_currency=api_response.get("instrument", {}).get("currency"),
-            side=api_response.get("side", "BUY"),
-            quantity=api_response.get("quantity", 0),
-            filled_quantity=api_response.get("filledQuantity", 0),
-            type=api_response.get("type", "LIMIT"),
-            status=api_response.get("status", "NEW"),
-            limit_price=api_response.get("limitPrice"),
-            stop_price=api_response.get("stopPrice"),
-            time_in_force=api_response.get("timeInForce", "GOOD_TILL_CANCEL"),
-            initiated_from=api_response.get("initiatedFrom", "API"),
-            created_at=api_response.get("createdAt"),
-            automation_status=automation_status,
-            related_order_id=related_order_id,
-            synced_at=datetime.utcnow(),
-        )
+        return {
+            "id": str(uuid.uuid4()),
+            "isin_id": isin_id,
+            "t212_order_id": api_response.get("id"),
+            "ticker": api_response.get("ticker", ""),
+            "instrument_isin": api_response.get("instrument", {}).get("isin"),
+            "instrument_name": api_response.get("instrument", {}).get("name"),
+            "instrument_currency": api_response.get("instrument", {}).get("currency"),
+            "side": api_response.get("side", "BUY"),
+            "quantity": api_response.get("quantity", 0),
+            "filled_quantity": api_response.get("filledQuantity", 0),
+            "type": api_response.get("type", "LIMIT"),
+            "status": api_response.get("status", "NEW"),
+            "limit_price": api_response.get("limitPrice"),
+            "stop_price": api_response.get("stopPrice"),
+            "time_in_force": api_response.get("timeInForce", "GOOD_TILL_CANCEL"),
+            "initiated_from": api_response.get("initiatedFrom", "API"),
+            "created_at": api_response.get("createdAt"),
+            "automation_status": automation_status,
+            "related_order_id": related_order_id,
+            "synced_at": datetime.utcnow().isoformat(),
+        }
