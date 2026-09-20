@@ -1,0 +1,100 @@
+PHASE 4: GRID TRADING AUTOMATION ENGINE - ARCHITECTURE SUMMARY
+================================================================
+
+ANSWERS TO 6 KEY ARCHITECTURAL QUESTIONS:
+
+Q1: BACKGROUND JOB SYSTEM?
+=> APScheduler (embedded in FastAPI)
+   - Single process, no separate service
+   - DB-configurable interval (15s default)
+   - Easy error handling
+   - Migrate to Celery in Phase 5
+
+Q2: SCHEDULER LOCATION?
+=> Background thread in FastAPI Render instance
+   - Main thread: Uvicorn HTTP server
+   - Background thread: APScheduler
+   - Both concurrent in same process
+   - Constraint: Single instance only
+
+Q3: DATABASE SCHEMA?
+=> New table: general_parameters
+   - parameter_name (VARCHAR UNIQUE)
+   - parameter_type (VARCHAR: integer|float|string|boolean)
+   - parameter_value (VARCHAR)
+   - description (TEXT)
+   - is_active (BOOLEAN)
+   - last_modified_at (TIMESTAMP)
+   
+   Initial values:
+   - scheduler_interval = 15 seconds
+   - automation_enabled = true
+   - grid_rebalance_enabled = true
+
+Q4: FASTAPI INTEGRATION?
+=> Use lifespan context manager + new services
+   - main.py: Add @asynccontextmanager lifespan
+   - services/scheduler.py: SchedulerService class
+   - services/automation_engine.py: AutomationEngine
+   - services/t212_service.py: T212 API helpers
+   - routes/automation.py: Config + monitoring endpoints
+   - models/db.py: Add GeneralParameters model
+   - requirements.txt: Add apscheduler>=3.10.0
+
+Q5: ERROR LOGGING STRATEGY?
+=> Three-tier logging:
+   Tier 1: Application logs (stdout, DEBUG/INFO/WARNING/ERROR)
+   Tier 2: Database logs (logs table, permanent audit trail)
+   Tier 3: API endpoints (GET /api/v1/automation/logs)
+
+Q6: CONCURRENCY SAFETY?
+=> APScheduler max_instances=1
+   - Prevents overlapping cycles
+   - Ensures atomic operations
+   - Single execution guarantee
+   - Constraint: Single instance only (Phase 5: Celery)
+
+THREE-PHASE AUTOMATION CYCLE:
+
+Phase 1: Initial Trade Setup
+- Query ISINs with initial_trade=TRUE
+- Load strategy parameters
+- Calculate grid prices
+- Place BUY and SELL limit orders
+- Link as related_order_id pair
+- Set initial_trade=FALSE
+
+Phase 2: Monitor Watch Orders
+- Query orders with automation_status='W'
+- Poll T212 API for status
+- Update local order status
+- Detect fills
+
+Phase 3: Handle Order Fills
+- When BUY fills: decrement trades_balance, cancel SELL, place new grid
+- When SELL fills: increment trades_balance, cancel BUY, place new grid
+- Fetch position data from T212
+- Calculate next grid level
+- Place new BUY/SELL pair
+
+PERFORMANCE:
+- Cycle time: 7-10 seconds (15s interval = 5-8s buffer)
+- Database: ~20 operations per cycle
+- T212 API: ~50 calls per cycle
+- Fits comfortably in interval
+
+IMPLEMENTATION TIMELINE:
+Sprint 1 (Week 1): Infrastructure
+Sprint 2 (Week 2): Phases 1-2
+Sprint 3 (Week 3): Phase 3 & API
+Sprint 4 (Week 4): Testing & Launch
+
+KEY FILES:
+models/db.py - GeneralParameters
+services/scheduler.py - SchedulerService
+services/automation_engine.py - AutomationEngine
+services/t212_service.py - T212 helpers
+routes/automation.py - API endpoints
+main.py - lifespan integration
+
+STATUS: READY FOR IMPLEMENTATION

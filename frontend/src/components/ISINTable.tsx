@@ -53,9 +53,23 @@ export default function ISINTable() {
     }
   }
 
-  // Sincronizar carteira (é apenas um refresh dos dados)
+  // Sincronizar carteira com T212
   const handleSync = async () => {
-    await loadISINs()
+    setLoadingSync(true)
+    try {
+      console.log('[ISINTable] Syncing with T212 API...')
+      const response = await apiClient.post('/isins/sync')
+      console.log('[ISINTable] Sync response:', response.data)
+
+      if (response.data.success) {
+        // Após sync bem-sucedido, recarregar ISINs
+        await loadISINs()
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar carteira:', error)
+    } finally {
+      setLoadingSync(false)
+    }
   }
 
   // Handler para toggle automação
