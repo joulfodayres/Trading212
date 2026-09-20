@@ -45,6 +45,9 @@ export default function StrategiesPage() {
   const [showCreateStrategy, setShowCreateStrategy] = useState(false)
   const [showCreateParameter, setShowCreateParameter] = useState(false)
 
+  // Error states
+  const [createStrategyError, setCreateStrategyError] = useState<string>('')
+
   // Form states
   const [strategyForm, setStrategyForm] = useState({
     name: '',
@@ -140,13 +143,15 @@ export default function StrategiesPage() {
       console.log('[handleCreateStrategy] Success, response:', response.data)
       setStrategies([...strategies, response.data])
       setStrategyForm({ name: '', description: '', initial_investment: null })
+      setCreateStrategyError('')
       setShowCreateStrategy(false)
       await loadStrategies()
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Failed to create strategy'
       console.error('[handleCreateStrategy] Backend Error:', message)
-      // Error is logged to console for debugging
-      // User can see the error since dialog stays open
+
+      // [NEW] Set error state for display
+      setCreateStrategyError(message)
     } finally {
       setLoading(false)
     }
@@ -311,7 +316,10 @@ export default function StrategiesPage() {
               variant="primary"
               size="sm"
               icon={<Plus size={16} />}
-              onClick={() => setShowCreateStrategy(true)}
+              onClick={() => {
+                setShowCreateStrategy(true)
+                setCreateStrategyError('')
+              }}
             >
               New Strategy
             </Button>
@@ -445,6 +453,12 @@ export default function StrategiesPage() {
                   <h3 className="text-lg font-bold text-t212-primary">New Strategy</h3>
                 </div>
                 <div className="px-6 py-5 space-y-4">
+                  {createStrategyError && (
+                    <div className="p-3 rounded-lg bg-red-900 bg-opacity-20 border border-red-500 text-red-400 text-sm flex items-start gap-2">
+                      <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                      <span>{createStrategyError}</span>
+                    </div>
+                  )}
                   <input
                     type="text"
                     placeholder="Name"
@@ -475,7 +489,10 @@ export default function StrategiesPage() {
                   <Button
                     variant="secondary"
                     size="md"
-                    onClick={() => setShowCreateStrategy(false)}
+                    onClick={() => {
+                      setShowCreateStrategy(false)
+                      setCreateStrategyError('')
+                    }}
                     className="flex-1"
                   >
                     Cancel
