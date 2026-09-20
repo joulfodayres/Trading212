@@ -1,422 +1,406 @@
-# Trading 212 Activity Statement Parser - Quick Reference Guide
+# Quick Reference: PDF Structure Mapping
 
-**Last Updated:** 2026-09-20  
-**For:** Developers implementing the PDF parser
-
----
-
-## 🎯 Core Facts
-
-| Aspect | Details |
-|--------|---------|
-| **Report Types** | Monthly (27-30 pages) + Daily (15 pages) |
-| **Compatibility** | ✅ Same structure (use single parser) |
-| **Main Tables** | 7-15 depending on trading activity |
-| **Accounts** | Invest + CFD (both usually present) |
-| **Encoding** | UTF-8 with potential currency symbol corruption |
-| **Decimal Format** | Mixed (comma and period separators) |
+**Visual Guide for Activity Statement Parser Implementation**
 
 ---
 
-## 🏗️ High-Level Architecture
+## Document Structure Diagram
 
 ```
-PDF File
-  ├── Page 1: Title & Metadata
-  ├── Pages 2-X: Invest Account
-  │   ├── Executed Trades (table)
-  │   ├── Pending Orders (table)
-  │   ├── Open Positions (table)
-  │   ├── Cash Breakdown (table)
-  │   ├── Transactions (table)
-  │   └── Dividends (table)
-  ├── Pages X+1-Y: CFD Account
-  │   ├── Executed Trades (CFD table)
-  │   ├── Positions (CFD table)
-  │   ├── Overnight Interest (table)
-  │   └── Transactions (table)
-  └── Last Page: Regulatory Footer
-```
-
----
-
-## 📋 Essential Tables to Extract
-
-### 1. Executed Trades (Equity) - **MUST HAVE**
-
-**Identifier:** "EXECUTION TIME" + "INSTRUMENT ISIN" in header
-
-**Columns (15):**
-```
-1. EXECUTION TIME      → datetime
-2. INSTRUMENT          → string (name)
-3. ISIN                → string (format: XX00XXXXXXXXX)
-4. ORDER ID            → string
-5. DIRECTION           → enum [BUY|SELL]
-6. QUANTITY            → float
-7. EXECUTION PRICE     → float (4 decimals)
-8. VALUE               → float (total in currency)
-9. ORDER TYPE          → string [Market|Limit|Stop]
-10. VENUE              → string [NYSE|XETRA|OTC|LSE|XEUR]
-11. SESSION            → string [Regular|Extended]
-12. FX RATE            → float
-13. FX FEE             → float
-14. GOVT FEES          → float
-15. RETURN VALUE       → float (€ currency)
-```
-
-**Validation:**
-- `VALUE = QUANTITY × EXECUTION PRICE` (±2% tolerance)
-- `DIRECTION ∈ {BUY, SELL}`
-- `EXECUTION TIME` must be UTC
-
----
-
-### 2. Open Positions (Equity) - **MUST HAVE**
-
-**Identifier:** "QUANTITY" + "AVERAGE PRICE" + "PRICE" together (not in trades table)
-
-**Columns (10):**
-```
-1. INSTRUMENT          → string
-2. ISIN                → string
-3. QUANTITY            → float (can be decimal)
-4. AVERAGE PRICE       → float
-5. CURRENT PRICE       → float
-6. UNREALISED P/L      → float (€ currency)
-7. RETURN %            → float (percentage)
-8. TOTAL VALUE         → float
-9. FX RATE             → float
-10. FX ADJUSTED VALUE  → float
-```
-
-**Validation:**
-- `TOTAL VALUE = QUANTITY × CURRENT PRICE`
-- `UNREALISED P/L = (CURRENT PRICE - AVERAGE PRICE) × QUANTITY`
-
----
-
-### 3. Cash Breakdown - **MUST HAVE**
-
-**Identifier:** "FUND" + "ISIN" + "QUANTITY" + "PRICE" + "VALUE"
-
-**Data:** Money market fund holdings
-
-**Common Funds:**
-- JPMorgan Liquidit Funds EUR Liquidit (ISIN: LU0326635387)
-- Goldman Sachs Euro Liquid Reserves Fund Inst (ISIN: IE00BDX1MM09)
-- BlackRock ICS Euro Liquidit Fund (ISIN: IE00BAFXJO29)
-
----
-
-### 4. Transactions & Interest - **IMPORTANT**
-
-**Identifier:** "TRANSACTION TIME" + "TYPE" + "AMOUNT"
-
-**Fields:**
-```
-TIME    → datetime
-TYPE    → [Deposit|Withdrawal|Interest|Fee|Dividend]
-AMOUNT  → float (signed: +/- )
-```
-
----
-
-### 5. Pending Orders - **CONDITIONAL** (may be empty)
-
-**Columns:**
-```
-INSTRUMENT, ISIN, ORDER TYPE, DIRECTION, QUANTITY, LIMIT PRICE, 
-STOP PRICE, EXPIRATION
+ACTIVITY STATEMENT
+│
+├─ PAGE 1: HEADER + OVERVIEW
+│  ├─ Header
+│  │  ├─ Customer ID
+│  │  ├─ Customer Name
+│  │  ├─ Report Type: "Activity Statement"
+│  │  ├─ Period: [START_DATE] to [END_DATE]
+│  │  └─ Generated: [DATE & TIME]
+│  │
+│  └─ Overview (Account-Type Sections)
+│     ├─ Trading 212 Invest Account
+│     │  ├─ Deposits: €X
+│     │  ├─ Withdrawals: €X
+│     │  ├─ Realised Return: €X
+│     │  ├─ Open Return: €X
+│     │  ├─ Open Return Change: €X
+│     │  ├─ Dividends: €X
+│     │  ├─ Interest on Cash: €X
+│     │  ├─ Cashback: €X
+│     │  ├─ FX Fee: €X
+│     │  ├─ Third Party Fees: €X
+│     │  └─ Account Value: €X
+│     │
+│     ├─ Trading 212 CFD Account
+│     │  ├─ Deposits: €X
+│     │  ├─ Withdrawals: €X
+│     │  ├─ FX Fee: €X
+│     │  ├─ Dividend Adjustments: €X
+│     │  ├─ Overnight Interest: €X
+│     │  ├─ Closed Result: €X
+│     │  ├─ Open Result: €X
+│     │  ├─ Open Result Change: €X
+│     │  ├─ Margin Requirement: €X
+│     │  ├─ Available Margin: €X
+│     │  └─ Account Value: €X
+│     │
+│     └─ Trading 212 Crypto Account
+│        ├─ Deposits: €X
+│        ├─ Withdrawals: €X
+│        ├─ Closed Result: €X
+│        ├─ Open Result: €X
+│        ├─ Open Result Change: €X
+│        └─ Account Value: €X
+│
+├─ INVEST ACCOUNT SECTION (Pages 2-9 / 2-5)
+│  ├─ Executed Trades (Table)
+│  │  └─ Columns: EXECUTION TIME | INSTRUMENT | ISIN | ORDER ID | DIRECTION |
+│  │             QUANTITY | EXECUTION PRICE | VALUE | ORDER TYPE | 
+│  │             EXECUTION VENUE | SESSION | FX RATE | FX FEE | 
+│  │             EXCHANGE & GOVT FEES | RETURN VALUE
+│  │
+│  ├─ Open Positions Summary
+│  │  ├─ Pending Orders (Table)
+│  │  │  └─ Columns: INSTRUMENT | ISIN | CURRENCY | ORDER ID | TYPE | DIRECTION |
+│  │  │             EXPIRATION | QUANTITY | LIMIT PRICE | STOP PRICE | VALUE
+│  │  │
+│  │  └─ Open Positions (Table)
+│  │     └─ Columns: INSTRUMENT | ISIN | QUANTITY | AVERAGE PRICE | PRICE |
+│  │                RETURN | VALUE | FX RATE | RETURN VALUE
+│  │
+│  ├─ Cash Breakdown
+│  │  ├─ Settled Cash: €X
+│  │  ├─ Unsettled Cash: €X
+│  │  └─ Total Cash: €X
+│  │
+│  └─ Transactions & Dividends
+│     ├─ Interest on Cash (Table)
+│     │  └─ TIME | TYPE | AMOUNT
+│     │
+│     └─ Dividends (Table)
+│        └─ EXECUTION TIME | INSTRUMENT | ISIN | QUANTITY | PRICE |
+│           GROSS AMOUNT | DIVIDEND TAX | NET AMOUNT
+│
+├─ CFD ACCOUNT SECTION (Pages 11-17 / 6-9)
+│  ├─ Executed Trades (Table) ⚠️ DIFFERENT COLUMNS!
+│  │  └─ Columns: EXECUTION TIME | INSTRUMENT | ORDER ID | ORDER TYPE |
+│  │             DIRECTION | EXECUTION VENUE | SESSION | QUANTITY |
+│  │             EXECUTION PRICE | VALUE | PROFIT/LOSS | OVERNIGHT INTEREST
+│  │
+│  ├─ Open Positions Summary
+│  │  ├─ Pending Orders (Table)
+│  │  └─ Open Positions (Table)
+│  │
+│  ├─ Cash Breakdown
+│  │  └─ [Same structure as Invest]
+│  │
+│  └─ Transactions, Dividends & Overnight Interest
+│     ├─ Transactions (Table)
+│     ├─ Overnight Interest (Table)
+│     └─ (Dividends if applicable)
+│
+├─ CRYPTO ACCOUNT SECTION (Pages 18-25 / 10-13)
+│  ├─ Executed Trades (Table) ⚠️ DIFFERENT FORMAT!
+│  │  └─ Columns: EXECUTION TIME | SYMBOL | ASSET | ORDER ID | FILL ID |
+│  │             DIRECTION | QUANTITY | EXECUTION PRICE | VALUE | FEE | RETURN
+│  │
+│  ├─ Open Positions Summary
+│  │  ├─ Pending Orders (Table)
+│  │  └─ Open Positions (Table)
+│  │
+│  ├─ Cash Breakdown
+│  │  └─ [Same structure as Invest]
+│  │
+│  └─ Transactions
+│     └─ [If any crypto transactions]
+│
+└─ FOOTER (Pages 26-27 / 14-15)
+   ├─ Glossary (Terms & Definitions)
+   └─ Disclosures & Legal Notices
 ```
 
 ---
 
-### 6. CFD Executed Trades - **CONDITIONAL** (if CFD account active)
+## Column Differences by Account Type
 
-**Columns (10):**
+### INVEST ACCOUNT - Executed Trades
+
 ```
-EXECUTION TIME, SYMBOL, ASSET, ORDER ID, FILL ID, DIRECTION,
-QUANTITY, EXECUTION PRICE, VALUE, REALISED P/L
-```
+✅ INVEST ONLY COLUMNS:
+   - ISIN (instrument identifier)
+   - FX RATE, FX FEE (forex costs)
+   - EXCHANGE & GOVT FEES (regulatory fees)
+   - RETURN VALUE (P&L on trade)
 
----
-
-### 7. CFD Open Positions - **CONDITIONAL**
-
-**Columns (12):**
-```
-SYMBOL, ASSET, CURRENCY, QUANTITY, OPENING PRICE, CURRENT PRICE,
-UNREALISED P/L, VALUE, FX RATE, RESULT, DIVIDEND, INTEREST
+⚠️ NOT IN CFD/CRYPTO:
+   - These columns don't appear in CFD or Crypto trades
 ```
 
----
+### CFD ACCOUNT - Executed Trades
 
-### 8. Overnight Interest (CFD) - **CONDITIONAL**
-
-**Columns:**
 ```
-TRANSACTION TIME, INSTRUMENT, DIRECTION, POSITION SIZE,
-OVERNIGHT INTEREST RATE, AMOUNT, FX RATE, AMOUNT (FXD)
-```
+✅ CFD ONLY COLUMNS:
+   - PROFIT/LOSS (immediate P&L)
+   - OVERNIGHT INTEREST (financing cost)
 
----
-
-## 🔑 Data Extraction Patterns
-
-### Pattern 1: Multi-Page Tables
-```
-Some tables span multiple pages. Indicators:
-- Table has 15+ rows
-- Header row repeats on next page
-- Row numbers/pagination appear
-
-Solution: Merge data from consecutive pages with same headers
+⚠️ NOT IN INVEST/CRYPTO:
+   - No ISIN (CFDs don't have ISINs)
+   - No individual FX/fee breakdown
 ```
 
-### Pattern 2: Account Headers
-```
-Before each account section:
-"CUSTOMER ID    CUSTOMER NAME"
-"João Luis Varela da Fonseca"
-"Invest Account - Executed Trades"
+### CRYPTO ACCOUNT - Executed Trades
 
-Use this to segment PDF into account sections
 ```
+✅ CRYPTO ONLY COLUMNS:
+   - SYMBOL (e.g., "BTC/EUR", "ETH/USD")
+   - ASSET (e.g., "Bitcoin", "Ethereum")
+   - FILL ID (crypto-specific identifier)
+   - FEE (trading fee for crypto)
 
-### Pattern 3: Section Separators
-```
-Sections marked by:
-- New account header line
-- Blank space (3+ empty lines)
-- "=====" divider lines
-- Page breaks
-
-Use these to detect section transitions
+⚠️ NOT IN INVEST/CFD:
+   - No ISIN (replaced by SYMBOL/ASSET)
+   - No ORDER TYPE (crypto fills are instant)
+   - No SESSION, VENUE (crypto is 24/7 OTC)
 ```
 
 ---
 
-## 🎨 Parsing Code Template
+## Report Type Detection
 
 ```python
-import pdfplumber
-import pandas as pd
-from datetime import datetime
-import re
-
-class Trading212Parser:
-    
-    def __init__(self, pdf_path):
-        self.pdf_path = pdf_path
-        self.data = {
-            'metadata': {},
-            'invest': {'trades': [], 'positions': [], 'cash': {}},
-            'cfd': {'trades': [], 'positions': []}
-        }
-    
-    def parse(self):
-        with pdfplumber.open(self.pdf_path) as pdf:
-            # Extract metadata from first page
-            self._parse_metadata(pdf.pages[0])
-            
-            # Extract tables from all pages
-            for page in pdf.pages:
-                tables = page.extract_tables()
-                if tables:
-                    self._process_tables(tables)
-        
-        return self.data
-    
-    def _parse_metadata(self, page):
-        text = page.extract_text()
-        
-        # Extract customer info
-        match = re.search(r'Account ID:\s+(\w+)', text)
-        if match:
-            self.data['metadata']['account_id'] = match.group(1)
-        
-        # Extract period
-        match = re.search(r'covering from (.+?) to (.+?) \(UTC\)', text)
-        if match:
-            self.data['metadata']['from'] = match.group(1)
-            self.data['metadata']['to'] = match.group(2)
-    
-    def _process_tables(self, tables):
-        for table in tables:
-            if not table or len(table) < 2:
-                continue
-            
-            headers = table[0]
-            headers_str = ' '.join(str(h) for h in headers).upper()
-            
-            # Identify table type by headers
-            if 'EXECUTION TIME' in headers_str and 'ISIN' in headers_str:
-                self._parse_equity_trades(table)
-            elif 'QUANTITY' in headers_str and 'AVERAGE PRICE' in headers_str:
-                self._parse_positions(table)
-            elif 'FUND' in headers_str and 'ISIN' in headers_str:
-                self._parse_cash(table)
-    
-    def _parse_equity_trades(self, table):
-        headers = table[0]
-        
-        for row in table[1:]:
-            if not any(row):  # Skip empty rows
-                continue
-            
-            trade = {
-                'timestamp': self._parse_datetime(row[0]),
-                'instrument': row[1],
-                'isin': row[2],
-                'order_id': row[3],
-                'direction': row[4].upper(),
-                'quantity': self._parse_float(row[5]),
-                'price': self._parse_float(row[6]),
-                'value': self._parse_float(row[7]),
-                'order_type': row[8],
-                'venue': row[9],
-            }
-            
-            self.data['invest']['trades'].append(trade)
-    
-    def _parse_positions(self, table):
-        for row in table[1:]:
-            if not any(row):
-                continue
-            
-            position = {
-                'instrument': row[0],
-                'isin': row[1],
-                'quantity': self._parse_float(row[2]),
-                'avg_price': self._parse_float(row[3]),
-                'current_price': self._parse_float(row[4]),
-                'unrealised_pl': self._parse_float(row[5]),
-                'total_value': self._parse_float(row[7]),
-            }
-            
-            self.data['invest']['positions'].append(position)
-    
-    def _parse_float(self, value):
-        """Parse number with mixed separators"""
-        if not value:
-            return 0.0
-        
-        # Remove currency symbols
-        clean = re.sub(r'[^\d.,\-]', '', str(value))
-        
-        # Handle mixed separators: 16,234.50 vs 16,50
-        if clean.count(',') == 1 and clean.count('.') == 0:
-            return float(clean.replace(',', '.'))  # EU: 16,50
-        else:
-            return float(clean.replace(',', ''))   # US: 16,234.50
-    
-    def _parse_datetime(self, value):
-        """Parse timestamp in UTC"""
-        try:
-            return datetime.strptime(str(value).strip(), '%Y-%m-%d %H:%M:%S')
-        except:
-            return None
+def detect_report_type(start_date: str, end_date: str) -> str:
+    if start_date == end_date:
+        return "DAILY"
+    elif is_month_end(end_date):
+        return "MONTHLY"
+    else:
+        return "INTERVAL"
 ```
 
----
+### Expected Pages by Report Type
 
-## ⚠️ Common Pitfalls & Solutions
-
-| Problem | Solution |
-|---------|----------|
-| **Currency symbol corruption** | Clean text: `€` ← `â‚¬` |
-| **Decimal parsing fails** | Normalize: remove all commas for US format |
-| **Multi-line table headers** | Merge rows if header exceeds 50 chars |
-| **Missing sections in daily** | Handle gracefully: `if not table: continue` |
-| **Order of tables varies** | Identify by header content, not position |
-| **Empty position/order sections** | Check for "No data available" text |
-| **Timestamp timezone** | All times are UTC (Z suffix implicit) |
-| **CFD account may not exist** | Check section count before parsing CFD |
+| Report Type | Pages | Reason |
+|-------------|-------|--------|
+| DAILY | ~15 | Few trades, minimal data |
+| MONTHLY | ~27 | Full month activity |
+| INTERVAL (7 days) | ~20 | Estimated |
+| INTERVAL (3 months) | ~40+ | Estimated |
 
 ---
 
-## 📈 Performance Tips
+## Critical Implementation Notes
+
+### ⚠️ Important Considerations
+
+1. **Account Type Column Differences**
+   - Must detect account type BEFORE parsing trade tables
+   - Can't use single column list for all three types
+   - Need separate parser methods per account type
+
+2. **Empty Sections**
+   - Sections may contain "No data available"
+   - Parser must handle gracefully (return empty list)
+
+3. **Multi-page Tables**
+   - Invest trades can span pages 2-6 (monthly)
+   - Must accumulate rows from multiple pages
+   - Look for header repetition to detect new page
+
+4. **Decimal/Currency Handling**
+   - Values formatted as: €1,234.56 or €1.234,56 (European)
+   - Must normalize to standard format
+   - Handle missing € sign in some cells
+
+5. **Date/Time Format**
+   - Date: DD.MM.YYYY (European format)
+   - Time: HH:MM (24-hour)
+   - Must parse correctly
+
+6. **Text Extraction Quality**
+   - PyPDF may extract some characters incorrectly
+   - Use fuzzy matching for headers
+   - Implement fallback parsing strategies
+
+---
+
+## Parser Skeleton (Pseudocode)
 
 ```python
-# ✅ DO: Use pdfplumber's streaming
-with pdfplumber.open(pdf_path) as pdf:
-    for page in pdf.pages:
-        tables = page.extract_tables()
-        # Process immediately, don't store all
-
-# ❌ DON'T: Load all into memory
-all_pages = [p.extract_text() for p in pdf.pages]  # Slow!
-
-# ✅ DO: Cache headers
-headers_cache = {}
-for table in tables:
-    header_sig = tuple(table[0])
-    if header_sig not in headers_cache:
-        headers_cache[header_sig] = self._identify_table_type(header_sig)
-
-# ✅ DO: Validate early
-if len(table) < 2:  # No data rows
-    continue
+class ActivityStatementParser:
+    """Parse Trading 212 Activity Statement PDFs"""
+    
+    def parse(self, pdf_path: str) -> ActivityStatement:
+        with pdfplumber.open(pdf_path) as pdf:
+            # Step 1: Extract text from all pages
+            all_text = "\n".join(p.extract_text() for p in pdf.pages)
+            
+            # Step 2: Parse header (page 1)
+            header = self._parse_header(all_text)
+            
+            # Step 3: Detect report type
+            report_type = self._detect_report_type(
+                header.period_start, 
+                header.period_end
+            )
+            
+            # Step 4: Parse overview (page 1)
+            overview = self._parse_overview(all_text)
+            
+            # Step 5: Parse account sections
+            invest = self._parse_invest_account(all_text)
+            cfd = self._parse_cfd_account(all_text)
+            crypto = self._parse_crypto_account(all_text)
+            
+            return ActivityStatement(
+                report_type=report_type,
+                customer_id=header.customer_id,
+                customer_name=header.customer_name,
+                period_start=header.period_start,
+                period_end=header.period_end,
+                overview=overview,
+                invest_account=invest,
+                cfd_account=cfd,
+                crypto_account=crypto
+            )
+    
+    def _parse_invest_account(self, text: str) -> InvestAccount:
+        # Find "Invest Account" section
+        invest_section = self._extract_section(text, "Invest Account")
+        
+        # Parse executed trades
+        trades = self._parse_table(
+            invest_section,
+            headers=[
+                "EXECUTION TIME", "INSTRUMENT", "ISIN", "ORDER ID",
+                "DIRECTION", "QUANTITY", "EXECUTION PRICE", "VALUE",
+                "ORDER TYPE", "EXECUTION VENUE", "SESSION", "FX RATE",
+                "FX FEE", "EXCHANGE & GOVT FEES", "RETURN VALUE"
+            ]
+        )
+        
+        # Parse open positions
+        positions = self._parse_table(...)
+        
+        # Parse cash breakdown
+        cash = self._parse_cash_breakdown(invest_section)
+        
+        # Parse transactions & dividends
+        transactions = self._parse_transactions(invest_section)
+        
+        return InvestAccount(
+            trades=trades,
+            positions=positions,
+            cash=cash,
+            transactions=transactions
+        )
+    
+    def _parse_cfd_account(self, text: str) -> CFDAccount:
+        # Similar to invest, but with CFD-specific columns
+        cfd_section = self._extract_section(text, "CFD Account")
+        
+        # Note: Different column headers for trades!
+        trades = self._parse_table(
+            cfd_section,
+            headers=[
+                "EXECUTION TIME", "INSTRUMENT", "ORDER ID", "ORDER TYPE",
+                "DIRECTION", "EXECUTION VENUE", "SESSION", "QUANTITY",
+                "EXECUTION PRICE", "VALUE", "PROFIT/LOSS", "OVERNIGHT INTEREST"
+            ]
+        )
+        
+        return CFDAccount(trades=trades, ...)
+    
+    def _parse_crypto_account(self, text: str) -> CryptoAccount:
+        # Similar to invest, but with crypto-specific columns
+        crypto_section = self._extract_section(text, "Crypto Account")
+        
+        # Note: SYMBOL/ASSET instead of INSTRUMENT/ISIN!
+        trades = self._parse_table(
+            crypto_section,
+            headers=[
+                "EXECUTION TIME", "SYMBOL", "ASSET", "ORDER ID", "FILL ID",
+                "DIRECTION", "QUANTITY", "EXECUTION PRICE", "VALUE", "FEE", "RETURN"
+            ]
+        )
+        
+        return CryptoAccount(trades=trades, ...)
+    
+    def _parse_table(self, text: str, headers: list[str]) -> list[dict]:
+        """Generic table parser"""
+        # Extract rows where each cell maps to a header
+        # Handle multi-line rows, empty cells, etc.
+        pass
+    
+    def _parse_overview(self, text: str) -> AccountOverview:
+        """Parse summary metrics for each account type"""
+        # Find "Deposits", "Withdrawals", etc.
+        # Extract values with currency parsing
+        pass
 ```
 
 ---
 
-## ✅ Testing Checklist
+## Database Schema (Quick Reference)
 
-```bash
-# Test Case 1: Monthly PDF (June)
-✓ Extract all 4 trade tables
-✓ Parse 100+ positions correctly
-✓ Handle 30-day date range
-✓ Extract cash in multiple currencies
+```sql
+-- Main statement table
+CREATE TABLE activity_statements (
+    id UUID PRIMARY KEY,
+    customer_id VARCHAR(50),
+    report_type VARCHAR(20),  -- DAILY, MONTHLY, INTERVAL
+    period_start DATE,
+    period_end DATE,
+    generated_date DATETIME,
+    page_count INT,
+    parsed_at DATETIME
+);
 
-# Test Case 2: Daily PDF (Sept 1)
-✓ Extract 2-3 trade tables
-✓ Handle single-day date range
-✓ Parse positions (may be fewer)
-✓ Verify currency handling
+-- Summary metrics
+CREATE TABLE account_overviews (
+    id UUID PRIMARY KEY,
+    statement_id UUID,
+    account_type VARCHAR(20),  -- INVEST, CFD, CRYPTO
+    account_id VARCHAR(50),
+    deposits DECIMAL(15,2),
+    withdrawals DECIMAL(15,2),
+    realised_return DECIMAL(15,2),
+    open_return DECIMAL(15,2),
+    ... (other metrics)
+);
 
-# Edge Cases
-✓ Empty sections ("No data available")
-✓ Partial shares (14.84 quantity)
-✓ Multi-line values wrapping
-✓ High-precision prices (4+ decimals)
+-- All trades (unified table)
+CREATE TABLE trades (
+    id UUID PRIMARY KEY,
+    statement_id UUID,
+    account_type VARCHAR(20),
+    execution_time DATETIME,
+    instrument_name VARCHAR(255),
+    isin_or_symbol VARCHAR(50),  -- INVEST: ISIN, CRYPTO: SYMBOL
+    order_id VARCHAR(50),
+    direction VARCHAR(10),  -- BUY, SELL
+    quantity DECIMAL(15,8),
+    execution_price DECIMAL(15,8),
+    value DECIMAL(15,2),
+    ... (account-type specific fields with NULLs)
+);
+
+-- Open positions
+CREATE TABLE open_positions (
+    id UUID PRIMARY KEY,
+    statement_id UUID,
+    account_type VARCHAR(20),
+    instrument_name VARCHAR(255),
+    isin_or_symbol VARCHAR(50),
+    quantity DECIMAL(15,8),
+    average_price DECIMAL(15,8),
+    current_price DECIMAL(15,8),
+    return_value DECIMAL(15,2),
+    value DECIMAL(15,2)
+);
 ```
 
 ---
 
-## 🚀 Implementation Roadmap
+**Quick Reference Guide - Keep This Handy!**
 
-1. **Phase 1: Basic Structure** (1-2 days)
-   - Extract tables from PDF
-   - Identify table types by headers
-   - Parse basic fields (datetime, float, string)
-
-2. **Phase 2: Data Validation** (2-3 days)
-   - Validate trade calculations
-   - Normalize decimals/currencies
-   - Handle errors gracefully
-
-3. **Phase 3: Output Formats** (1-2 days)
-   - Export to CSV
-   - Export to JSON
-   - Export to DataFrame
-
-4. **Phase 4: Testing & Optimization** (2-3 days)
-   - Test with 10+ real PDFs
-   - Benchmark performance
-   - Add error recovery
-
----
-
-## 📚 Reference Files
-
-- **Main Analysis:** `STRUCTURE_ANALYSIS.md`
-- **Detailed Structure:** `DETAILED_STRUCTURE_COMPARISON.md`
-- **Monthly PDF Breakdown:** `Activity-Statement-2026-06-01-2026-06-30_DETAILED_ANALYSIS.md`
-- **Daily PDF Breakdown:** `Activity-Statement-2026-09-01-2026-09-01_DETAILED_ANALYSIS.md`
-
----
-
-*Created: 2026-09-20 | Status: Ready for Implementation*
+Last Updated: 2026-09-20

@@ -113,7 +113,7 @@ export default function StrategiesPage() {
   }
 
   const handleCreateStrategy = async () => {
-    // Validation
+    // Client-side validation only for format
     if (!strategyForm.name.trim()) {
       console.error('[handleCreateStrategy] Error: Name is required')
       return
@@ -129,15 +129,7 @@ export default function StrategiesPage() {
       return
     }
 
-    // Check for duplicate names
-    const duplicateExists = strategies.some(
-      s => s.name && s.name.toLowerCase().trim() === strategyForm.name.toLowerCase().trim()
-    )
-    if (duplicateExists) {
-      console.error('[handleCreateStrategy] Error: A strategy with this name already exists')
-      return
-    }
-
+    setLoading(true)
     try {
       console.log('[handleCreateStrategy] Creating strategy:', strategyForm)
       const response = await apiClient.post('/v1/strategies', {
@@ -149,10 +141,14 @@ export default function StrategiesPage() {
       setStrategies([...strategies, response.data])
       setStrategyForm({ name: '', description: '', initial_investment: null })
       setShowCreateStrategy(false)
-      loadStrategies()
+      await loadStrategies()
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Failed to create strategy'
-      console.error('[handleCreateStrategy] Error:', message)
+      console.error('[handleCreateStrategy] Backend Error:', message)
+      // Error is logged to console for debugging
+      // User can see the error since dialog stays open
+    } finally {
+      setLoading(false)
     }
   }
 
