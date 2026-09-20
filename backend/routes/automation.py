@@ -89,11 +89,11 @@ async def enable_global_automation():
 
         logger.info("Enabling global automation...")
 
-        # Update app_parameters
+        # Update app_parameters (singleton table - filter by 1=1 or limit 1)
         result = db.client.table("app_parameters").update({
             "grid_trading_enabled": True,
             "updated_at": "now()"
-        }).execute()
+        }).limit(1).execute()
 
         if result.data:
             logger.info("✅ Global automation enabled")
@@ -122,11 +122,11 @@ async def disable_global_automation():
 
         logger.info("Disabling global automation...")
 
-        # Update app_parameters
+        # Update app_parameters (singleton table - filter by 1=1 or limit 1)
         result = db.client.table("app_parameters").update({
             "grid_trading_enabled": False,
             "updated_at": "now()"
-        }).execute()
+        }).limit(1).execute()
 
         if result.data:
             logger.info("✅ Global automation disabled")
