@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -7,50 +7,57 @@ import { useToast } from '../components/ui/Toast'
 import { apiClient } from '../api/client'
 import { ConfigForm } from '../components/ConfigForm'
 
-interface StrategyParams {
-  buy_threshold_percent: number
-  sell_threshold_percent: number
-  buy_quantity_percent: number
-  sell_quantity_percent: number
-  check_interval_seconds: number
-  max_position_size_percent: number
-  stop_loss_percent: number
-  max_drawdown_percent: number
-}
-
 export default function ConfigPage() {
-  const [params, setParams] = useState<StrategyParams>({
-    buy_threshold_percent: 1.0,
-    sell_threshold_percent: 1.0,
-    buy_quantity_percent: 50.0,
-    sell_quantity_percent: 50.0,
-    check_interval_seconds: 300,
-    max_position_size_percent: 10.0,
-    stop_loss_percent: 5.0,
-    max_drawdown_percent: 10.0
-  })
+  const [schedulerInterval, setSchedulerInterval] = useState<number>(15)
+  const [intervalInput, setIntervalInput] = useState<string>('15')
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'trading212' | 'strategy' | 'risk'>('trading212')
+  const [loadingInterval, setLoadingInterval] = useState(true)
   const toast = useToast()
 
-  const handleSaveStrategy = async () => {
-    setLoading(true)
+  // Fetch current scheduler interval on mount
+  useEffect(() => {
+    fetchSchedulerInterval()
+  }, [])
+
+  const fetchSchedulerInterval = async () => {
     try {
-      const response = await apiClient.put('/config/strategy-params', params)
-      toast.success('Parâmetros da estratégia guardados com sucesso!')
+      setLoadingInterval(true)
+      const response = await apiClient.get('/automation/config/interval')
+      const interval = response.data.scheduler_interval_seconds || 15
+      setSchedulerInterval(interval)
+      setIntervalInput(String(interval))
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Erro ao guardar parâmetros'
+      const message = error?.response?.data?.detail || 'Erro ao carregar intervalo do scheduler'
       toast.error(message)
+      // Keep current values on error
     } finally {
-      setLoading(false)
+      setLoadingInterval(false)
     }
   }
 
-  const handleParamChange = (key: keyof StrategyParams, value: any) => {
-    setParams({
-      ...params,
-      [key]: parseFloat(value) || 0
-    })
+  const handleSaveInterval = async () => {
+    const interval = parseInt(intervalInput)
+
+    if (isNaN(interval) || interval < 5 || interval > 300) {
+      toast.error('Intervalo deve estar entre 5 e 300 segundos')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await apiClient.put('/automation/config/interval', {
+        scheduler_interval_seconds: interval
+      })
+      setSchedulerInterval(interval)
+      toast.success('Intervalo do scheduler atualizado com sucesso!')
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Erro ao guardar intervalo'
+      toast.error(message)
+      // Reset input on error
+      setIntervalInput(String(schedulerInterval))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -61,198 +68,81 @@ export default function ConfigPage() {
         <h2 className="text-2xl font-bold text-t212-primary">Configuração</h2>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-t212-border">
-        <button
-          onClick={() => setActiveTab('trading212')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            activeTab === 'trading212'
-              ? 'border-b-2 border-t212-primary text-t212-primary'
-              : 'text-t212-secondary hover:text-t212-primary'
-          }`}
-        >
-          Trading 212
-        </button>
-        <button
-          onClick={() => setActiveTab('strategy')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            activeTab === 'strategy'
-              ? 'border-b-2 border-t212-primary text-t212-primary'
-              : 'text-t212-secondary hover:text-t212-primary'
-          }`}
-        >
-          Estratégia
-        </button>
-        <button
-          onClick={() => setActiveTab('risk')}
-          className={`px-4 py-3 font-medium transition-colors ${
-            activeTab === 'risk'
-              ? 'border-b-2 border-t212-primary text-t212-primary'
-              : 'text-t212-secondary hover:text-t212-primary'
-          }`}
-        >
-          Gestão de Risco
-        </button>
-      </div>
+      {/* Geral Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Geral</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Trading 212 Config */}
+          <div>
+            <h3 className="text-lg font-semibold text-t212-primary mb-4">Trading 212</h3>
+            <ConfigForm />
+          </div>
 
-      {/* Tab Content */}
-      <div>
-        {/* Trading 212 Config */}
-        {activeTab === 'trading212' && (
-          <ConfigForm />
-        )}
+          {/* Scheduler Interval */}
+          <div className="border-t border-t212-border pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-t212-primary mb-4">⏱️ Scheduler</h3>
 
-        {/* Strategy Params */}
-        {activeTab === 'strategy' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Parâmetros da Estratégia Grid Trading</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Buy Configuration */}
+            {loadingInterval ? (
+              <div className="flex items-center justify-center py-4 text-t212-secondary">
+                <div className="animate-spin w-4 h-4 border-2 border-t212-primary border-t-transparent rounded-full mr-2" />
+                Carregando intervalo...
+              </div>
+            ) : (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-t212-primary flex items-center gap-2">
-                  📈 Compra (BUY)
-                </h3>
+                {/* Current Interval Display */}
+                <div className="p-4 rounded-lg bg-t212-primary bg-opacity-5 border border-t212-primary border-opacity-20">
+                  <div className="text-sm text-t212-secondary mb-1">Intervalo Atual</div>
+                  <div className="text-2xl font-bold text-t212-primary">
+                    {schedulerInterval}s
+                  </div>
+                  <div className="text-xs text-t212-secondary mt-1">
+                    (~{Math.round(schedulerInterval / 60 * 10) / 10} minuto{schedulerInterval >= 60 ? 's' : ''})
+                  </div>
+                </div>
+
+                {/* Interval Input */}
                 <Input
-                  label="Limite de Compra (%)"
+                  label="Novo Intervalo (segundos)"
                   type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={params.buy_threshold_percent}
-                  onChange={(e) => handleParamChange('buy_threshold_percent', e.target.value)}
-                  hint="Percentagem de queda para dispara compra. Ex: 1.0 = -1%"
+                  step="5"
+                  min="5"
+                  max="300"
+                  value={intervalInput}
+                  onChange={(e) => setIntervalInput(e.target.value)}
+                  hint="Intervalo entre ciclos de automação. Mín: 5s, Máx: 300s"
                 />
-                <Input
-                  label="Quantidade de Compra (%)"
-                  type="number"
-                  step="1"
-                  min="1"
-                  max="100"
-                  value={params.buy_quantity_percent}
-                  onChange={(e) => handleParamChange('buy_quantity_percent', e.target.value)}
-                  hint="Percentagem do capital a usar. Ex: 50 = 50% do saldo"
-                />
+
+                {/* Info Messages */}
+                <div className="space-y-2 text-xs text-t212-secondary">
+                  <p>📌 <strong>Intervalo recomendado:</strong> 15 segundos (padrão)</p>
+                  <p>⚡ <strong>Menor intervalo:</strong> Mais responsivo, mais requisições à API</p>
+                  <p>🔋 <strong>Maior intervalo:</strong> Menos requisições, resposta mais lenta</p>
+                </div>
+
+                {/* Save Button */}
+                <Button
+                  variant="primary"
+                  onClick={handleSaveInterval}
+                  isLoading={loading}
+                  className="w-full"
+                >
+                  {loading ? 'Guardando...' : 'Guardar Intervalo'}
+                </Button>
               </div>
-
-              {/* Sell Configuration */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-t212-primary flex items-center gap-2">
-                  📉 Venda (SELL)
-                </h3>
-                <Input
-                  label="Limite de Venda (%)"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={params.sell_threshold_percent}
-                  onChange={(e) => handleParamChange('sell_threshold_percent', e.target.value)}
-                  hint="Percentagem de subida para disparar venda. Ex: 1.0 = +1%"
-                />
-                <Input
-                  label="Quantidade de Venda (%)"
-                  type="number"
-                  step="1"
-                  min="1"
-                  max="100"
-                  value={params.sell_quantity_percent}
-                  onChange={(e) => handleParamChange('sell_quantity_percent', e.target.value)}
-                  hint="Percentagem da posição a vender. Ex: 50 = 50% da posição"
-                />
-              </div>
-
-              {/* Check Interval */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-t212-primary flex items-center gap-2">
-                  ⏱️ Frequência
-                </h3>
-                <Input
-                  label="Intervalo de Verificação (segundos)"
-                  type="number"
-                  step="60"
-                  min="60"
-                  value={params.check_interval_seconds}
-                  onChange={(e) => handleParamChange('check_interval_seconds', e.target.value)}
-                  hint="Tempo entre verificações. Ex: 300 = 5 minutos"
-                />
-              </div>
-
-              <Button
-                variant="primary"
-                onClick={handleSaveStrategy}
-                isLoading={loading}
-                className="w-full"
-              >
-                Guardar Parâmetros
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Risk Management */}
-        {activeTab === 'risk' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestão de Risco</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="p-4 rounded-lg bg-t212-warning bg-opacity-10 border border-t212-warning text-t212-warning text-sm">
-                ⚠️ Estes parâmetros protegem o seu capital limitando o risco por operação
-              </div>
-
-              <div className="space-y-4">
-                <Input
-                  label="Tamanho Máximo de Posição (%)"
-                  type="number"
-                  step="1"
-                  min="1"
-                  max="100"
-                  value={params.max_position_size_percent}
-                  onChange={(e) => handleParamChange('max_position_size_percent', e.target.value)}
-                  hint="% máxima do capital em uma posição. Ex: 10 = máx 10% do saldo"
-                />
-
-                <Input
-                  label="Stop Loss (%)"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={params.stop_loss_percent}
-                  onChange={(e) => handleParamChange('stop_loss_percent', e.target.value)}
-                  hint="Perda máxima aceitável. Ex: 5 = vende se perder 5%"
-                />
-
-                <Input
-                  label="Drawdown Máximo (%)"
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={params.max_drawdown_percent}
-                  onChange={(e) => handleParamChange('max_drawdown_percent', e.target.value)}
-                  hint="Queda máxima do capital. Ex: 10 = para se cair 10% total"
-                />
-              </div>
-
-              <Button
-                variant="primary"
-                onClick={handleSaveStrategy}
-                isLoading={loading}
-                className="w-full"
-              >
-                Guardar Parâmetros de Risco
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Info Card */}
       <Card className="border-t212-info border-opacity-30">
         <CardContent className="pt-6">
           <div className="space-y-3 text-sm text-t212-secondary">
-            <p>💡 <strong>Dica:</strong> Comece com parâmetros conservadores e ajuste conforme ganhe experiência.</p>
+            <p>💡 <strong>Dica:</strong> Utilize o intervalo do scheduler para controlar a frequência de execução da automação.</p>
             <p>🔒 <strong>Segurança:</strong> Suas credenciais são encriptadas e nunca são expostas.</p>
-            <p>⚙️ <strong>Atualizações:</strong> Os parâmetros são aplicados na próxima verificação do scheduler.</p>
+            <p>⚙️ <strong>Atualizações:</strong> As alterações ao intervalo entram em vigor imediatamente.</p>
           </div>
         </CardContent>
       </Card>
