@@ -282,23 +282,33 @@ async def sync_positions():
                     continue
 
                 # Preparar dados para atualizar/inserir
+                # Cross-check com API T212 - guardar TODOS os campos
                 wallet_impact = position.get("walletImpact", {})
+                instrument = position.get("instrument", {})
 
                 isin_data = {
+                    # Identificadores
                     "isin": isin,
                     "ticker": instrument.get("ticker", ""),
                     "name": instrument.get("name", ""),
+
+                    # Preços e quantidades
                     "quantity": position.get("quantity", 0),
                     "current_price": position.get("currentPrice", 0),
                     "average_price_paid": position.get("averagePricePaid", 0),
                     "quantity_available_for_trading": position.get("quantityAvailableForTrading", 0),
                     "quantity_in_pies": position.get("quantityInPies", 0),
+
+                    # Wallet impact (P&L, valores)
                     "wi_currency": wallet_impact.get("currency", "EUR"),
                     "wi_current_value": wallet_impact.get("currentValue", 0),
                     "wi_fx_impact": wallet_impact.get("fxImpact", 0),
                     "wi_total_cost": wallet_impact.get("totalCost", 0),
                     "wi_unrealized_profit_loss": wallet_impact.get("unrealizedProfitLoss", 0),
+
+                    # Timestamps
                     "api_created_at": position.get("createdAt"),
+                    "position_created_at": position.get("createdAt"),
                     "updated_at": "now()"
                 }
 
