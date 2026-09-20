@@ -107,11 +107,41 @@ export default function StrategiesPage() {
   const loadParameters = async (strategyId: string) => {
     try {
       const response = await apiClient.get(`/v1/strategies/${strategyId}`)
-      console.log(`[loadParameters] Full response for strategy ${strategyId}:`, response.data)
-      console.log(`[loadParameters] Parameters array:`, response.data.parameters)
-      setParameters(response.data.parameters || [])
+      const strategyData = response.data
+      console.log(`[loadParameters] Full response for strategy ${strategyId}:`, strategyData)
+      console.log(`[loadParameters] Parameters array:`, strategyData.parameters)
+
+      // Set parameters
+      setParameters(strategyData.parameters || [])
+
+      // [NEW] Check if all required positions exist
+      if (strategyData.parameters && Array.isArray(strategyData.parameters)) {
+        const positions = strategyData.parameters.map((p: StrategyParameter) => p.pos)
+        const hasNegativeOne = positions.includes("-1")
+        const hasZero = positions.includes("0")
+        const hasOne = positions.includes("1")
+
+        const allRequiredPositionsExist = hasNegativeOne && hasZero && hasOne
+        console.log(`[loadParameters] Positions check: -1=${hasNegativeOne}, 0=${hasZero}, 1=${hasOne}, valid=${allRequiredPositionsExist}`)
+
+        // [NEW] Update strategy validation state based on actual parameters
+        if (selectedStrategy) {
+          setSelectedStrategy({
+            ...selectedStrategy,
+            is_valid: allRequiredPositionsExist
+          })
+        }
+      } else {
+        // No parameters at all - mark as invalid
+        if (selectedStrategy) {
+          setSelectedStrategy({
+            ...selectedStrategy,
+            is_valid: false
+          })
+        }
+      }
     } catch (error) {
-      console.error('Error loading parameters:', error)
+      console.error('[loadParameters] Error loading parameters:', error)
     }
   }
 
