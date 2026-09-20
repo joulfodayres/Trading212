@@ -263,33 +263,29 @@ export default function StrategiesPage() {
                 {strategies.map((strategy) => {
                   const name = strategy.name && strategy.name.trim() ? strategy.name.trim() : null
                   const description = strategy.description && strategy.description.trim() && strategy.description !== 'None' ? strategy.description.trim() : null
+                  const displayName = name || `Unnamed Strategy (${strategy.id.substring(0, 8)})`
 
                   console.log('[StrategiesPage] Rendering strategy:', {
                     id: strategy.id,
                     name,
                     description,
+                    displayName,
                     enabled: strategy.enabled,
                     is_valid: strategy.is_valid
                   })
-
-                  // Show strategy if it has name OR description (at least one)
-                  const shouldShow = name || description
 
                   return (
                     <button
                       key={strategy.id}
                       onClick={() => handleStrategyClick(strategy)}
                       className="w-full p-4 rounded-lg border border-t212-border hover:border-t212-primary hover:bg-t212-hover transition flex items-center justify-between"
-                      style={{ display: shouldShow ? 'flex' : 'none' }}
                     >
                       <div className="flex-1 text-left">
-                        {name && (
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-t212-primary">
-                              {name}
-                            </h3>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className={`font-semibold ${name ? 'text-t212-primary' : 'text-t212-secondary'}`}>
+                            {displayName}
+                          </h3>
+                        </div>
                         {description && (
                           <p className="text-sm text-t212-secondary mb-1">{description}</p>
                         )}
@@ -307,7 +303,7 @@ export default function StrategiesPage() {
                       <ChevronRight size={20} className="text-t212-secondary" />
                     </button>
                   )
-                }).filter(Boolean)}
+                })}
               </div>
             ) : (
               <p className="text-t212-secondary text-center py-8">No strategies created</p>
