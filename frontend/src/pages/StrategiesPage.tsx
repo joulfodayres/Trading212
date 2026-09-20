@@ -122,13 +122,16 @@ export default function StrategiesPage() {
   }
 
   const handleStrategyClick = (strategy: Strategy) => {
+    console.log('[StrategiesPage] Clicked strategy:', strategy)
     setSelectedStrategy(strategy)
-    setStrategyEditForm({
+    const formData = {
       name: strategy.name || '',
       description: strategy.description || '',
       initial_investment: strategy.initial_investment || 0,
-      enabled: strategy.enabled,
-    })
+      enabled: strategy.enabled || false,
+    }
+    console.log('[StrategiesPage] Setting form data:', formData)
+    setStrategyEditForm(formData)
     setViewMode('detail')
   }
 

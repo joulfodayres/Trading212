@@ -35,7 +35,7 @@ class AutomationStatusResponse(BaseModel):
 
 class SchedulerIntervalRequest(BaseModel):
     """Request para atualizar intervalo do scheduler"""
-    scheduler_interval_seconds: int = Field(..., ge=5, le=300)
+    scheduler_interval_seconds: int = Field(..., ge=5, le=3600)
 
 
 
@@ -234,8 +234,8 @@ async def update_scheduler_interval(request: SchedulerIntervalRequest):
 
         scheduler_interval_seconds = request.scheduler_interval_seconds
 
-        if not (5 <= scheduler_interval_seconds <= 300):
-            raise HTTPException(status_code=400, detail="scheduler_interval_seconds must be between 5 and 300")
+        if not (5 <= scheduler_interval_seconds <= 3600):
+            raise HTTPException(status_code=400, detail="scheduler_interval_seconds must be between 5 and 3600")
 
         db = get_db()
 

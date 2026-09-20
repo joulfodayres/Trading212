@@ -39,8 +39,8 @@ export default function ConfigPage() {
   const handleSaveInterval = async () => {
     const interval = parseInt(intervalInput)
 
-    if (isNaN(interval) || interval < 5 || interval > 300) {
-      toast.error('Interval must be between 5 and 300 seconds')
+    if (isNaN(interval) || interval < 5 || interval > 3600) {
+      toast.error('Interval must be between 5 and 3600 seconds')
       return
     }
 
@@ -110,10 +110,10 @@ export default function ConfigPage() {
                   type="number"
                   step="5"
                   min="5"
-                  max="300"
+                  max="3600"
                   value={intervalInput}
                   onChange={(e) => setIntervalInput(e.target.value)}
-                  hint="Interval between automation cycles. Min: 5s, Max: 300s"
+                  hint="Interval between automation cycles. Min: 5s, Max: 3600s"
                 />
 
                 {/* Info Messages */}
