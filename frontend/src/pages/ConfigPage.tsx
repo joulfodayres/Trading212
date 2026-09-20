@@ -22,12 +22,13 @@ export default function ConfigPage() {
   const fetchSchedulerInterval = async () => {
     try {
       setLoadingInterval(true)
-      const response = await apiClient.get('/automation/config/interval')
+      const response = await apiClient.get('/v1/automation/config/interval')
       const interval = response.data.scheduler_interval_seconds || 15
       setSchedulerInterval(interval)
       setIntervalInput(String(interval))
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error loading scheduler interval'
+      console.error('[ConfigPage] Error fetching interval:', message)
       toast.error(message)
       // Keep current values on error
     } finally {
@@ -45,13 +46,14 @@ export default function ConfigPage() {
 
     setLoading(true)
     try {
-      await apiClient.put('/automation/config/interval', {
+      await apiClient.put('/v1/automation/config/interval', {
         scheduler_interval_seconds: interval
       })
       setSchedulerInterval(interval)
       toast.success('Scheduler interval updated successfully!')
     } catch (error: any) {
       const message = error?.response?.data?.detail || 'Error saving interval'
+      console.error('[ConfigPage] Error saving interval:', message)
       toast.error(message)
       // Reset input on error
       setIntervalInput(String(schedulerInterval))

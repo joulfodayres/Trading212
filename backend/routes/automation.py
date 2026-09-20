@@ -33,6 +33,9 @@ class AutomationStatusResponse(BaseModel):
     last_cycle_duration: Optional[float] = None
 
 
+class SchedulerIntervalRequest(BaseModel):
+    """Request para atualizar intervalo do scheduler"""
+    scheduler_interval_seconds: int
 # ===== HELPERS =====
 
 def _get_db():
@@ -180,32 +183,93 @@ async def get_automation_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/config/interval")
-async def update_scheduler_interval(interval: int = Query(..., ge=5, le=300)):
+@router.get("/config/interval")
+async def get_scheduler_interval():
     """
+    GET /api/v1/automation/config/interval
+
+    Retorna o intervalo atual do scheduler
+
+    Returns:
+        Current scheduler interval configuration
+    """
+    try:
+        from db.supabase_client import get_db
+
+        db = get_db()
+
+        # Buscar app_parameters
+        result = db.client.table("app_parameters").select("scheduler_interval_seconds").execute()
+        scheduler_interval_seconds = result.data[0].get("scheduler_interval_seconds", 15) if result.data else 15
+
+        return {
+            "scheduler_interval_seconds": scheduler_interval_seconds,
+            "status": "ok"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter intervalo do scheduler: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/config/interval")
+async def update_scheduler_interval(request: SchedulerIntervalRequest):
+    """
+    PUT /api/v1/automation/config/interval
+
     Update scheduler interval at runtime.
 
-    Args:
-        interval: New interval in seconds (5-300)
+    Request body:
+        {
+            "scheduler_interval_seconds": int (5-300)
+        }
 
     Returns:
         Updated configuration
     """
     try:
-        from main import scheduler_service
+        from db.supabase_client import get_db
 
-        if not scheduler_service:
-            raise HTTPException(status_code=500, detail="Scheduler não inicializado")
+        scheduler_interval_seconds = request.scheduler_interval_seconds
 
-        await scheduler_service.update_interval(interval)
+        if not (5 <= scheduler_interval_seconds <= 300):
+            raise HTTPException(status_code=400, detail="scheduler_interval_seconds must be between 5 and 300")
 
-        return {
-            "status": "updated",
-            "new_interval": interval,
-        }
+        db = get_db()
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # Get the singleton row first
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+
+        param_id = result.data[0]["id"]
+
+        # Update with WHERE clause
+        update_result = db.client.table("app_parameters").update({
+            "scheduler_interval_seconds": scheduler_interval_seconds,
+            "updated_at": "now()"
+        }).eq("id", param_id).execute()
+
+        if update_result.data:
+            logger.info(f"✅ Scheduler interval updated to {scheduler_interval_seconds}s")
+
+            # Try to update the running scheduler if available
+            try:
+                from main import scheduler_service
+                if scheduler_service:
+                    await scheduler_service.update_interval(scheduler_interval_seconds)
+            except Exception as update_err:
+                logger.warning(f"Could not update running scheduler: {update_err}")
+
+            return {
+                "status": "updated",
+                "scheduler_interval_seconds": scheduler_interval_seconds,
+            }
+        else:
+            raise Exception("Failed to update app_parameters")
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao atualizar intervalo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
