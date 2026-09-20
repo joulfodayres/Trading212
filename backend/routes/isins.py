@@ -288,7 +288,6 @@ async def sync_positions():
                     "isin": isin,
                     "ticker": instrument.get("ticker", ""),
                     "name": instrument.get("name", ""),
-                    "currency": instrument.get("currency", "EUR"),
                     "quantity": position.get("quantity", 0),
                     "current_price": position.get("currentPrice", 0),
                     "average_price_paid": position.get("averagePricePaid", 0),
