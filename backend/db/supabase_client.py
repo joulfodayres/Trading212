@@ -11,6 +11,101 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+# ===== SQLAlchemy-like wrapper para compatibilidade com AutomationEngine =====
+
+class QueryBuilder:
+    """Simula SQLAlchemy QueryBuilder"""
+
+    def __init__(self, client: Client, table_name: str, model_class=None):
+        self.client = client
+        self.table_name = table_name
+        self.model_class = model_class
+        self._filters = []
+
+    def filter_by(self, **kwargs):
+        """Simula filter_by"""
+        self._filters = kwargs
+        return self
+
+    def filter(self, *args):
+        """Simula filter (por enquanto apenas suporta filter_by)"""
+        return self
+
+    def first(self):
+        """Retorna primeiro resultado"""
+        result = self.client.table(self.table_name).select("*").execute()
+        for key, value in self._filters.items():
+            if result.data:
+                result.data = [r for r in result.data if r.get(key) == value]
+        if result.data:
+            return result.data[0]
+        return None
+
+    def all(self):
+        """Retorna todos os resultados"""
+        result = self.client.table(self.table_name).select("*").execute()
+        filtered = result.data or []
+        for key, value in self._filters.items():
+            filtered = [r for r in filtered if r.get(key) == value]
+        return filtered
+
+
+class SQLAlchemyCompatibleSession:
+    """Wrapper que oferece interface SQLAlchemy mas usa Supabase por baixo"""
+
+    def __init__(self, client: Client):
+        self.client = client
+        self._objects_to_add = []
+        self._objects_to_update = {}
+
+    def query(self, model_class):
+        """Simula session.query()"""
+        table_name = self._get_table_name(model_class)
+        return QueryBuilder(self.client, table_name, model_class)
+
+    def add(self, obj):
+        """Simula session.add()"""
+        self._objects_to_add.append(obj)
+
+    def commit(self):
+        """Comita as mudanças (inserts)"""
+        for obj in self._objects_to_add:
+            self._insert_object(obj)
+        self._objects_to_add = []
+
+    def rollback(self):
+        """Cancela a transação"""
+        self._objects_to_add = []
+        self._objects_to_update = {}
+
+    def close(self):
+        """Fecha a sessão"""
+        pass
+
+    def _get_table_name(self, model_class):
+        """Obtém o nome da tabela a partir da classe modelo"""
+        # Mapping simples
+        mapping = {
+            "ISIN": "isins",
+            "Strategy": "strategies",
+            "StrategyParameters": "strategy_parameters",
+            "Order": "orders",
+        }
+        class_name = model_class.__name__ if hasattr(model_class, '__name__') else str(model_class)
+        return mapping.get(class_name, class_name.lower() + "s")
+
+    def _insert_object(self, obj):
+        """Insere um objeto na BD"""
+        table_name = self._get_table_name(obj.__class__)
+        data = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+        try:
+            self.client.table(table_name).insert(data).execute()
+            logger.debug(f"Inserted object in {table_name}: {data.get('id', 'no-id')}")
+        except Exception as e:
+            logger.error(f"Error inserting object: {e}")
+            raise
+
+
 class SupabaseDB:
     """Cliente Supabase singleton"""
 
@@ -259,6 +354,7 @@ class SupabaseDB:
 
 # Singleton global
 _db_instance: Optional[SupabaseDB] = None
+_supabase_client: Optional[Client] = None
 
 
 def get_db() -> SupabaseDB:
@@ -267,3 +363,20 @@ def get_db() -> SupabaseDB:
     if _db_instance is None:
         _db_instance = SupabaseDB()
     return _db_instance
+
+
+def get_supabase_client() -> Client:
+    """Retorna cliente Supabase puro"""
+    global _supabase_client
+    if _supabase_client is None:
+        _supabase_client = create_client(
+            supabase_url=settings.SUPABASE_URL,
+            supabase_key=settings.SUPABASE_KEY
+        )
+    return _supabase_client
+
+
+def SessionLocal() -> SQLAlchemyCompatibleSession:
+    """Factory para criar nova sessão tipo SQLAlchemy"""
+    client = get_supabase_client()
+    return SQLAlchemyCompatibleSession(client)
