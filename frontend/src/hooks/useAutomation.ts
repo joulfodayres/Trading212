@@ -33,15 +33,13 @@ export const useAutomation = () => {
     async (
       isin: string,
       automationEnabled: boolean,
-      strategyId?: string,
-      initialInvestment?: number
+      strategyId?: string
     ): Promise<AutomationConfig | null> => {
       setLoading(true)
       try {
         const response = await apiClient.put(`/isins/${isin}/automation`, {
           automation_enabled: automationEnabled,
-          strategy_id: strategyId || null,
-          initial_investment: initialInvestment || null
+          strategy_id: strategyId || null
         })
 
         return response.data

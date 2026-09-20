@@ -12,7 +12,7 @@ interface AutomationBottomSheetProps {
   isOpen: boolean
   type: 'enable' | 'disable' | 'edit'
   isin: string
-  onConfirm: (strategyId?: string, initialInvestment?: number) => Promise<void>
+  onConfirm: (strategyId?: string) => Promise<void>
   onCancel: () => void
 }
 
@@ -25,7 +25,6 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 }) => {
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
-  const [initialInvestment, setInitialInvestment] = useState<string>('')
   const [loadingStrategies, setLoadingStrategies] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
@@ -58,11 +57,7 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
 
     setConfirming(true)
     try {
-      const investment = type === 'edit' || type === 'enable' ? parseFloat(initialInvestment) || undefined : undefined
-      await onConfirm(
-        (type === 'enable' || type === 'edit') ? selectedStrategy : undefined,
-        investment
-      )
+      await onConfirm((type === 'enable' || type === 'edit') ? selectedStrategy : undefined)
     } finally {
       setConfirming(false)
     }
@@ -136,24 +131,6 @@ export const AutomationBottomSheet: React.FC<AutomationBottomSheetProps> = ({
                       Nenhuma estratégia disponível
                     </div>
                   )}
-                </div>
-
-                {/* Initial Investment */}
-                <div>
-                  <label className="block text-sm font-semibold text-t212-primary mb-3">
-                    Investimento Inicial (EUR):
-                  </label>
-
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Ex: 10.00"
-                    value={initialInvestment}
-                    onChange={(e) => setInitialInvestment(e.target.value)}
-                    disabled={confirming}
-                    className="w-full px-4 py-3 bg-t212-bg-secondary border-2 border-t212-primary rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning focus:border-transparent transition font-medium placeholder-t212-secondary"
-                  />
                 </div>
               </div>
             ) : (

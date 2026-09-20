@@ -93,14 +93,13 @@ export default function ISINTable() {
     setDialogOpen(true)
   }
 
-  async function handleDialogConfirm(strategyId?: string, initialInvestment?: number) {
+  async function handleDialogConfirm(strategyId?: string) {
     if (!selectedISIN) return
 
     const result = await toggleAutomation(
       selectedISIN.isin,
       dialogType !== 'disable',
-      strategyId,
-      initialInvestment
+      strategyId
     )
 
     if (result) {
