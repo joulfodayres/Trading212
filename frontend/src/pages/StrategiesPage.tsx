@@ -201,9 +201,13 @@ export default function StrategiesPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold text-t212-primary">{strategy.name}</h3>
                         {strategy.is_valid ? (
-                          <CheckCircle size={16} className="text-t212-success" title="Válida" />
+                          <div title="Válida">
+                            <CheckCircle size={16} className="text-t212-success" />
+                          </div>
                         ) : (
-                          <AlertCircle size={16} className="text-t212-warning" title="Faltam parâmetros" />
+                          <div title="Faltam parâmetros">
+                            <AlertCircle size={16} className="text-t212-warning" />
+                          </div>
                         )}
                       </div>
                       {strategy.description && (
