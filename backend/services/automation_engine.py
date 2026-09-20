@@ -533,19 +533,18 @@ class AutomationEngine:
                     return selected
 
             else:  # trades_balance == 0
-                # Zero: buscar exato pos=0
+                # Zero: buscar exato pos=0 (OBRIGATÓRIO)
                 for pos_int, param in params_list:
                     if pos_int == 0:
                         self.logger.debug("Strategy parameters encontrados: pos=0")
                         return param
 
-                # Se não existir pos=0, usar o mais próximo
-                params_list.sort(key=lambda x: abs(x[0]))
-                selected = params_list[0][1]
-                self.logger.debug(
-                    f"Strategy parameters fallback (zero): pos=0 não existe → pos={params_list[0][0]}"
+                # pos=0 não existe - ERRO
+                self.logger.error(
+                    f"CRÍTICO: Strategy parameters pos=0 não encontrado para strategy={strategy_id}. "
+                    f"pos=0 é obrigatório. ISINs não devem ter trades_balance=0 sem parâmetros."
                 )
-                return selected
+                return None
 
         except Exception as e:
             self.logger.error(f"Erro buscando strategy_parameters: {e}", exc_info=True)
