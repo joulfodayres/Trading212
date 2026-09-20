@@ -150,8 +150,9 @@ export default function StrategiesPage() {
       setStrategyForm({ name: '', description: '', initial_investment: null })
       setShowCreateStrategy(false)
       loadStrategies()
-    } catch (error) {
-      console.error('[handleCreateStrategy] Error:', error)
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Failed to create strategy'
+      console.error('[handleCreateStrategy] Error:', message)
     }
   }
 
@@ -223,20 +224,24 @@ export default function StrategiesPage() {
   }
 
   const handleCreateParameter = async () => {
-    if (!selectedStrategy || !parameterForm.pos) return
+    if (!selectedStrategy || !parameterForm.pos) {
+      console.error('[StrategiesPage] Position is required')
+      return
+    }
 
     // Validate Position is integer
     const posValue = parseInt(parameterForm.pos, 10)
     if (isNaN(posValue) || posValue.toString() !== parameterForm.pos.trim()) {
-      console.error('Error: Position must be an integer (e.g., -1, 0, 1)')
+      console.error('[StrategiesPage] Position must be an integer (e.g., -1, 0, 1)')
       return
     }
 
     try {
       const response = await apiClient.post(
         `/v1/strategies/${selectedStrategy.id}/parameters`,
-        { ...parameterForm, pos: parameterForm.pos.trim() }
+        { ...parameterForm, pos: posValue }  // Send as integer
       )
+      console.log('[StrategiesPage] Parameter created successfully:', response.data)
       setParameters([...parameters, response.data])
       setParameterForm({
         pos: '',
@@ -252,8 +257,9 @@ export default function StrategiesPage() {
         param10: undefined,
       })
       setShowCreateParameter(false)
-    } catch (error) {
-      console.error('Error creating parameter:', error)
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Failed to create parameter'
+      console.error('[StrategiesPage] Create parameter error:', message)
     }
   }
 
@@ -722,10 +728,17 @@ export default function StrategiesPage() {
                 </div>
                 <div className="px-6 py-5 space-y-4">
                   <input
-                    type="text"
+                    type="number"
+                    step="1"
                     placeholder="Position (ex: -1, 0, 1)"
                     value={parameterForm.pos}
-                    onChange={(e) => setParameterForm({ ...parameterForm, pos: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      // Only allow empty, minus sign at start, or integers
+                      if (val === '' || /^-?\d+$/.test(val)) {
+                        setParameterForm({ ...parameterForm, pos: val })
+                      }
+                    }}
                     style={{ color: '#000000' }}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
                   />

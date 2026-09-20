@@ -6,7 +6,7 @@ Phase 5: Strategy Management
 import logging
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/strategies", tags=["strategies"])
 
 class StrategyParameterBase(BaseModel):
     """Base schema for strategy parameters"""
-    pos: str  # "-1", "0", "1", etc
+    pos: Union[str, int]  # Accept both string and int
     param1: float  # Usually negative (buy discount)
     param2: float  # Usually positive (sell premium)
     param3: Optional[float] = None
@@ -87,7 +87,7 @@ def _check_strategy_valid(db, strategy_id: str) -> bool:
     """
     try:
         result = db.client.table("strategy_parameters").select("pos").eq("strategy_id", strategy_id).execute()
-        positions = [row.get("pos") for row in result.data or []]
+        positions = [str(row.get("pos")) for row in result.data or []]
 
         required_positions = {"-1", "0", "1"}
         return required_positions.issubset(set(positions))
@@ -203,6 +203,16 @@ async def create_strategy(data: StrategyCreate):
 
         logger.info(f"Creating strategy: {data.name}...")
 
+        # Check if strategy name already exists
+        if data.name and data.name.strip():
+            existing = db.client.table("strategies").select("id").eq("strategy_name", data.name).execute()
+            if existing.data:
+                logger.warning(f"Strategy name already exists: {data.name}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Strategy with name '{data.name}' already exists"
+                )
+
         strategy_data = {
             "strategy_name": data.name,
             "strategy_desc": data.description,
@@ -229,6 +239,8 @@ async def create_strategy(data: StrategyCreate):
             "updated_at": strategy.get("updated_at")
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating strategy: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -315,9 +327,12 @@ async def create_strategy_parameter(strategy_id: str, data: StrategyParameterBas
         if not existing.data:
             raise HTTPException(status_code=404, detail="Strategy not found")
 
+        # Ensure pos is integer for DB
+        pos_int = int(data.pos) if isinstance(data.pos, str) else data.pos
+
         param_data = {
             "strategy_id": strategy_id,
-            "pos": data.pos,
+            "pos": pos_int,
             "param1": data.param1,
             "param2": data.param2,
             "param3": data.param3,
@@ -343,7 +358,7 @@ async def create_strategy_parameter(strategy_id: str, data: StrategyParameterBas
         return {
             "id": param["id"],
             "strategy_id": param["strategy_id"],
-            "pos": param["pos"],
+            "pos": str(param["pos"]),  # Convert INT to STRING for response
             "param1": param["param1"],
             "param2": param["param2"],
             "param3": param.get("param3"),
@@ -380,8 +395,11 @@ async def update_strategy_parameter(strategy_id: str, param_id: str, data: Strat
         if not existing.data:
             raise HTTPException(status_code=404, detail="Parameter not found")
 
+        # Ensure pos is integer for DB
+        pos_int = int(data.pos) if isinstance(data.pos, str) else data.pos
+
         update_data = {
-            "pos": data.pos,
+            "pos": pos_int,
             "param1": data.param1,
             "param2": data.param2,
             "param3": data.param3,
@@ -406,7 +424,7 @@ async def update_strategy_parameter(strategy_id: str, param_id: str, data: Strat
         return {
             "id": param["id"],
             "strategy_id": param["strategy_id"],
-            "pos": param["pos"],
+            "pos": str(param["pos"]),  # Convert INT to STRING for response
             "param1": param["param1"],
             "param2": param["param2"],
             "param3": param.get("param3"),
