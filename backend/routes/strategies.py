@@ -131,6 +131,9 @@ async def list_strategies():
                 "updated_at": row.get("updated_at")
             })
 
+        # Sort by created_at ascending (oldest first)
+        strategies.sort(key=lambda x: x.get("created_at") or "")
+
         logger.info(f"Returned {len(strategies)} strategies")
         logger.info(f"[DEBUG] Final response: {strategies}")
         return strategies
@@ -441,4 +444,37 @@ async def delete_strategy_parameter(strategy_id: str, param_id: str):
         raise
     except Exception as e:
         logger.error(f"Error deleting parameter {param_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{strategy_id}")
+async def delete_strategy(strategy_id: str):
+    """
+    DELETE /api/v1/strategies/{strategy_id} - Delete strategy and all parameters
+    """
+    try:
+        db = _get_db()
+
+        logger.info(f"Deleting strategy {strategy_id}...")
+
+        # Check strategy exists
+        existing = db.client.table("strategies").select("id").eq("id", strategy_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Strategy not found")
+
+        # Delete all parameters first
+        db.client.table("strategy_parameters").delete().eq("strategy_id", strategy_id).execute()
+        logger.info(f"Deleted all parameters for strategy {strategy_id}")
+
+        # Delete the strategy
+        result = db.client.table("strategies").delete().eq("id", strategy_id).execute()
+
+        logger.info(f"✅ Strategy deleted: {strategy_id}")
+
+        return {"success": True, "message": "Strategy and all parameters deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting strategy {strategy_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

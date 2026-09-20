@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, ArrowLeft, Save, X, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react'
+import { Plus, ArrowLeft, Save, X, AlertCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { ToggleSwitch } from '../components/ui/ToggleSwitch'
@@ -122,6 +122,11 @@ export default function StrategiesPage() {
       return
     }
 
+    if (strategyForm.initial_investment < 0) {
+      console.warn('[handleCreateStrategy] Initial investment cannot be negative')
+      return
+    }
+
     // Check for duplicate names
     const duplicateExists = strategies.some(
       s => s.name && s.name.toLowerCase().trim() === strategyForm.name.toLowerCase().trim()
@@ -175,10 +180,12 @@ export default function StrategiesPage() {
 
       setStrategies(strategies.map(s => s.id === selectedStrategy.id ? response.data : s))
       setSelectedStrategy(response.data)
+      console.log('[handleSaveStrategyEdit] Strategy updated successfully')
+      setViewMode('list')
       loadStrategies()
-    } catch (error) {
-      console.error('Error updating strategy:', error)
-      alert('Error updating strategy')
+    } catch (error: any) {
+      const errorDetail = error?.response?.data?.detail || error?.message || 'Unknown error'
+      console.error('[handleSaveStrategyEdit] Error:', errorDetail)
     }
   }
 
@@ -230,6 +237,31 @@ export default function StrategiesPage() {
     }
   }
 
+  const [deleteStrategyId, setDeleteStrategyId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDeleteStrategy = async (strategyId: string) => {
+    setDeleteStrategyId(strategyId)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteStrategyId) return
+
+    try {
+      console.log('[handleConfirmDelete] Deleting strategy:', deleteStrategyId)
+      await apiClient.delete(`/v1/strategies/${deleteStrategyId}`)
+      setStrategies(strategies.filter(s => s.id !== deleteStrategyId))
+      setShowDeleteConfirm(false)
+      setDeleteStrategyId(null)
+      console.log('[handleConfirmDelete] Strategy deleted successfully')
+    } catch (error) {
+      console.error('[handleConfirmDelete] Error deleting strategy:', error)
+      setShowDeleteConfirm(false)
+      setDeleteStrategyId(null)
+    }
+  }
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A'
     return new Date(dateStr).toLocaleString('en-US')
@@ -275,9 +307,8 @@ export default function StrategiesPage() {
                   })
 
                   return (
-                    <button
+                    <div
                       key={strategy.id}
-                      onClick={() => handleStrategyClick(strategy)}
                       className="w-full p-4 rounded-lg border border-t212-border hover:border-t212-primary hover:bg-t212-hover transition flex items-center justify-between"
                     >
                       <div className="flex-1 text-left">
@@ -300,8 +331,28 @@ export default function StrategiesPage() {
                           )}
                         </div>
                       </div>
-                      <ChevronRight size={20} className="text-t212-secondary" />
-                    </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStrategyClick(strategy)}
+                          className="p-2 hover:bg-t212-hover rounded-lg transition text-t212-primary hover:text-t212-warning"
+                          title="Edit strategy"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStrategy(strategy.id)}
+                          disabled={strategy.enabled}
+                          className={`p-2 rounded-lg transition ${
+                            strategy.enabled
+                              ? 'text-t212-muted cursor-not-allowed'
+                              : 'text-t212-error hover:bg-t212-hover hover:text-t212-warning'
+                          }`}
+                          title={strategy.enabled ? 'Cannot delete active strategy' : 'Delete strategy'}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
                   )
                 })}
               </div>
@@ -310,6 +361,46 @@ export default function StrategiesPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && deleteStrategyId && (
+          <>
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-40" onClick={() => setShowDeleteConfirm(false)} />
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+              <div className="bg-t212-bg-primary rounded-2xl shadow-2xl border border-t212-border w-full max-w-md">
+                <div className="px-6 py-5 border-b border-t212-border">
+                  <h3 className="text-lg font-bold text-t212-primary">Delete Strategy</h3>
+                </div>
+                <div className="px-6 py-5 space-y-4">
+                  <p className="text-t212-primary font-semibold">
+                    Delete strategy "{strategies.find(s => s.id === deleteStrategyId)?.name || 'Unnamed'}"?
+                  </p>
+                  <p className="text-sm text-t212-secondary">
+                    This will permanently delete the strategy and all associated parameters. This action cannot be undone.
+                  </p>
+                </div>
+                <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="md"
+                    onClick={handleConfirmDelete}
+                    className="flex-1"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Create Strategy Modal */}
         {showCreateStrategy && (
@@ -344,6 +435,7 @@ export default function StrategiesPage() {
                     onChange={(e) => setStrategyForm({ ...strategyForm, initial_investment: e.target.value ? parseFloat(e.target.value) : null })}
                     className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
                     style={{ color: '#000000' }}
+                    min="0"
                   />
                 </div>
                 <div className="px-6 py-4 border-t border-t212-border bg-t212-bg-secondary flex gap-3">
@@ -398,7 +490,8 @@ export default function StrategiesPage() {
                 type="text"
                 value={strategyEditForm.name}
                 onChange={(e) => setStrategyEditForm({ ...strategyEditForm, name: e.target.value })}
-                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                style={{ color: '#000000' }}
               />
             </div>
 
@@ -408,7 +501,8 @@ export default function StrategiesPage() {
               <textarea
                 value={strategyEditForm.description}
                 onChange={(e) => setStrategyEditForm({ ...strategyEditForm, description: e.target.value })}
-                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                style={{ color: '#000000' }}
                 rows={3}
               />
             </div>
@@ -420,7 +514,9 @@ export default function StrategiesPage() {
                 type="number"
                 value={strategyEditForm.initial_investment}
                 onChange={(e) => setStrategyEditForm({ ...strategyEditForm, initial_investment: parseFloat(e.target.value) })}
-                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg text-t212-primary focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                className="w-full px-4 py-2 bg-t212-bg-secondary border border-t212-border rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-t212-warning"
+                style={{ color: '#000000' }}
+                min="0"
               />
             </div>
 
