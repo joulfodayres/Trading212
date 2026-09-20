@@ -89,8 +89,11 @@ export default function StrategiesPage() {
     setLoading(true)
     try {
       const response = await apiClient.get('/v1/strategies')
+      console.log('[StrategiesPage.loadStrategies] Full response:', response.data)
+      response.data.forEach((s: Strategy) => {
+        console.log(`[StrategiesPage] Strategy: ${s.name} | Description: "${s.description}" | Enabled: ${s.enabled} | Valid: ${s.is_valid}`)
+      })
       setStrategies(response.data)
-      console.log('Strategies loaded:', response.data)
     } catch (error) {
       console.error('Error loading strategies:', error)
     } finally {
@@ -233,7 +236,15 @@ export default function StrategiesPage() {
               </div>
             ) : strategies.length > 0 ? (
               <div className="space-y-2">
-                {strategies.map((strategy) => (
+                {strategies.map((strategy) => {
+                  console.log('[StrategiesPage] Rendering strategy:', {
+                    id: strategy.id,
+                    name: strategy.name,
+                    description: strategy.description,
+                    enabled: strategy.enabled,
+                    is_valid: strategy.is_valid
+                  })
+                  return (
                   <button
                     key={strategy.id}
                     onClick={() => handleStrategyClick(strategy)}
@@ -245,7 +256,7 @@ export default function StrategiesPage() {
                           {strategy.name && strategy.name.trim() ? strategy.name : `Strategy ${strategy.id.substring(0, 8)}`}
                         </h3>
                       </div>
-                      {strategy.description && (
+                      {strategy.description && strategy.description.trim() && (
                         <p className="text-sm text-t212-secondary mb-1">{strategy.description}</p>
                       )}
                       <div className="flex items-center gap-2">
@@ -261,7 +272,8 @@ export default function StrategiesPage() {
                     </div>
                     <ChevronRight size={20} className="text-t212-secondary" />
                   </button>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-t212-secondary text-center py-8">No strategies created</p>
