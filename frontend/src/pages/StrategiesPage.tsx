@@ -237,13 +237,24 @@ export default function StrategiesPage() {
             ) : strategies.length > 0 ? (
               <div className="space-y-2">
                 {strategies.map((strategy) => {
+                  const name = strategy.name && strategy.name.trim() ? strategy.name.trim() : null
+                  const description = strategy.description && strategy.description.trim() && strategy.description !== 'None' ? strategy.description.trim() : null
+                  const hasValidData = name || description
+
                   console.log('[StrategiesPage] Rendering strategy:', {
                     id: strategy.id,
-                    name: strategy.name,
-                    description: strategy.description,
+                    name,
+                    description,
+                    hasValidData,
                     enabled: strategy.enabled,
                     is_valid: strategy.is_valid
                   })
+
+                  // Skip strategies without name or description
+                  if (!hasValidData) {
+                    return null
+                  }
+
                   return (
                   <button
                     key={strategy.id}
@@ -251,13 +262,15 @@ export default function StrategiesPage() {
                     className="w-full p-4 rounded-lg border border-t212-border hover:border-t212-primary hover:bg-t212-hover transition flex items-center justify-between"
                   >
                     <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-t212-primary">
-                          {strategy.name && strategy.name.trim() ? strategy.name : `Strategy ${strategy.id.substring(0, 8)}`}
-                        </h3>
-                      </div>
-                      {strategy.description && strategy.description.trim() && (
-                        <p className="text-sm text-t212-secondary mb-1">{strategy.description}</p>
+                      {name && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-t212-primary">
+                            {name}
+                          </h3>
+                        </div>
+                      )}
+                      {description && (
+                        <p className="text-sm text-t212-secondary mb-1">{description}</p>
                       )}
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-semibold ${strategy.enabled ? 'text-t212-success' : 'text-t212-muted'}`}>

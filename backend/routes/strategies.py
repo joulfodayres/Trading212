@@ -114,8 +114,8 @@ async def list_strategies():
             is_valid = _check_strategy_valid(db, row["id"])
             strategies.append({
                 "id": row["id"],
-                "name": row.get("name", ""),
-                "description": row.get("description"),
+                "name": row.get("name", "") or "",
+                "description": row.get("description") or None,
                 "initial_investment": row.get("initial_investment", 0),
                 "enabled": row.get("enabled", False),
                 "is_valid": is_valid,
@@ -155,8 +155,8 @@ async def get_strategy(strategy_id: str):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", ""),
-            "description": strategy.get("description"),
+            "name": strategy.get("name", "") or "",
+            "description": strategy.get("description") or None,
             "initial_investment": strategy.get("initial_investment", 0),
             "enabled": strategy.get("enabled", False),
             "is_valid": is_valid,
@@ -201,8 +201,8 @@ async def create_strategy(data: StrategyCreate):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", ""),
-            "description": strategy.get("description"),
+            "name": strategy.get("name", "") or "",
+            "description": strategy.get("description") or None,
             "initial_investment": strategy.get("initial_investment", 0),
             "enabled": strategy.get("enabled", False),
             "is_valid": False,  # New strategy has no params yet
@@ -265,8 +265,8 @@ async def update_strategy(strategy_id: str, data: StrategyUpdate):
 
         return {
             "id": strategy["id"],
-            "name": strategy.get("name", ""),
-            "description": strategy.get("description"),
+            "name": strategy.get("name", "") or "",
+            "description": strategy.get("description") or None,
             "initial_investment": strategy.get("initial_investment", 0),
             "enabled": strategy.get("enabled", False),
             "is_valid": is_valid,
