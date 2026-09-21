@@ -198,8 +198,7 @@ class AutomationEngine:
             # Round quantities to ISIN's precision
             buy_quantity_rounded = round(buy_quantity, quantity_precision)
             sell_quantity_rounded = round(sell_quantity, quantity_precision)
-            buy_price_rounded = round(buy_price, 3)  # Price always 3 decimals
-            sell_price_rounded = round(sell_price, 3)
+            # Prices are NOT rounded - sent as-is with full precision
 
             self.logger.debug(
                 f"After rounding (precision={quantity_precision}): BUY qty={buy_quantity_rounded}, SELL qty={sell_quantity_rounded}"
@@ -210,7 +209,7 @@ class AutomationEngine:
                 order_type="BUY",
                 ticker=ticker,
                 quantity=buy_quantity_rounded,
-                limit_price=buy_price_rounded,
+                limit_price=buy_price,
                 isin_id=isin_id,
                 initial_precision=quantity_precision
             )
@@ -223,7 +222,7 @@ class AutomationEngine:
                 order_type="SELL",
                 ticker=ticker,
                 quantity=sell_quantity_rounded,
-                limit_price=sell_price_rounded,
+                limit_price=sell_price,
                 isin_id=isin_id,
                 initial_precision=quantity_precision
             )
@@ -503,11 +502,10 @@ class AutomationEngine:
             # Round quantities to ISIN's precision
             new_buy_quantity_rounded = round(new_buy_quantity, quantity_precision)
             new_sell_quantity_rounded = round(new_sell_quantity, quantity_precision)
-            new_buy_price_rounded = round(new_buy_price, 3)  # Price always 3 decimals
-            new_sell_price_rounded = round(new_sell_price, 3)
+            # Prices are NOT rounded - sent as-is with full precision
 
             self.logger.debug(
-                f"Novo pair: BUY @ {new_buy_price_rounded:.2f} qty={new_buy_quantity_rounded:.2f}, SELL @ {new_sell_price_rounded:.2f} qty={new_sell_quantity_rounded:.2f}"
+                f"Novo pair: BUY @ {new_buy_price:.2f} qty={new_buy_quantity_rounded:.2f}, SELL @ {new_sell_price:.2f} qty={new_sell_quantity_rounded:.2f}"
             )
 
             # Place BUY order
@@ -515,7 +513,7 @@ class AutomationEngine:
                 order_type="BUY",
                 ticker=isin_data.get("ticker"),
                 quantity=new_buy_quantity_rounded,
-                limit_price=new_buy_price_rounded,
+                limit_price=new_buy_price,
                 isin_id=isin_data.get("id"),
                 initial_precision=quantity_precision
             )
@@ -528,7 +526,7 @@ class AutomationEngine:
                 order_type="SELL",
                 ticker=isin_data.get("ticker"),
                 quantity=new_sell_quantity_rounded,
-                limit_price=new_sell_price_rounded,
+                limit_price=new_sell_price,
                 isin_id=isin_data.get("id"),
                 initial_precision=quantity_precision
             )

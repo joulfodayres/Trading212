@@ -35,33 +35,31 @@ class T212Service:
         Args:
             ticker: Ticker symbol (ex: AAPL_US_EQ)
             quantity: Positive quantity (already rounded by AutomationEngine to ISIN's quantity_precision)
-            limit_price: Limit price (ex: 148.99, already rounded to 3 decimals)
+            limit_price: Limit price (sent as-is, no rounding)
             time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
 
-        NOTE: Quantity is already rounded by AutomationEngine to ISIN's quantity_precision.
-        We do NOT re-round it here - that would break the precision adaptation logic.
-        Only limit_price is validated to ensure it's properly formatted.
+        NOTE: Both quantity and limit_price are passed as-is from AutomationEngine.
+        No rounding happens here - values are pre-formatted by the caller.
         """
         try:
-            # Quantity is already rounded by AutomationEngine - use as-is
-            # Only ensure limit_price is properly formatted (should be rounded to 3 decimals already)
-            limit_price_rounded = round(limit_price, 3)
+            # Both quantity and limit_price are already properly formatted by AutomationEngine
+            # Pass them as-is without any modifications
 
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price_rounded} ({time_validity})"
+                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=quantity, limit_price=limit_price_rounded, time_validity=time_validity
+                ticker=ticker, quantity=quantity, limit_price=limit_price, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price_rounded} (Order ID={order_id}, validity={time_validity})"
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 
@@ -80,36 +78,32 @@ class T212Service:
         Args:
             ticker: Ticker symbol
             quantity: Positive quantity to sell (already rounded by AutomationEngine to ISIN's quantity_precision)
-            limit_price: Limit price (ex: 150.00, already rounded to 3 decimals)
+            limit_price: Limit price (sent as-is, no rounding)
             time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
 
-        NOTE: Quantity is already rounded by AutomationEngine to ISIN's quantity_precision.
-        We do NOT re-round it here - that would break the precision adaptation logic.
-        Only limit_price is validated to ensure it's properly formatted.
+        NOTE: Both quantity and limit_price are passed as-is from AutomationEngine.
+        No rounding happens here - values are pre-formatted by the caller.
         """
         try:
-            # Quantity is already rounded by AutomationEngine - use as-is
-            # Only ensure limit_price is properly formatted (should be rounded to 3 decimals already)
-            limit_price_rounded = round(limit_price, 3)
-
+            # Both quantity and limit_price are already properly formatted by AutomationEngine
             # Ensure quantity is negative for SELL
             sell_quantity = -abs(quantity) if quantity > 0 else quantity
 
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price_rounded} ({time_validity})"
+                f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=sell_quantity, limit_price=limit_price_rounded, time_validity=time_validity
+                ticker=ticker, quantity=sell_quantity, limit_price=limit_price, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} @ {limit_price_rounded} (Order ID={order_id}, validity={time_validity})"
+                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 
