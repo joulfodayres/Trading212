@@ -39,9 +39,23 @@ npm run dev  # http://localhost:5173
 
 ## 📚 Documentation
 
+### 🎯 **Start Here: Documentation Hub**
+**👉 Open [`docs/index.html`](docs/index.html) in your browser for the complete documentation system**
+
+- Beautiful, searchable documentation hub
+- 7 main sections (Getting Started, Architecture, API, Development, Deployment, Knowledge Base, Troubleshooting)
+- Real-time search (Cmd/Ctrl+K)
+- Dark mode support
+- Mobile-responsive design
+- Learning paths for different roles
+
 ### Essential Reading
 | Document | Purpose |
 |----------|---------|
+| **`docs/index.html`** | 🎯 **Main documentation hub** (start here!) |
+| **`docs/KNOWLEDGE_BASE.md`** | Complete project overview + architecture |
+| **`docs/DEVELOPMENT.md`** | Local setup & development workflow |
+| **`docs/API_REFERENCE.md`** | Complete API endpoint documentation |
 | **`STATUS.md`** | Current project status & timeline |
 | **`CLAUDE.md`** | Architecture, database schema, tech stack |
 | **`COMECA_AQUI.md`** | Quick start & troubleshooting |
@@ -49,7 +63,10 @@ npm run dev  # http://localhost:5173
 ### Detailed Guides
 | Document | Topic |
 |----------|-------|
-| **`docs/README.md`** | Documentation index |
+| **`docs/DOCUMENTATION_STRUCTURE.md`** | How documentation is organized |
+| **`docs/TROUBLESHOOTING.md`** | Common issues & solutions |
+| **`docs/CODE_EXAMPLES.md`** | Real code snippets |
+| **`docs/QUICK_REFERENCE.md`** | Quick lookup cheat sheet |
 | **`docs/t212-api/`** | Trading 212 API analysis (Phase 4) |
 
 ---
