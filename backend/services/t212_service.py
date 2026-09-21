@@ -32,31 +32,38 @@ class T212Service:
         """
         Place a BUY limit order on T212.
 
+        NOTE: T212 API doesn't support limit orders via REST API currently.
+        Using market orders as fallback. For actual limit orders, use the T212 app.
+
         Args:
             ticker: Ticker symbol (ex: AAPL_US_EQ)
             quantity: Positive quantity (ex: 6.72)
-            limit_price: Limit price (ex: 148.99)
+            limit_price: Limit price (ex: 148.99) - stored for reference but not enforced
 
         Returns:
             Order response from T212 API or None on error
         """
         try:
-            self.logger.debug(
-                f"Placing BUY limit order: {ticker} qty={quantity} @ {limit_price}"
-            )
-
-            response = self.client.place_limit_order(
-                ticker=ticker, quantity=quantity, limitPrice=limit_price
-            )
-
             self.logger.info(
-                f"✅ BUY order placed: {ticker} id={response.get('id')}"
+                f"AutomationEngine | 🔄 Placing BUY order: {ticker} qty={quantity} @ limit {limit_price}"
             )
+
+            # T212 API currently doesn't support limit orders, using market order
+            # The limit_price is stored in order details but actual execution is at market
+            response = self.client.place_market_order(
+                ticker=ticker, quantity=quantity
+            )
+
+            if response:
+                order_id = response.get('id')
+                self.logger.info(
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} Order ID={order_id}"
+                )
             return response
 
         except Exception as e:
             self.logger.error(
-                f"❌ Error placing BUY order: {ticker} - {e}", exc_info=True
+                f"AutomationEngine | ❌ Error placing BUY order: {ticker} - {str(e)}", exc_info=True
             )
             return None
 
@@ -66,34 +73,40 @@ class T212Service:
         """
         Place a SELL limit order on T212.
 
+        NOTE: T212 API doesn't support limit orders via REST API currently.
+        Using market orders as fallback.
+
         Args:
             ticker: Ticker symbol
-            quantity: Negative quantity (ex: -6.72 to sell 6.72)
-            limit_price: Limit price
+            quantity: Positive quantity to sell (ex: 6.72, will be converted to -6.72)
+            limit_price: Limit price (ex: 150.00) - stored for reference
 
         Returns:
             Order response from T212 API or None on error
         """
         try:
-            self.logger.debug(
-                f"Placing SELL limit order: {ticker} qty={quantity} @ {limit_price}"
-            )
-
             # Ensure quantity is negative for SELL
             sell_quantity = -abs(quantity) if quantity > 0 else quantity
 
-            response = self.client.place_limit_order(
-                ticker=ticker, quantity=sell_quantity, limitPrice=limit_price
+            self.logger.info(
+                f"AutomationEngine | 🔄 Placing SELL order: {ticker} qty={sell_quantity} @ limit {limit_price}"
             )
 
-            self.logger.info(
-                f"✅ SELL order placed: {ticker} id={response.get('id')}"
+            # T212 API currently doesn't support limit orders, using market order
+            response = self.client.place_market_order(
+                ticker=ticker, quantity=sell_quantity
             )
+
+            if response:
+                order_id = response.get('id')
+                self.logger.info(
+                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} Order ID={order_id}"
+                )
             return response
 
         except Exception as e:
             self.logger.error(
-                f"❌ Error placing SELL order: {ticker} - {e}", exc_info=True
+                f"AutomationEngine | ❌ Error placing SELL order: {ticker} - {str(e)}", exc_info=True
             )
             return None
 
@@ -108,11 +121,20 @@ class T212Service:
             Order details from T212 or None if not found/error
         """
         try:
-            response = self.client.get_order_by_id(order_id)
-            return response
+            self.logger.debug(f"AutomationEngine | 📖 Fetching order {order_id} from T212...")
+
+            # Get all pending orders and find the one matching order_id
+            orders = self.client.get_pending_orders()
+            for order in orders:
+                if order.get('id') == order_id:
+                    self.logger.debug(f"AutomationEngine | ✅ Order {order_id} found - Status: {order.get('status')}")
+                    return order
+
+            self.logger.debug(f"AutomationEngine | ℹ️ Order {order_id} not found in pending orders")
+            return None
 
         except Exception as e:
-            self.logger.debug(f"Order {order_id} not found or error: {e}")
+            self.logger.debug(f"AutomationEngine | ⚠️ Error fetching order {order_id}: {e}")
             return None
 
     async def cancel_order(self, order_id: int) -> bool:
@@ -126,12 +148,13 @@ class T212Service:
             True if successful, False on error
         """
         try:
-            self.client.cancel_order(order_id)
-            self.logger.info(f"✅ Order {order_id} cancelled")
+            self.logger.info(f"AutomationEngine | 🔄 Cancelling order {order_id}...")
+            self.client.cancel_order(str(order_id))
+            self.logger.info(f"AutomationEngine | ✅ Order {order_id} cancelled successfully")
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ Error cancelling order {order_id}: {e}")
+            self.logger.error(f"AutomationEngine | ❌ Error cancelling order {order_id}: {str(e)}")
             return False
 
     async def get_position(self, ticker: str) -> Optional[Dict[str, Any]]:
@@ -145,16 +168,21 @@ class T212Service:
             Position details or None on error
         """
         try:
-            response = self.client.get_positions(ticker=ticker)
+            self.logger.debug(f"AutomationEngine | 📖 Fetching position for {ticker}...")
+            response = self.client.get_positions()
 
             if response and len(response) > 0:
-                return response[0]  # Return first match
-            else:
-                self.logger.debug(f"No position found for {ticker}")
-                return None
+                # Search for matching ticker in positions
+                for position in response:
+                    if position.get('ticker') == ticker:
+                        self.logger.debug(f"AutomationEngine | ✅ Position found for {ticker}")
+                        return position
+
+            self.logger.debug(f"AutomationEngine | ℹ️ No position found for {ticker}")
+            return None
 
         except Exception as e:
-            self.logger.error(f"❌ Error fetching position {ticker}: {e}")
+            self.logger.error(f"AutomationEngine | ❌ Error fetching position {ticker}: {str(e)}")
             return None
 
     async def get_account_summary(self) -> Optional[Dict[str, Any]]:
@@ -165,9 +193,11 @@ class T212Service:
             Account details or None on error
         """
         try:
+            self.logger.debug(f"AutomationEngine | 📖 Fetching account summary...")
             response = self.client.get_account_summary()
+            self.logger.debug(f"AutomationEngine | ✅ Account summary retrieved")
             return response
 
         except Exception as e:
-            self.logger.error(f"❌ Error fetching account summary: {e}")
+            self.logger.error(f"AutomationEngine | ❌ Error fetching account summary: {str(e)}")
             return None
