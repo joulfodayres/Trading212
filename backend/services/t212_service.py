@@ -212,23 +212,42 @@ class T212Service:
 
         Returns:
             Position details or None on error
+
+        NOTE: The T212 Position schema exposes the ticker inside
+        `position.instrument.ticker` (NOT at the top level). We also pass
+        the `ticker` query param so the API filters server-side.
         """
         try:
-            self.logger.debug(f"AutomationEngine | 📖 Fetching position for {ticker}...")
-            response = self.client.get_positions()
+            self.logger.info(f"AutomationEngine | 📖 Fetching position for {ticker} (GET /equity/positions?ticker={ticker})...")
+            response = self.client.get_positions(ticker=ticker)
+
+            self.logger.debug(f"AutomationEngine | 📊 Positions API returned {len(response) if response else 0} position(s) for {ticker}")
 
             if response and len(response) > 0:
-                # Search for matching ticker in positions
+                # Search for matching ticker. The ticker is nested under instrument.ticker,
+                # but also check top-level as a fallback for API variations.
                 for position in response:
-                    if position.get('ticker') == ticker:
-                        self.logger.debug(f"AutomationEngine | ✅ Position found for {ticker}")
+                    pos_ticker = (position.get("instrument") or {}).get("ticker") or position.get("ticker")
+                    if pos_ticker == ticker:
+                        self.logger.info(f"AutomationEngine | ✅ Position found for {ticker} (currentPrice={position.get('currentPrice')})")
                         return position
 
-            self.logger.debug(f"AutomationEngine | ℹ️ No position found for {ticker}")
+                # If server-side filtered by ticker and returned exactly one, use it
+                if len(response) == 1:
+                    only = response[0]
+                    self.logger.info(f"AutomationEngine | ✅ Position (single result) for {ticker} (currentPrice={only.get('currentPrice')})")
+                    return only
+
+                self.logger.warning(
+                    f"AutomationEngine | ⚠️ {len(response)} position(s) returned but none matched ticker '{ticker}'. "
+                    f"Tickers seen: {[ (p.get('instrument') or {}).get('ticker') or p.get('ticker') for p in response ]}"
+                )
+
+            self.logger.info(f"AutomationEngine | ℹ️ No position found for {ticker}")
             return None
 
         except Exception as e:
-            self.logger.error(f"AutomationEngine | ❌ Error fetching position {ticker}: {str(e)}")
+            self.logger.error(f"AutomationEngine | ❌ Error fetching position {ticker}: {str(e)}", exc_info=True)
             return None
 
     async def get_account_summary(self) -> Optional[Dict[str, Any]]:

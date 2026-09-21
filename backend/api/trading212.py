@@ -67,10 +67,19 @@ class Trading212Client:
             logger.error(f"Erro ao obter summary: {response.status_code} - {response.text}")
             raise Exception(f"Erro T212 API: {response.status_code}")
 
-    def get_positions(self) -> List[Dict[str, Any]]:
-        """GET /equity/positions — Retorna posições abertas"""
+    def get_positions(self, ticker: Optional[str] = None) -> List[Dict[str, Any]]:
+        """GET /equity/positions — Retorna posições abertas
+
+        Args:
+            ticker: Filtrar por ticker específico (ex: AAPL_US_EQ). Opcional.
+        """
         url = f"{self.base_url}/equity/positions"
-        response = self.session.get(url)
+        params = {}
+        if ticker:
+            params["ticker"] = ticker
+
+        logger.info(f"AutomationEngine | 🌐 GET {url} params={params}")
+        response = self.session.get(url, params=params)
         self._handle_rate_limit(response)
 
         if response.status_code == 200:
@@ -185,16 +194,28 @@ class Trading212Client:
             raise Exception(error_detail)
 
     def cancel_order(self, order_id: str) -> bool:
-        """DELETE /equity/orders/{id} — Cancela uma ordem"""
+        """DELETE /equity/orders/{id} — Cancela uma ordem
+
+        Returns True if cancellation request accepted (200) OR if the order
+        was not found (404) - a 404 means the order is no longer active
+        (already filled/cancelled), so there is nothing to cancel.
+        Raises Exception on other errors.
+        """
         url = f"{self.base_url}/equity/orders/{order_id}"
+        logger.info(f"AutomationEngine | 🌐 DELETE {url}")
         response = self.session.delete(url)
         self._handle_rate_limit(response)
 
         if response.status_code in [200, 204]:
             return True
+        elif response.status_code == 404:
+            # Order not found - already filled or cancelled. Not a real error.
+            logger.warning(f"AutomationEngine | ⚠️ Order {order_id} not found (404) - already filled/cancelled, nothing to cancel")
+            return True
         else:
-            logger.error(f"Erro ao cancelar ordem: {response.status_code} - {response.text}")
-            raise Exception(f"Erro T212 API: {response.status_code}")
+            error_text = response.text or f"HTTP {response.status_code}"
+            logger.error(f"Erro ao cancelar ordem {order_id}: {response.status_code} - {error_text}")
+            raise Exception(f"Erro T212 API ao cancelar ordem: {response.status_code} - {error_text}")
 
     def get_order_history(self, limit: int = 50, cursor: Optional[str] = None, ticker: Optional[str] = None) -> Dict[str, Any]:
         """GET /equity/history/orders — Histórico de trades
