@@ -208,12 +208,13 @@ class AutomationEngine:
                     f"AutomationEngine | FASE 1 | ⚠️ Não foi possível obter preço atualizado de {ticker} na T212 - usando preço da BD (€{current_price})"
                 )
 
-            # [NEW] Calculate investment with adjustment based on param2/param3
+            # [NEW] Calculate investment with adjustment: BUY uses param3, SELL uses param4
             initial_investment = strategy.get("initial_investment", 0)
             param2 = params.get("param2", 0)
             param3 = params.get("param3", 0)
-            buy_investment = initial_investment * (1 + param2 / 100)
-            sell_investment = initial_investment * (1 + param3 / 100)
+            param4 = params.get("param4", 0)
+            buy_investment = initial_investment * (1 + param3 / 100)
+            sell_investment = initial_investment * (1 + param4 / 100)
 
             # Calculate prices
             param1 = params.get("param1", 0)
@@ -572,12 +573,13 @@ class AutomationEngine:
                 )
                 return
 
-            # [NEW] Recalculate investment with new position
+            # [NEW] Recalculate investment: BUY uses param3, SELL uses param4
             initial_investment = strategy.get("initial_investment", 0)
             param2 = params.get("param2", 0)
             param3 = params.get("param3", 0)
-            new_buy_investment = initial_investment * (1 + param2 / 100)
-            new_sell_investment = initial_investment * (1 + param3 / 100)
+            param4 = params.get("param4", 0)
+            new_buy_investment = initial_investment * (1 + param3 / 100)
+            new_sell_investment = initial_investment * (1 + param4 / 100)
 
             # Calculate new prices with new position
             current_price = isin_data.get("current_price")
@@ -596,7 +598,7 @@ class AutomationEngine:
 
             self.logger.info(
                 f"AutomationEngine | FASE 3 | 🧮 Variáveis calculadas para {isin_data.get('ticker')}: "
-                f"initial_investment={initial_investment}, param1={param1}, param2={param2}, param3={param3}, "
+                f"initial_investment={initial_investment}, param1={param1}, param2={param2}, param3={param3}, param4={param4}, "
                 f"current_price={current_price}, quantity_precision={quantity_precision} | "
                 f"new_buy_investment={new_buy_investment}, new_sell_investment={new_sell_investment}, "
                 f"new_buy_price={new_buy_price}, new_sell_price={new_sell_price}, "
