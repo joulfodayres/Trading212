@@ -126,6 +126,7 @@ async def upload_reports(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
                 "period_end": meta.get("period_end"),
                 "generated_at": meta.get("generated_at"),
                 "pages": meta.get("pages"),
+                "updated_at": "now()",
             }).eq("id", file_id).execute()
 
             inserted = {}
@@ -138,7 +139,8 @@ async def upload_reports(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
                 grand_total[table] += n
 
             db.client.table("imported_files").update({
-                "status": "IMPORTED"
+                "status": "IMPORTED",
+                "updated_at": "now()"
             }).eq("id", file_id).execute()
 
             results.append({
@@ -153,7 +155,8 @@ async def upload_reports(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"Erro ao processar {upload.filename}: {e}", exc_info=True)
             db.client.table("imported_files").update({
-                "status": "FAILED"
+                "status": "FAILED",
+                "updated_at": "now()"
             }).eq("id", file_id).execute()
             results.append({
                 "file_name": upload.filename,

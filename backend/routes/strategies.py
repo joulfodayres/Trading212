@@ -284,6 +284,9 @@ async def update_strategy(strategy_id: str, data: StrategyUpdate):
         if data.enabled is not None:
             update_data["strategy_status"] = "E" if data.enabled else "D"
 
+        # Always refresh updated_at
+        update_data["updated_at"] = "now()"
+
         result = db.client.table("strategies").update(update_data).eq("id", strategy_id).execute()
 
         if not result.data:

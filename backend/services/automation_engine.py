@@ -257,7 +257,10 @@ class AutomationEngine:
             db.client.table("orders").insert([buy_order_data, sell_order_data]).execute()
 
             # Mark ISIN as setup done
-            db.client.table("isins").update({"initial_trade": False}).eq("id", isin_data.get("id")).execute()
+            db.client.table("isins").update({
+                "initial_trade": False,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", isin_data.get("id")).execute()
 
             self.logger.info(
                 f"✅ {ticker}: Ordens criadas (BUY id={buy_order_id}, SELL id={sell_order_id})"
@@ -327,7 +330,8 @@ class AutomationEngine:
             update_data = {
                 "status": current_status,
                 "filled_quantity": filled_qty,
-                "synced_at": datetime.utcnow().isoformat()
+                "synced_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
             }
 
             # If FILLED, mark as 'E' (Executed)
@@ -433,6 +437,9 @@ class AutomationEngine:
                     update_isin["trades_balance"] = trades_balance + 1
                     self.logger.debug(f"SELL fill: trades_balance {trades_balance} → {trades_balance + 1}")
 
+                # Timestamp
+                update_isin["updated_at"] = datetime.utcnow().isoformat()
+
                 # Save position update
                 db.client.table("isins").update(update_isin).eq("id", isin.get("id")).execute()
 
@@ -445,7 +452,8 @@ class AutomationEngine:
                     if cancel_success:
                         db.client.table("orders").update({
                             "automation_status": "C",
-                            "status": "CANCELLED"
+                            "status": "CANCELLED",
+                            "updated_at": datetime.utcnow().isoformat()
                         }).eq("id", related_order.get("id")).execute()
 
             # Place new BUY/SELL pair at new grid level
@@ -802,7 +810,8 @@ class AutomationEngine:
 
                         # Update ISIN's quantity_precision
                         db.client.table("isins").update({
-                            "quantity_precision": new_precision
+                            "quantity_precision": new_precision,
+                            "updated_at": datetime.utcnow().isoformat()
                         }).eq("id", isin_id).execute()
 
                         self.logger.info(

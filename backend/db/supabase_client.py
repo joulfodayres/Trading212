@@ -5,6 +5,7 @@ Simplificado para single-user (sem user_id)
 """
 import logging
 from typing import Dict, List, Optional, Any
+from datetime import datetime
 from supabase import create_client, Client
 from config.settings import settings
 
@@ -213,6 +214,8 @@ class SupabaseDB:
     def update_isin(self, isin_id: str, updates: Dict) -> Optional[Dict]:
         """Atualizar ISIN"""
         try:
+            # Always refresh updated_at on any update
+            updates = {**updates, "updated_at": datetime.utcnow().isoformat()}
             response = (
                 self.client.table("isins")
                 .update(updates)
@@ -265,7 +268,10 @@ class SupabaseDB:
             # Atualizar
             response = (
                 self.client.table("isins")
-                .update({"automation_enabled": new_value})
+                .update({
+                    "automation_enabled": new_value,
+                    "updated_at": datetime.utcnow().isoformat()
+                })
                 .eq("id", isin_id)
                 .execute()
             )

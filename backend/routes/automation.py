@@ -111,7 +111,8 @@ async def enable_global_automation():
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "grid_trading_enabled": True
+            "grid_trading_enabled": True,
+            "updated_at": "now()"
         }).eq("id", param_id).execute()
 
         if update_result.data:
@@ -150,7 +151,8 @@ async def disable_global_automation():
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "grid_trading_enabled": False
+            "grid_trading_enabled": False,
+            "updated_at": "now()"
         }).eq("id", param_id).execute()
 
         if update_result.data:
@@ -258,7 +260,8 @@ async def update_scheduler_interval(request: SchedulerIntervalRequest):
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "scheduler_interval_seconds": scheduler_interval_seconds
+            "scheduler_interval_seconds": scheduler_interval_seconds,
+            "updated_at": "now()"
         }).eq("id", param_id).execute()
 
         logger.info(f"Update result: {update_result}")
@@ -494,7 +497,8 @@ async def update_log_level(request: LogLevelRequest):
 
         # Update with WHERE clause
         update_result = db.client.table("app_parameters").update({
-            "log_level": request.log_level
+            "log_level": request.log_level,
+            "updated_at": "now()"
         }).eq("id", param_id).execute()
 
         if update_result.data:

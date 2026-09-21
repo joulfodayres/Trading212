@@ -160,7 +160,8 @@ class SchedulerService:
 
             # Update database via Supabase
             update_result = db.client.table("app_parameters").update({
-                "scheduler_interval_seconds": new_interval
+                "scheduler_interval_seconds": new_interval,
+                "updated_at": "now()"
             }).eq("id", param_id).execute()
 
             if not update_result.data:
