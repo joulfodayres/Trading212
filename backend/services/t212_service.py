@@ -184,6 +184,8 @@ class T212Service:
                 f"AutomationEngine | ⚠️ Error searching historical order {order_id} ({ticker}): {e}"
             )
             return None
+
+    async def cancel_order(self, order_id: int) -> bool:
         """
         Cancel a pending order on T212.
 
