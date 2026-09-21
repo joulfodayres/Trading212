@@ -142,7 +142,48 @@ class T212Service:
             self.logger.debug(f"AutomationEngine | ⚠️ Error fetching order {order_id}: {e}")
             return None
 
-    async def cancel_order(self, order_id: int) -> bool:
+    async def get_historical_order(self, order_id: int, ticker: str) -> Optional[Dict[str, Any]]:
+        """
+        Search for an order in T212 historical orders (executed/closed orders).
+
+        Used when an order is no longer in pending orders - it may have been
+        filled/executed. Calls GET /equity/history/orders?cursor=0&ticker=<ticker>
+        and searches items[].order for the matching order_id.
+
+        Args:
+            order_id: T212 order ID (integer)
+            ticker: Ticker symbol to filter history by (e.g., NQSEd_EQ)
+
+        Returns:
+            The matching order dict (items[].order) from history, or None if not found/error
+        """
+        try:
+            self.logger.debug(
+                f"AutomationEngine | 📖 Searching historical orders for order {order_id} (ticker={ticker})..."
+            )
+
+            # GET /equity/history/orders?cursor=0&ticker=<ticker>
+            history = self.client.get_order_history(cursor="0", ticker=ticker)
+            items = history.get("items", []) if history else []
+
+            for item in items:
+                order = item.get("order", {})
+                if order.get("id") == order_id:
+                    self.logger.info(
+                        f"AutomationEngine | ✅ Order {order_id} found in history - Status: {order.get('status')}"
+                    )
+                    return order
+
+            self.logger.debug(
+                f"AutomationEngine | ℹ️ Order {order_id} not found in historical orders for {ticker}"
+            )
+            return None
+
+        except Exception as e:
+            self.logger.warning(
+                f"AutomationEngine | ⚠️ Error searching historical order {order_id} ({ticker}): {e}"
+            )
+            return None
         """
         Cancel a pending order on T212.
 

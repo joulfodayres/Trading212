@@ -175,6 +175,39 @@ class AutomationEngine:
                 )
                 return
 
+            # [NEW] Fetch fresh current price from T212 before placing orders.
+            # The BUY/SELL prices must be based on the latest market price, not a stale DB value.
+            self.logger.info(f"AutomationEngine | FASE 1 | 🔄 Obtendo preço atualizado de {ticker} na T212...")
+            position = await self.t212_service.get_position(ticker)
+            if position and position.get("currentPrice") is not None:
+                fresh_price = position.get("currentPrice")
+                self.logger.info(
+                    f"AutomationEngine | FASE 1 | ✅ Preço atualizado: {ticker} €{current_price} → €{fresh_price}"
+                )
+
+                # Update ISIN with fresh position data from T212
+                update_isin = {
+                    "current_price": fresh_price,
+                    "quantity": position.get("quantity", isin_data.get("quantity")),
+                    "average_price_paid": position.get("averagePricePaid", isin_data.get("average_price_paid")),
+                    "quantity_available_for_trading": position.get("quantityAvailableForTrading", isin_data.get("quantity_available_for_trading")),
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+                # Wallet impact
+                wi = position.get("walletImpact", {})
+                update_isin["wi_current_value"] = wi.get("currentValue", isin_data.get("wi_current_value"))
+                update_isin["wi_total_cost"] = wi.get("totalCost", isin_data.get("wi_total_cost"))
+                update_isin["wi_unrealized_profit_loss"] = wi.get("unrealizedProfitLoss", isin_data.get("wi_unrealized_profit_loss"))
+
+                db.client.table("isins").update(update_isin).eq("id", isin_id).execute()
+
+                # Use the fresh price for all subsequent calculations
+                current_price = fresh_price
+            else:
+                self.logger.warning(
+                    f"AutomationEngine | FASE 1 | ⚠️ Não foi possível obter preço atualizado de {ticker} na T212 - usando preço da BD (€{current_price})"
+                )
+
             # [NEW] Calculate investment with adjustment based on param2/param3
             initial_investment = strategy.get("initial_investment", 0)
             param2 = params.get("param2", 0)
@@ -319,7 +352,47 @@ class AutomationEngine:
             t212_order = await self.t212_service.get_pending_order(order_id)
 
             if not t212_order:
-                self.logger.info(f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) não encontrada em T212 - pode estar FILLED")
+                # Order not in pending orders - it may have been FILLED/executed.
+                # Search the historical orders endpoint to confirm its final state.
+                self.logger.info(
+                    f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) não encontrada em pendentes - procurando no histórico..."
+                )
+                historical_order = await self.t212_service.get_historical_order(order_id, ticker)
+
+                if not historical_order:
+                    self.logger.info(
+                        f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) também não encontrada no histórico - mantendo estado atual"
+                    )
+                    return
+
+                # Found in history - update our order with the historical data
+                hist_status = historical_order.get("status", "UNKNOWN")
+                hist_filled = historical_order.get("filledQuantity", 0)
+                self.logger.info(
+                    f"AutomationEngine | FASE 2 | ✅ Ordem {order_id} ({ticker}) encontrada no histórico - Status: {hist_status}, Filled: {hist_filled}"
+                )
+
+                update_data = {
+                    "status": hist_status,
+                    "filled_quantity": hist_filled,
+                    "synced_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+                if historical_order.get("limitPrice") is not None:
+                    update_data["limit_price"] = historical_order.get("limitPrice")
+
+                # If FILLED (or otherwise executed), mark automation_status as 'E'
+                if hist_status == "FILLED":
+                    update_data["automation_status"] = "E"
+                    self.logger.info(
+                        f"AutomationEngine | FASE 2 | ✅ Ordem {order_id} ({ticker}) EXECUTADA (via histórico) - marcando como EXECUTADA"
+                    )
+                    self._log_db_action(
+                        f"✅ Ordem FILLED via histórico: {ticker} (Order ID: {order_id})",
+                        {"order_id": order_id, "ticker": ticker, "status": hist_status}
+                    )
+
+                db.client.table("orders").update(update_data).eq("id", order_data.get("id")).execute()
                 return
 
             # Update order status from T212 response

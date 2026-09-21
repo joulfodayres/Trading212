@@ -196,12 +196,20 @@ class Trading212Client:
             logger.error(f"Erro ao cancelar ordem: {response.status_code} - {response.text}")
             raise Exception(f"Erro T212 API: {response.status_code}")
 
-    def get_order_history(self, limit: int = 50, cursor: Optional[str] = None) -> Dict[str, Any]:
-        """GET /equity/history/orders — Histórico de trades"""
+    def get_order_history(self, limit: int = 50, cursor: Optional[str] = None, ticker: Optional[str] = None) -> Dict[str, Any]:
+        """GET /equity/history/orders — Histórico de trades
+
+        Args:
+            limit: Número de resultados (max 50)
+            cursor: Para paginação
+            ticker: Filtrar por ticker específico (ex: AAPL_US_EQ)
+        """
         url = f"{self.base_url}/equity/history/orders"
         params = {"limit": limit}
-        if cursor:
+        if cursor is not None:
             params["cursor"] = cursor
+        if ticker:
+            params["ticker"] = ticker
 
         response = self.session.get(url, params=params)
         self._handle_rate_limit(response)
