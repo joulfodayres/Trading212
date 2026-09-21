@@ -81,7 +81,7 @@
 - ✅ Strategy parameters table (all 10 params)
 - ✅ Strategy validation (requires pos -1, 0, 1)
 - ✅ Frontend strategy editor
-- ⏳ Upload T212 data files
+- ✅ Upload T212 data files (Reports — Activity Statement PDF import)
 - ⏳ Charts & statistics dashboard
 - ⏳ Knowledge Base
 
@@ -164,9 +164,21 @@
 - created_at, updated_at (TIMESTAMP)
 ```
 
----
+#### **Reports — Activity Statement import** (16 tables)
+```sql
+-- Control table
+imported_files:
+  - id (UUID, PK), file_name, file_hash (SHA-256, unique for dedup)
+  - customer_id, customer_name, period_start, period_end, generated_at, pages
+  - status (PENDING/IMPORTED/FAILED), imported_at, created_at, updated_at
 
-## 🔌 API Endpoints
+-- 15 data tables (invest_*, cfd_*, crypto_*), each with:
+  - id (UUID, PK), file_id (UUID, FK → imported_files ON DELETE CASCADE)
+  - created_at, updated_at (TIMESTAMPTZ)
+```
+Full spec: `docs/REPORTS_FEATURE.md`, `reports/reports_schema.sql`, `reports/SECOES_PDF.md`.
+
+---
 
 ### Strategies Management
 
@@ -283,6 +295,29 @@ Atualizar intervalo do scheduler (5-300s).
 ```json
 Request: { "interval": 15 }
 ```
+
+### Reports (Activity Statement Import)
+
+#### **POST /api/reports/upload**
+Upload one or more Activity Statement PDFs (multipart, `files` field). SHA-256 dedup (skips
+duplicates), parses 15 tables, batch-inserts, returns per-table insertion summary.
+```json
+Response: {
+  "files_processed": 1,
+  "grand_total": { "invest_executed_trades": 71, ... },
+  "grand_total_inserted": 314,
+  "results": [ { "file_name": "...", "status": "imported", "total_inserted": 314, "inserted": {...} } ]
+}
+```
+
+#### **GET /api/reports/files**
+Lista de ficheiros processados (id, período, upload date, status).
+
+#### **GET /api/reports/summary**
+```json
+Response: { "total_files": 3, "imported": 2, "failed": 1 }
+```
+Parser: `backend/services/report_parser.py` (PyMuPDF). See `docs/REPORTS_FEATURE.md`.
 
 ---
 
@@ -441,7 +476,7 @@ npm run dev
 ## 📚 Phase 5 Backlog
 
 1. ✅ Strategy Management (DONE)
-2. ⏳ Upload T212 Data Files
+2. ✅ Upload T212 Data Files (DONE — Reports / Activity Statement PDF import)
 3. ⏳ Charts & Statistics Dashboard
 4. ✅ Global Automation Toggle (DONE)
 5. ✅ Automation Dialog (DONE)
@@ -450,5 +485,5 @@ npm run dev
 
 ---
 
-**Last Updated:** 2026-09-20
+**Last Updated:** 2026-09-21
 **Status:** Phase 5 em desenvolvimento

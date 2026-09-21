@@ -19,6 +19,7 @@ Files to upload (in this order):
 5. DEVELOPMENT.md            (Setup & workflows)
 6. TROUBLESHOOTING.md        (Problem solving)
 7. QUICK_REFERENCE.md        (Quick lookup)
+8. REPORTS_FEATURE.md        (Activity Statement PDF import)
 ```
 
 ### Step 2: Create Claude.com Project
@@ -273,7 +274,7 @@ Prioritize clarity and provide actionable advice.
 
 Before uploading, verify:
 
-- ✅ All 7 .md files are ready
+- ✅ All 8 .md files are ready
 - ✅ No secrets in any file
 - ✅ All links are relative (docs/file.md format)
 - ✅ File names are clear and descriptive
@@ -326,7 +327,7 @@ Knowledge Base is complete and production-ready.
 
 ---
 
-**Last Updated:** 2026-09-20
-**Files Ready:** 7/7 ✅
-**Total Documentation:** 2,947 lines
+**Last Updated:** 2026-09-21
+**Files Ready:** 8/8 ✅
+**Total Documentation:** 3,000+ lines
 **Status:** Ready for Claude.com Projects upload

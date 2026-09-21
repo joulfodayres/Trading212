@@ -149,6 +149,18 @@ Solution:
 
 ---
 
+### 7. **REPORTS_FEATURE.md** - Activity Statement Import
+**Reports Feature Documentation**
+- PDF structure parsed (15 tables across Invest / CFD / Crypto)
+- `imported_files` control table + 15 data tables schema
+- Endpoints: POST /api/reports/upload, GET /api/reports/files, GET /api/reports/summary
+- PyMuPDF parser (`report_parser.py`) logic + validation counts
+- Frontend Reports page (sidebar item, upload, summary, processed-files list)
+
+**Use when:** Working on the Reports / PDF import feature.
+
+---
+
 ## 📖 How to Use This Knowledge Base
 
 ### For Different Roles:
@@ -277,6 +289,6 @@ Keep docs in sync with code!
 
 ---
 
-**Last Updated:** 2026-09-20
-**Total Documentation:** 2,900+ lines across 6 documents
+**Last Updated:** 2026-09-21
+**Total Documentation:** 3,000+ lines across 7 documents
 **Status:** Complete and production-ready
