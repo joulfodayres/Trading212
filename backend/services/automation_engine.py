@@ -52,43 +52,49 @@ class AutomationEngine:
         cycle_start = datetime.utcnow()
         self.last_cycle_start = cycle_start
 
-        self.logger.info(f"🔄 Ciclo #{self.cycle_count} iniciado")
+        self.logger.info(f"🔄 AutomationEngine | Ciclo #{self.cycle_count} iniciado às {cycle_start.isoformat()}")
 
         try:
             # Check if global automation is enabled
+            self.logger.debug(f"AutomationEngine | ⏳ Verificando se automação está ativada...")
             self._log_db_action("⏳ Verificando status global de automação...")
             grid_trading_enabled = self._check_grid_trading_enabled()
             if not grid_trading_enabled:
-                self.logger.debug("⏸️ Grid trading está desativado globalmente, ciclo ignorado")
+                self.logger.info(f"AutomationEngine | ⏸️ Ciclo #{self.cycle_count} IGNORADO: Grid trading está desativado globalmente")
                 self._log_db_action("⏸️ Grid trading desativado, ciclo ignorado")
                 return
 
+            self.logger.info(f"AutomationEngine | ✅ Automação ativada, iniciando ciclo de 3 fases")
             self._log_db_action("✅ Automação ativada, iniciando ciclo de 3 fases")
 
             # PHASE 1: Setup initial BUY/SELL pairs
-            self.logger.debug("Fase 1: Setup Inicial")
+            self.logger.info(f"AutomationEngine | 📋 FASE 1: Iniciando Setup Inicial...")
             await self._phase_1_initial_setup()
+            self.logger.info(f"AutomationEngine | ✅ FASE 1: Setup Inicial completo")
 
             # PHASE 2: Monitor Watch orders
-            self.logger.debug("Fase 2: Monitorar Ordens")
+            self.logger.info(f"AutomationEngine | 📋 FASE 2: Iniciando Monitoramento de Ordens...")
             await self._phase_2_monitor_orders()
+            self.logger.info(f"AutomationEngine | ✅ FASE 2: Monitoramento de Ordens completo")
 
             # PHASE 3: Handle order fills and rebalance
-            self.logger.debug("Fase 3: Processar Fills")
+            self.logger.info(f"AutomationEngine | 📋 FASE 3: Iniciando Processamento de Fills...")
             await self._phase_3_handle_fills()
+            self.logger.info(f"AutomationEngine | ✅ FASE 3: Processamento de Fills completo")
 
             cycle_duration = (datetime.utcnow() - cycle_start).total_seconds()
             self.last_cycle_duration = cycle_duration
-            self.logger.info(f"✅ Ciclo #{self.cycle_count} completo ({cycle_duration:.2f}s)")
+            self.logger.info(f"✅ AutomationEngine | Ciclo #{self.cycle_count} completo com sucesso em {cycle_duration:.2f}s")
             self._log_db_action(f"✅ Ciclo #{self.cycle_count} completo com sucesso", {"duration_seconds": cycle_duration})
 
         except Exception as e:
             cycle_duration = (datetime.utcnow() - cycle_start).total_seconds()
             self.last_cycle_duration = cycle_duration
             self.logger.error(
-                f"❌ Erro no ciclo #{self.cycle_count} ({cycle_duration:.2f}s): {e}",
+                f"❌ AutomationEngine | ERRO no ciclo #{self.cycle_count} após {cycle_duration:.2f}s: {str(e)}",
                 exc_info=True,
             )
+            self._log_db_action(f"❌ Erro fatal no ciclo: {str(e)}", {"cycle": self.cycle_count, "error": str(e)})
             # Continue - don't crash, next cycle will retry
 
     # =========================================================================
@@ -123,12 +129,13 @@ class AutomationEngine:
             self.logger.info(f"Fase 1: {len(isins)} ISINs para setup inicial")
             self._log_db_action(f"✅ Carregados {len(isins)} ISINs para setup inicial", {"count": len(isins)})
 
-            for isin_data in isins:
+            for idx, isin_data in enumerate(isins, 1):
+                self.logger.info(f"AutomationEngine | FASE 1 | 🔄 Processando ISIN {idx}/{len(isins)}: {isin_data.get('ticker', 'N/A')}")
                 await self._phase_1_setup_isin(isin_data)
 
         except Exception as e:
-            self.logger.error(f"❌ Erro na Fase 1: {e}", exc_info=True)
-            self._log_db_action(f"❌ Erro na Fase 1 (Setup Inicial): {str(e)}", {"error": str(e)})
+            self.logger.error(f"AutomationEngine | FASE 1 | ❌ Erro: {str(e)}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 1: {str(e)}", {"error": str(e)})
 
     async def _phase_1_setup_isin(self, isin_data: Dict):
         """
@@ -138,20 +145,25 @@ class AutomationEngine:
             db = get_db()
             ticker = isin_data.get("ticker")
             current_price = isin_data.get("current_price")
-            self.logger.info(
-                f"Fase 1: Setup {ticker} (current_price={current_price})"
-            )
+            isin_id = isin_data.get("id")
+
+            self.logger.info(f"AutomationEngine | FASE 1 | 📝 Setup para {ticker} @ €{current_price} (ISIN ID: {isin_id})")
 
             # Load strategy
             strategy_id = isin_data.get("strategy_id")
+            self.logger.debug(f"AutomationEngine | FASE 1 | 📖 Carregando estratégia ID: {strategy_id}")
             strategy_result = db.client.table("strategies").select("*").eq("id", strategy_id).execute()
             strategy = strategy_result.data[0] if strategy_result.data else None
             if not strategy:
-                self.logger.warning(f"Strategy não encontrada para {ticker}")
+                self.logger.warning(f"AutomationEngine | FASE 1 | ⚠️ Strategy não encontrada para {ticker} (strategy_id={strategy_id})")
                 return
+
+            strategy_name = strategy.get("strategy_name", "UNKNOWN")
+            self.logger.info(f"AutomationEngine | FASE 1 | ✅ Estratégia carregada: {strategy_name}")
 
             # Load strategy parameters for current position (trades_balance)
             trades_balance = isin_data.get("trades_balance", 0)
+            self.logger.debug(f"AutomationEngine | FASE 1 | 📖 Carregando parâmetros para trades_balance={trades_balance}")
             params = self._get_strategy_parameters(strategy_id, trades_balance)
 
             if not params:
