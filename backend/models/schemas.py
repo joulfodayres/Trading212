@@ -12,6 +12,7 @@ class AppParametersResponse(BaseModel):
     """Schema para resposta de parâmetros da app"""
     scheduler_interval_seconds: int
     grid_trading_enabled: bool
+    log_level: str
     updated_at: datetime
 
     class Config:
@@ -22,6 +23,7 @@ class AppParametersUpdate(BaseModel):
     """Schema para atualizar parâmetros"""
     scheduler_interval_seconds: Optional[int] = None
     grid_trading_enabled: Optional[bool] = None
+    log_level: Optional[str] = None
 
 
 class UserCreate(BaseModel):

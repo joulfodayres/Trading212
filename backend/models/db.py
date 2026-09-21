@@ -27,6 +27,9 @@ class AppParameters(Base):
     # Grid trading configuration
     grid_trading_enabled = Column(Boolean, default=True)
 
+    # Logging configuration
+    log_level = Column(String, default='OFF')
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

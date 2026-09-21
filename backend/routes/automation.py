@@ -38,8 +38,14 @@ class SchedulerIntervalRequest(BaseModel):
     scheduler_interval_seconds: int = Field(..., ge=5, le=3600)
 
 
+class LogLevelRequest(BaseModel):
+    """Request para atualizar log level"""
+    log_level: str = Field(..., pattern='^(OFF|LOW|MEDIUM|HIGH)$')
 
-def _get_db():
+
+class RunCycleOnceRequest(BaseModel):
+    """Request para executar um ciclo uma única vez"""
+    pass
     """Get Supabase DB instance"""
     from db.supabase_client import get_db
     return get_db()
@@ -398,4 +404,109 @@ async def get_automation_metrics():
 
     except Exception as e:
         logger.error(f"Erro ao obter métricas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/run-cycle-once")
+async def run_cycle_once():
+    """
+    POST /api/v1/automation/run-cycle-once
+
+    Executa UMA ÚNICA VEZ o ciclo de automação imediatamente.
+    Não afeta o estado global da automação (grid_trading_enabled).
+    """
+    try:
+        from main import automation_engine
+
+        if not automation_engine:
+            raise HTTPException(status_code=503, detail="AutomationEngine não inicializado")
+
+        logger.info("🚀 Executando ciclo manual via API (run-cycle-once)...")
+
+        # Chamar run_cycle diretamente
+        import asyncio
+        await automation_engine.run_cycle()
+
+        # Retornar status após execução
+        return {
+            "success": True,
+            "message": "Ciclo executado com sucesso",
+            "cycle_number": automation_engine.cycle_count,
+            "last_duration": automation_engine.last_cycle_duration
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao executar ciclo manual: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao executar ciclo: {str(e)}")
+
+
+@router.get("/config/log-level")
+async def get_log_level():
+    """
+    GET /api/v1/automation/config/log-level
+
+    Retorna o nível de logging atual
+    """
+    try:
+        db = _get_db()
+
+        result = db.client.table("app_parameters").select("log_level").execute()
+        log_level = result.data[0].get("log_level", "OFF") if result.data else "OFF"
+
+        return {
+            "log_level": log_level,
+            "status": "ok"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao obter log_level: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/config/log-level")
+async def update_log_level(request: LogLevelRequest):
+    """
+    PUT /api/v1/automation/config/log-level
+
+    Atualiza o nível de logging em tempo real.
+
+    Valores válidos: OFF, LOW, MEDIUM, HIGH
+    """
+    try:
+        if request.log_level not in ["OFF", "LOW", "MEDIUM", "HIGH"]:
+            raise HTTPException(
+                status_code=400,
+                detail="log_level deve ser um de: OFF, LOW, MEDIUM, HIGH"
+            )
+
+        db = _get_db()
+
+        # Get the singleton row first
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+
+        param_id = result.data[0]["id"]
+        logger.info(f"Updating log_level to {request.log_level}...")
+
+        # Update with WHERE clause
+        update_result = db.client.table("app_parameters").update({
+            "log_level": request.log_level
+        }).eq("id", param_id).execute()
+
+        if update_result.data:
+            logger.info(f"✅ Log level updated to {request.log_level}")
+            return {
+                "status": "updated",
+                "log_level": request.log_level,
+            }
+        else:
+            error_msg = f"Failed to update app_parameters. Response: {update_result}"
+            logger.error(error_msg)
+            raise Exception(error_msg)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao atualizar log_level: {e}")
         raise HTTPException(status_code=500, detail=str(e))

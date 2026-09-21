@@ -57,11 +57,32 @@ export const useGlobalAutomation = () => {
     }
   }, [fetchStatus])
 
+  const runOnce = useCallback(async () => {
+    setLoading(true)
+    try {
+      console.log('[useGlobalAutomation] Chamando run-cycle-once...')
+      const response = await apiClient.post('/v1/automation/run-cycle-once')
+      if (response.data.success) {
+        console.log('[useGlobalAutomation] ✅ Ciclo executado com sucesso', response.data)
+        await fetchStatus()
+        return true
+      }
+      console.error('[useGlobalAutomation] Resposta inesperada:', response.data)
+      return false
+    } catch (error: any) {
+      console.error('[useGlobalAutomation] ❌ Erro ao executar ciclo:', error)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchStatus])
+
   return {
     status,
     loading,
     fetchStatus,
     enable,
-    disable
+    disable,
+    runOnce
   }
 }

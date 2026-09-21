@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LogOut, Settings, BarChart3, History, TrendingUp, Power, Sliders, FileText } from 'lucide-react'
+import { LogOut, Settings, BarChart3, History, TrendingUp, Power, Sliders, FileText, Play } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useGlobalAutomation } from '../hooks/useGlobalAutomation'
 import { Button } from './ui/Button'
@@ -12,7 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const { logout } = useAuthStore()
-  const { status, loading, fetchStatus, enable, disable } = useGlobalAutomation()
+  const { status, loading, fetchStatus, enable, disable, runOnce } = useGlobalAutomation()
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<'enable' | 'disable' | null>(null)
 
@@ -81,6 +81,19 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
             disabled={loading}
           />
         </div>
+      </div>
+
+      {/* Manual Cycle Button */}
+      <div className="p-4 border-b border-t212-border">
+        <button
+          onClick={() => runOnce()}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-t212-primary to-t212-secondary text-gray-900 font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Execute automation cycle once immediately"
+        >
+          <Play size={16} />
+          <span>Run Cycle Once</span>
+        </button>
       </div>
 
       {/* Navigation */}
