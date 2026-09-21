@@ -42,18 +42,21 @@ class T212Service:
             Order response from T212 API or None on error
         """
         try:
+            # Round quantity to 8 decimal places (T212 API requirement)
+            quantity_rounded = round(quantity, 8)
+
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price} ({time_validity})"
+                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity_rounded} @ {limit_price} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=quantity, limit_price=limit_price, time_validity=time_validity
+                ticker=ticker, quantity=quantity_rounded, limit_price=limit_price, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity_rounded} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 
@@ -79,8 +82,11 @@ class T212Service:
             Order response from T212 API or None on error
         """
         try:
+            # Round quantity to 8 decimal places (T212 API requirement)
+            quantity_rounded = round(quantity, 8)
+
             # Ensure quantity is negative for SELL
-            sell_quantity = -abs(quantity) if quantity > 0 else quantity
+            sell_quantity = -abs(quantity_rounded) if quantity_rounded > 0 else quantity_rounded
 
             self.logger.info(
                 f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price} ({time_validity})"
