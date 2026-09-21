@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading 212 Bot - Documentation Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #d1fae5;
+            --secondary: #3b82f6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --dark-lighter: #374151;
+            --light: #f9fafb;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-light: #6b7280;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--light);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background: #111827;
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .navbar {
+            background: #1f2937;
+            border-bottom: 1px solid #374151;
+        }
+
+        body.dark-mode .card {
+            background: #1f2937;
+            border: 1px solid #374151;
+        }
+
+        body.dark-mode .search-box {
+            background: #374151;
+            border: 1px solid #4b5563;
+            color: #f3f4f6;
+        }
+
+        body.dark-mode .search-box::placeholder {
+            color: #9ca3af;
+        }
+
+        body.dark-mode .sidebar {
+            background: #1f2937;
+            border-right: 1px solid #374151;
+        }
+
+        body.dark-mode .sidebar a {
+            color: #e5e7eb;
+        }
+
+        body.dark-mode .sidebar a:hover {
+            background: #374151;
+        }
+
+        body.dark-mode .sidebar a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        body.dark-mode .footer {
+            background: #1f2937;
+            border-top: 1px solid #374151;
+        }
+
+        .navbar {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .navbar-brand span {
+            font-size: 1.25rem;
+        }
+
+        .navbar-right {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--light);
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-title {
+            font-weight: bold;
+            margin-bottom: 0.75rem;
+            margin-top: 1rem;
+            color: var(--primary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        .sidebar-title:first-child {
+            margin-top: 0;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.25rem;
+            text-decoration: none;
+            color: var(--text);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .sidebar a:hover {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding-left: 1.25rem;
+        }
+
+        .sidebar a.active {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .search-container {
+            margin-bottom: 2rem;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .section-description {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .card-description {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            flex: 1;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .tag.urgent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .tag.done {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .tag.todo {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .card-link {
+            display: inline-block;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            align-self: flex-start;
+        }
+
+        .card-link:hover {
+            color: var(--primary-dark);
+            transform: translateX(4px);
+        }
+
+        .code-block {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--primary-light);
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .quick-link {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .quick-link:hover {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-light);
+            margin-top: 3rem;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+
+        .status-badge.live {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.todo {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .no-results span {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: static;
+                width: 100%;
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+                padding: 1rem;
+            }
+
+            .sidebar-title {
+                width: 100%;
+                margin: 1rem 0 0.5rem 0;
+            }
+
+            .sidebar a {
+                flex: 1;
+                min-width: 150px;
+                text-align: center;
+                padding: 0.5rem;
+            }
+
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            color: #78350f;
+        }
+
+        body.dark-mode .highlight {
+            background: #92400e;
+            color: #fde047;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="#" class="navbar-brand">
+            <span>📊</span> Trading 212 Bot
+        </a>
+        <div class="navbar-right">
+            <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+                🌙
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-title">📚 Sections</div>
+            <a href="#" onclick="showSection('getting-started', event)" class="nav-link active">Getting Started</a>
+            <a href="#" onclick="showSection('architecture', event)" class="nav-link">Architecture</a>
+            <a href="#" onclick="showSection('api-docs', event)" class="nav-link">API Docs</a>
+            <a href="#" onclick="showSection('development', event)" class="nav-link">Development</a>
+            <a href="#" onclick="showSection('deployment', event)" class="nav-link">Deployment</a>
+            <a href="#" onclick="showSection('knowledge-base', event)" class="nav-link">Knowledge Base</a>
+            <a href="#" onclick="showSection('troubleshooting', event)" class="nav-link">Troubleshooting</a>
+
+            <div class="sidebar-title">🔗 Quick Links</div>
+            <a href="https://trading212-1.onrender.com" target="_blank">🌐 Frontend Live</a>
+            <a href="https://trading212-4ojx.onrender.com/docs" target="_blank">📖 API Swagger Docs</a>
+            <a href="https://github.com/joulfodayres/Trading212" target="_blank">🐙 GitHub</a>
+            <a href="https://app.supabase.com" target="_blank">🗄️ Supabase DB</a>
+            <a href="https://trading212.com" target="_blank">📈 Trading 212</a>
+
+            <div class="sidebar-title">📁 Key Files</div>
+            <a href="KNOWLEDGE_BASE.md" target="_blank">Knowledge Base</a>
+            <a href="API_REFERENCE.md" target="_blank">API Reference</a>
+            <a href="DEVELOPMENT.md" target="_blank">Dev Guide</a>
+            <a href="TROUBLESHOOTING.md" target="_blank">Troubleshooting</a>
+            <a href="CODE_EXAMPLES.md" target="_blank">Code Examples</a>
+            <a href="QUICK_REFERENCE.md" target="_blank">Quick Ref</a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Search -->
+            <div class="search-container">
+                <input
+                    type="text"
+                    class="search-box"
+                    id="searchBox"
+                    placeholder="🔍 Search documentation... (e.g., 'API endpoints', 'Grid Trading', 'deploy')"
+                >
+            </div>
+
+            <!-- Getting Started Section -->
+            <section id="getting-started" class="section active">
+                <div class="breadcrumb">
+                    <span>Home</span>
+                    <span>›</span>
+                    <span>Getting Started</span>
+                </div>
+
+                <div class="hero">
+                    <h1>Welcome to Trading 212 Bot</h1>
+                    <p>Automated trading system with Grid Trading strategy engine • Phase 4 Complete • Production Ready</p>
+                </div>
+
+                <div class="section-description">
+                    Trading 212 Bot is a sophisticated automated trading system with real-time portfolio management,
+                    strategy configuration, and comprehensive API integration. Perfect for traders who want to automate
+                    their trading strategies on the Trading 212 platform.
+                </div>
+
+                <div class="quick-links">
+                    <a href="KNOWLEDGE_BASE.md" class="quick-link">📚 Project Overview</a>
+                    <a href="QUICK_REFERENCE.md" class="quick-link">⚡ Quick Ref</a>
+                    <a href="DEVELOPMENT.md" class="quick-link">🚀 Local Setup</a>
+                    <a href="https://trading212-1.onrender.com" class="quick-link" target="_blank">🌐 Live App</a>
+                </div>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🎯</div>
+                        <div class="card-title">Project Status</div>
+                        <div class="card-description">
+                            <strong>Phase 4 Complete</strong> - Automation engine fully operational with Grid Trading strategy,
+                            APScheduler integration, and real-time portfolio monitoring.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag done">✅ LIVE</span>
+                            <span class="tag">100% Phase 4</span>
+                            <span class="tag">90% Overall</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md" class="card-link">Learn more →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🚀</div>
+                        <div class="card-title">Tech Stack</div>
+                        <div class="card-description">
+                            React 18 + TypeScript for frontend, FastAPI for backend, PostgreSQL via Supabase,
+                            Render for cloud hosting, Trading 212 Official API integration.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">React</span>
+                            <span class="tag">FastAPI</span>
+                            <span class="tag">Supabase</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#architecture" class="card-link">See architecture →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">💡</div>
+                        <div class="card-title">Key Features</div>
+                        <div class="card-description">
+                            Grid Trading strategy engine, real-time portfolio sync, strategy management,
+                            automated order execution, comprehensive logging and monitoring.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag done">Grid Trading</span>
+                            <span class="tag done">Automation</span>
+                            <span class="tag done">Monitoring</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#grid-trading" class="card-link">Explore features →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.5rem; color: var(--primary);">
+                    📖 Documentation Sections
+                </h2>
+                <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+                    Everything you need to understand, develop, and deploy the Trading 212 Bot system.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🏗️</div>
+                        <div class="card-title">Architecture</div>
+                        <div class="card-description">
+                            System design, component interaction, deployment architecture, and data flow diagrams.
+                        </div>
+                        <a href="#" onclick="showSection('architecture', event)" class="card-link">Read →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📡</div>
+                        <div class="card-title">API Documentation</div>
+                        <div class="card-description">
+                            Complete API reference with endpoints, authentication, request/response examples,
+                            and error handling.
+                        </div>
+                        <a href="#" onclick="showSection('api-docs', event)" class="card-link">Explore →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">👨‍💻</div>
+                        <div class="card-title">Development Guide</div>
+                        <div class="card-description">
+                            Local setup, project structure, development workflow, testing, debugging,
+                            and best practices.
+                        </div>
+                        <a href="#" onclick="showSection('development', event)" class="card-link">Setup →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🚀</div>
+                        <div class="card-title">Deployment</div>
+                        <div class="card-description">
+                            Production deployment on Render, database setup on Supabase, environment configuration,
+                            and monitoring.
+                        </div>
+                        <a href="#" onclick="showSection('deployment', event)" class="card-link">Deploy →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🧠</div>
+                        <div class="card-title">Knowledge Base</div>
+                        <div class="card-description">
+                            Deep dives into Grid Trading strategy, automation engine, Trading 212 API quirks,
+                            database schema, and more.
+                        </div>
+                        <a href="#" onclick="showSection('knowledge-base', event)" class="card-link">Learn →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🐛</div>
+                        <div class="card-title">Troubleshooting</div>
+                        <div class="card-description">
+                            Common issues, error solutions, debugging techniques, performance optimization,
+                            and getting help.
+                        </div>
+                        <a href="#" onclick="showSection('troubleshooting', event)" class="card-link">Fix →</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Architecture Section -->
+            <section id="architecture" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Architecture</span>
+                </div>
+
+                <h1 class="section-title">🏗️ Architecture Overview</h1>
+
+                <p class="section-description">
+                    Understanding how all components of the Trading 212 Bot work together to deliver automated
+                    trading functionality with real-time monitoring and comprehensive logging.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🌐</div>
+                        <div class="card-title">Frontend (React)</div>
+                        <div class="card-description">
+                            React 18 + TypeScript + Vite + Tailwind CSS. Provides user interface for portfolio
+                            management, strategy configuration, and real-time monitoring.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">React 18</span>
+                            <span class="tag">TypeScript</span>
+                            <span class="tag">Tailwind</span>
+                        </div>
+                        <a href="DEVELOPMENT.md#frontend" class="card-link">Frontend guide →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚙️</div>
+                        <div class="card-title">Backend (FastAPI)</div>
+                        <div class="card-description">
+                            FastAPI + Python with Uvicorn. Handles authentication, API routing, automation engine,
+                            Trading 212 API integration, and database operations.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">FastAPI</span>
+                            <span class="tag">Python 3.14</span>
+                            <span class="tag">Uvicorn</span>
+                        </div>
+                        <a href="DEVELOPMENT.md#backend" class="card-link">Backend guide →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🗄️</div>
+                        <div class="card-title">Database (Supabase)</div>
+                        <div class="card-description">
+                            PostgreSQL database hosted on Supabase Cloud. Stores ISINs, strategies, trades, orders,
+                            logs, and configuration data. RLS for security.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">PostgreSQL</span>
+                            <span class="tag">RLS</span>
+                            <span class="tag">Supabase</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#database-schema" class="card-link">Schema →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Trading 212 API</div>
+                        <div class="card-description">
+                            Official Trading 212 API integration with HTTP Basic Auth. Fetches positions, places orders,
+                            monitors execution, and syncs account data.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">REST API</span>
+                            <span class="tag">HTTP Auth</span>
+                            <span class="tag">Polling</span>
+                        </div>
+                        <a href="docs/t212-api/API_ANALYSIS.md" class="card-link">T212 API →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔄</div>
+                        <div class="card-title">Automation Engine</div>
+                        <div class="card-description">
+                            3-phase automation cycle (Setup → Monitor → Rebalance) running on APScheduler.
+                            Implements Grid Trading strategy with real-time order management.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag done">Phase 1</span>
+                            <span class="tag done">Phase 2</span>
+                            <span class="tag done">Phase 3</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#automation-engine" class="card-link">Learn →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">☁️</div>
+                        <div class="card-title">Deployment (Render)</div>
+                        <div class="card-description">
+                            Frontend and backend hosted on Render cloud platform. Automatic deployments on GitHub push.
+                            HTTPS, auto-scaling, and monitoring included.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">Render</span>
+                            <span class="tag">Auto-deploy</span>
+                            <span class="tag">HTTPS</span>
+                        </div>
+                        <a href="#" onclick="showSection('deployment', event)" class="card-link">Deploy guide →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Data Flow Diagram
+                </h2>
+
+                <div class="code-block" style="background: var(--light); color: var(--text); border-left: 4px solid var(--primary);">
+                    <pre>
+┌──────────────────────────────────────┐
+│  BROWSER (React Frontend)            │
+│  https://trading212-1.onrender.com   │
+└──────────────┬───────────────────────┘
+               │ HTTPS/REST
+               ▼
+┌──────────────────────────────────────┐
+│  BACKEND API (FastAPI)               │
+│  https://trading212-4ojx.onrender... │
+│                                      │
+│  ├─ Authentication (Supabase JWT)    │
+│  ├─ Automation Engine (APScheduler)  │
+│  └─ Trading 212 API Client           │
+└──┬──────────────────────────────────┬┘
+   │                                   │
+   │ SQL                               │ HTTP/REST
+   ▼                                   ▼
+┌──────────────────────┐    ┌──────────────────────┐
+│  DATABASE            │    │  TRADING 212 API     │
+│  (Supabase)          │    │  (demo.trading212)   │
+│                      │    │                      │
+│ ├─ isins             │    │ ├─ Positions         │
+│ ├─ strategies        │    │ ├─ Orders            │
+│ ├─ trades            │    │ ├─ History           │
+│ ├─ orders            │    │ └─ Metadata          │
+│ ├─ logs              │    │                      │
+│ └─ app_parameters    │    └──────────────────────┘
+└──────────────────────┘</pre>
+                </div>
+            </section>
+
+            <!-- API Documentation Section -->
+            <section id="api-docs" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>API Documentation</span>
+                </div>
+
+                <h1 class="section-title">📡 API Reference</h1>
+
+                <p class="section-description">
+                    Complete API endpoint documentation with authentication, request/response examples,
+                    and integration guides.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🔑</div>
+                        <div class="card-title">Authentication</div>
+                        <div class="card-description">
+                            Learn how to authenticate requests using JWT tokens via Supabase Auth. Includes
+                            header format and token refresh mechanism.
+                        </div>
+                        <a href="API_REFERENCE.md#authentication" class="card-link">Read →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Strategies API</div>
+                        <div class="card-description">
+                            Create, read, update, and delete trading strategies. Manage strategy parameters,
+                            validation, and activation.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">POST</span>
+                            <span class="tag">GET</span>
+                            <span class="tag">PUT</span>
+                        </div>
+                        <a href="API_REFERENCE.md#strategies" class="card-link">Explore →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">ISINs API</div>
+                        <div class="card-description">
+                            Manage ISIN portfolio, sync with Trading 212, and enable/disable automation
+                            for specific instruments.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">GET</span>
+                            <span class="tag">POST</span>
+                            <span class="tag">SYNC</span>
+                        </div>
+                        <a href="API_REFERENCE.md#isins" class="card-link">Details →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🤖</div>
+                        <div class="card-title">Automation API</div>
+                        <div class="card-description">
+                            Control global automation, monitor engine status, check phase execution logs,
+                            and manage automation parameters.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">PUT</span>
+                            <span class="tag">GET</span>
+                            <span class="tag">STATUS</span>
+                        </div>
+                        <a href="API_REFERENCE.md#automation" class="card-link">Control →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Orders API</div>
+                        <div class="card-description">
+                            Retrieve order history, view pending orders, check execution status,
+                            and analyze trade performance.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">GET</span>
+                            <span class="tag">HISTORY</span>
+                            <span class="tag">STATUS</span>
+                        </div>
+                        <a href="API_REFERENCE.md#orders" class="card-link">View →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚙️</div>
+                        <div class="card-title">Configuration API</div>
+                        <div class="card-description">
+                            Manage user configuration, Trading 212 API credentials (encrypted),
+                            and application parameters.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">GET</span>
+                            <span class="tag">PUT</span>
+                            <span class="tag">SECURE</span>
+                        </div>
+                        <a href="API_REFERENCE.md#configuration" class="card-link">Configure →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Quick API Reference
+                </h2>
+
+                <div class="code-block">
+# Get API Documentation (Swagger UI)
+GET https://trading212-4ojx.onrender.com/docs
+
+# Base URL for API
+https://trading212-4ojx.onrender.com/api/v1
+
+# Authentication Header
+Authorization: Bearer {jwt_token}
+
+# Example: List Strategies
+GET /api/v1/strategies
+Authorization: Bearer {jwt_token}
+
+# Example: Create Strategy
+POST /api/v1/strategies
+Content-Type: application/json
+Authorization: Bearer {jwt_token}
+
+{
+  "name": "Grid Trading 1%",
+  "type": "grid_trading",
+  "params": {
+    "pos_minus_1": {...},
+    "pos_0": {...},
+    "pos_1": {...}
+  }
+}
+
+# Example: Sync Portfolio
+POST /api/v1/isins/sync
+Authorization: Bearer {jwt_token}
+
+# Example: Enable Automation
+PUT /api/v1/automation/enable
+Authorization: Bearer {jwt_token}</div>
+
+                <p style="color: var(--text-light); margin-top: 1.5rem;">
+                    <strong>Pro Tip:</strong> Visit the <a href="https://trading212-4ojx.onrender.com/docs" target="_blank" style="color: var(--primary);">
+                    live Swagger documentation</a> for interactive API testing!
+                </p>
+            </section>
+
+            <!-- Development Section -->
+            <section id="development" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Development</span>
+                </div>
+
+                <h1 class="section-title">👨‍💻 Development Guide</h1>
+
+                <p class="section-description">
+                    Local development setup, project structure, development workflow, testing,
+                    debugging, and best practices.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🚀</div>
+                        <div class="card-title">Local Setup</div>
+                        <div class="card-description">
+                            Step-by-step guide to set up the development environment locally,
+                            including backend and frontend servers.
+                        </div>
+                        <a href="DEVELOPMENT.md#local-setup" class="card-link">Setup →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📁</div>
+                        <div class="card-title">Project Structure</div>
+                        <div class="card-description">
+                            Understand the organization of backend, frontend, database, and documentation folders.
+                            File layout and naming conventions.
+                        </div>
+                        <a href="DEVELOPMENT.md#project-structure" class="card-link">Explore →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔄</div>
+                        <div class="card-title">Git Workflow</div>
+                        <div class="card-description">
+                            Branching strategy, commit conventions, code review process, and pull request workflow.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">Git</span>
+                            <span class="tag">GitHub</span>
+                            <span class="tag">Workflow</span>
+                        </div>
+                        <a href="DEVELOPMENT.md#git-workflow" class="card-link">Learn →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🧪</div>
+                        <div class="card-title">Testing</div>
+                        <div class="card-description">
+                            Run tests for backend and frontend. Includes unit tests, integration tests,
+                            and test configuration.
+                        </div>
+                        <a href="DEVELOPMENT.md#testing" class="card-link">Run tests →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🐛</div>
+                        <div class="card-title">Debugging</div>
+                        <div class="card-description">
+                            Debugging techniques, browser dev tools, backend logging, and common debugging scenarios.
+                        </div>
+                        <a href="DEVELOPMENT.md#debugging" class="card-link">Debug →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚡</div>
+                        <div class="card-title">Performance</div>
+                        <div class="card-description">
+                            Performance optimization tips, profiling tools, database query optimization,
+                            and monitoring.
+                        </div>
+                        <a href="DEVELOPMENT.md#performance" class="card-link">Optimize →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Quick Start: Backend
+                </h2>
+
+                <div class="code-block">
+# Clone repository
+git clone https://github.com/joulfodayres/Trading212.git
+cd Trading212
+
+# Create Python virtual environment
+cd backend
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file (copy from .env.example)
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run backend server
+uvicorn main:app --reload
+# Available at http://localhost:8000
+# API docs at http://localhost:8000/docs</div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Quick Start: Frontend
+                </h2>
+
+                <div class="code-block">
+# In a new terminal, from project root
+cd frontend
+
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
+# Edit .env with backend URL
+
+# Run development server
+npm run dev
+# Available at http://localhost:5173
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview</div>
+
+                <p style="color: var(--text-light); margin-top: 1.5rem;">
+                    For full setup instructions, environment variables, and troubleshooting, see
+                    <a href="DEVELOPMENT.md" style="color: var(--primary);">DEVELOPMENT.md</a>.
+                </p>
+            </section>
+
+            <!-- Deployment Section -->
+            <section id="deployment" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Deployment</span>
+                </div>
+
+                <h1 class="section-title">🚀 Deployment Guide</h1>
+
+                <p class="section-description">
+                    Production deployment on Render, Supabase database setup, environment configuration,
+                    and production monitoring.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">☁️</div>
+                        <div class="card-title">Render Deployment</div>
+                        <div class="card-description">
+                            Deploy frontend and backend to Render cloud platform. Automatic deployments on GitHub push,
+                            HTTPS, and auto-scaling.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag done">Live</span>
+                            <span class="tag">Auto-deploy</span>
+                        </div>
+                        <a href="DEVELOPMENT.md#deployment" class="card-link">Deploy →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🗄️</div>
+                        <div class="card-title">Database Setup</div>
+                        <div class="card-description">
+                            PostgreSQL database setup on Supabase, migrations, schema creation, RLS policies,
+                            and backups.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag">PostgreSQL</span>
+                            <span class="tag">Supabase</span>
+                            <span class="tag">RLS</span>
+                        </div>
+                        <a href="DEVELOPMENT.md#database-setup" class="card-link">Setup →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔐</div>
+                        <div class="card-title">Environment Variables</div>
+                        <div class="card-description">
+                            Configure production environment variables for Render, database connection,
+                            API keys, and authentication.
+                        </div>
+                        <a href="DEVELOPMENT.md#environment-variables" class="card-link">Configure →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Monitoring</div>
+                        <div class="card-description">
+                            Monitor application health, check logs, track performance, and set up alerts
+                            for errors or slowdowns.
+                        </div>
+                        <a href="DEVELOPMENT.md#monitoring" class="card-link">Monitor →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">✅</div>
+                        <div class="card-title">Production Checklist</div>
+                        <div class="card-description">
+                            Pre-deployment checks, security validation, performance verification,
+                            and post-deployment testing.
+                        </div>
+                        <a href="DEVELOPMENT.md#production-checklist" class="card-link">Checklist →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔄</div>
+                        <div class="card-title">Auto-Deploy</div>
+                        <div class="card-description">
+                            Automatic deployment pipeline on GitHub push. Continuous deployment workflow
+                            and rollback procedures.
+                        </div>
+                        <a href="DEVELOPMENT.md#auto-deploy" class="card-link">Configure →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Production URLs
+                </h2>
+
+                <div class="quick-links" style="margin-bottom: 1.5rem;">
+                    <a href="https://trading212-1.onrender.com" class="quick-link" target="_blank">🌐 Frontend</a>
+                    <a href="https://trading212-4ojx.onrender.com" class="quick-link" target="_blank">⚙️ Backend</a>
+                    <a href="https://trading212-4ojx.onrender.com/docs" class="quick-link" target="_blank">📖 API Docs</a>
+                    <a href="https://github.com/joulfodayres/Trading212" class="quick-link" target="_blank">🐙 GitHub</a>
+                </div>
+
+                <p style="color: var(--text-light);">
+                    All services are deployed automatically on pushes to the main branch. For detailed deployment
+                    instructions, see <a href="DEVELOPMENT.md#deployment" style="color: var(--primary);">DEVELOPMENT.md</a>.
+                </p>
+            </section>
+
+            <!-- Knowledge Base Section -->
+            <section id="knowledge-base" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Knowledge Base</span>
+                </div>
+
+                <h1 class="section-title">🧠 Knowledge Base</h1>
+
+                <p class="section-description">
+                    Deep dives into Grid Trading strategy, automation engine, Trading 212 API,
+                    database schema, and advanced topics.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">📚</div>
+                        <div class="card-title">Complete KB</div>
+                        <div class="card-description">
+                            Comprehensive project overview covering architecture, phases, database schema,
+                            API endpoints, automation engine logic, and key concepts.
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag done">Overview</span>
+                            <span class="tag done">Complete</span>
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md" class="card-link">Read →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">Grid Trading Strategy</div>
+                        <div class="card-description">
+                            How the Grid Trading strategy works, parameter configuration, execution phases,
+                            and risk management.
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#grid-trading" class="card-link">Learn →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔄</div>
+                        <div class="card-title">Automation Engine (3-Phase)</div>
+                        <div class="card-description">
+                            Deep dive into the 3-phase automation cycle: Setup, Monitor, and Rebalance phases.
+                            Execution logic and APScheduler integration.
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#automation-engine-logic" class="card-link">Explore →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔐</div>
+                        <div class="card-title">Trading 212 API</div>
+                        <div class="card-description">
+                            Complete Trading 212 API documentation, endpoints, rate limits, authentication,
+                            and API quirks to watch out for.
+                        </div>
+                        <a href="docs/t212-api/API_ANALYSIS.md" class="card-link">Details →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🗄️</div>
+                        <div class="card-title">Database Schema</div>
+                        <div class="card-description">
+                            Complete database schema for all tables: isins, strategies, trades, orders,
+                            logs, app_parameters, and more.
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#database-schema" class="card-link">View →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">💡</div>
+                        <div class="card-title">Key Concepts</div>
+                        <div class="card-description">
+                            Explanations of important concepts: trades_balance, is_valid, automation_status,
+                            and other critical properties.
+                        </div>
+                        <a href="KNOWLEDGE_BASE.md#key-concepts" class="card-link">Understand →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">💾</div>
+                        <div class="card-title">Code Examples</div>
+                        <div class="card-description">
+                            Real code snippets for frontend, backend, and database operations.
+                            Copy-paste ready examples.
+                        </div>
+                        <a href="CODE_EXAMPLES.md" class="card-link">Copy →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚡</div>
+                        <div class="card-title">Quick Reference</div>
+                        <div class="card-description">
+                            Cheat sheet with URLs, commands, endpoints, file locations, and quick lookup tables.
+                        </div>
+                        <a href="QUICK_REFERENCE.md" class="card-link">Reference →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Learning Paths
+                </h2>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-title" style="color: var(--secondary);">🎓 Beginner</div>
+                        <div class="card-description">
+                            <strong>New to the project?</strong>
+                            <ol style="margin-top: 1rem; padding-left: 1.5rem;">
+                                <li>Start with <a href="KNOWLEDGE_BASE.md" style="color: var(--primary);">KNOWLEDGE_BASE.md</a> (Overview)</li>
+                                <li>Read <a href="QUICK_REFERENCE.md" style="color: var(--primary);">QUICK_REFERENCE.md</a> (Quick facts)</li>
+                                <li>Explore <a href="DEVELOPMENT.md" style="color: var(--primary);">DEVELOPMENT.md</a> (Setup)</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title" style="color: var(--secondary);">💼 Intermediate</div>
+                        <div class="card-description">
+                            <strong>Ready to code?</strong>
+                            <ol style="margin-top: 1rem; padding-left: 1.5rem;">
+                                <li>Read <a href="DEVELOPMENT.md" style="color: var(--primary);">DEVELOPMENT.md</a> (Structure)</li>
+                                <li>Study <a href="API_REFERENCE.md" style="color: var(--primary);">API_REFERENCE.md</a> (APIs)</li>
+                                <li>Review <a href="CODE_EXAMPLES.md" style="color: var(--primary);">CODE_EXAMPLES.md</a> (Examples)</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title" style="color: var(--secondary);">🚀 Advanced</div>
+                        <div class="card-description">
+                            <strong>Deep dive?</strong>
+                            <ol style="margin-top: 1rem; padding-left: 1.5rem;">
+                                <li>Analyze <a href="CODE_EXAMPLES.md" style="color: var(--primary);">CODE_EXAMPLES.md</a> (Logic)</li>
+                                <li>Study <a href="KNOWLEDGE_BASE.md#automation-engine-logic" style="color: var(--primary);">Automation Engine</a></li>
+                                <li>Fix issues in <a href="TROUBLESHOOTING.md" style="color: var(--primary);">TROUBLESHOOTING.md</a></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Troubleshooting Section -->
+            <section id="troubleshooting" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Troubleshooting</span>
+                </div>
+
+                <h1 class="section-title">🐛 Troubleshooting Guide</h1>
+
+                <p class="section-description">
+                    Common issues, solutions, debugging techniques, performance optimization,
+                    and resources for getting help.
+                </p>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">🔧</div>
+                        <div class="card-title">Startup Issues</div>
+                        <div class="card-description">
+                            Backend won't start, port conflicts, missing dependencies, environment variable errors.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#startup-issues" class="card-link">Fix →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🔐</div>
+                        <div class="card-title">Authentication Errors</div>
+                        <div class="card-description">
+                            Login failures, JWT token issues, Supabase Auth problems, permission denied errors.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#authentication-errors" class="card-link">Solve →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🗄️</div>
+                        <div class="card-title">Database Issues</div>
+                        <div class="card-description">
+                            Missing columns, migration failures, RLS policy problems, connection timeouts.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#database-issues" class="card-link">Resolve →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚙️</div>
+                        <div class="card-title">Automation Engine</div>
+                        <div class="card-description">
+                            Scheduler not running, orders not placed, grid not executing, phase failures.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#automation-engine" class="card-link">Debug →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Trading 212 API Errors</div>
+                        <div class="card-description">
+                            401 Unauthorized, 429 Rate Limited, 400 Bad Request, connection issues.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#t212-api-errors" class="card-link">Handle →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">🎨</div>
+                        <div class="card-title">Frontend Issues</div>
+                        <div class="card-description">
+                            Blank page, API 404s, styling problems, component errors.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#frontend-issues" class="card-link">Fix →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">☁️</div>
+                        <div class="card-title">Deployment Issues</div>
+                        <div class="card-description">
+                            Render deployment failing, auto-deploy not triggering, environment variables not set.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#deployment-issues" class="card-link">Deploy →</a>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-icon">⚡</div>
+                        <div class="card-title">Performance Issues</div>
+                        <div class="card-description">
+                            Slow queries, high CPU usage, memory leaks, frontend lag.
+                        </div>
+                        <a href="TROUBLESHOOTING.md#performance-issues" class="card-link">Optimize →</a>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">
+                    Common Solutions
+                </h2>
+
+                <div class="grid">
+                    <div class="card" style="background: #fef3c7;">
+                        <div class="card-icon">🔄</div>
+                        <div class="card-title">Backend Won't Start</div>
+                        <div class="card-description">
+                            <strong>Problem:</strong> "Connection refused" or "Port already in use"<br><br>
+                            <strong>Solution:</strong>
+                            <ol style="margin-top: 0.75rem; padding-left: 1.5rem;">
+                                <li>Check if port 8000 is in use: `netstat -an | grep 8000`</li>
+                                <li>Kill existing process or change port: `uvicorn main:app --port 8001`</li>
+                                <li>Verify .env file exists and is correct</li>
+                                <li>Check requirements.txt: `pip install -r requirements.txt`</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background: #fef3c7;">
+                        <div class="card-icon">🔐</div>
+                        <div class="card-title">Login Failed</div>
+                        <div class="card-description">
+                            <strong>Problem:</strong> "Invalid credentials" or infinite loop<br><br>
+                            <strong>Solution:</strong>
+                            <ol style="margin-top: 0.75rem; padding-left: 1.5rem;">
+                                <li>Check SUPABASE_URL and SUPABASE_KEY in .env</li>
+                                <li>Verify email exists in Supabase Auth</li>
+                                <li>Check browser console for 401 errors</li>
+                                <li>Clear localStorage and try again</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background: #fef3c7;">
+                        <div class="card-icon">⚙️</div>
+                        <div class="card-title">Automation Not Running</div>
+                        <div class="card-description">
+                            <strong>Problem:</strong> Scheduler shows running but orders not placed<br><br>
+                            <strong>Solution:</strong>
+                            <ol style="margin-top: 0.75rem; padding-left: 1.5rem;">
+                                <li>Check backend logs for scheduler errors</li>
+                                <li>Verify T212_API_KEY and T212_API_SECRET in .env</li>
+                                <li>Check automation enabled: GET /api/v1/automation/status</li>
+                                <li>Review strategy parameters for pos -1, 0, 1</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="color: var(--text-light); margin-top: 1.5rem;">
+                    For more issues and detailed solutions, see <a href="TROUBLESHOOTING.md" style="color: var(--primary);">TROUBLESHOOTING.md</a>.
+                </p>
+            </section>
+
+            <!-- Search Results -->
+            <section id="search-results" class="section">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showSection('getting-started', event)">Home</a>
+                    <span>›</span>
+                    <span>Search Results</span>
+                </div>
+
+                <h1 class="section-title" id="search-results-title">🔍 Search Results</h1>
+
+                <div id="search-results-container">
+                    <div class="no-results">
+                        <span>🔎</span>
+                        <p>Search documentation to find what you're looking for...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>
+            <strong>Trading 212 Bot Documentation</strong> |
+            <a href="https://github.com/joulfodayres/Trading212" target="_blank">GitHub</a> |
+            <a href="https://trading212-1.onrender.com" target="_blank">Live App</a> |
+            <a href="https://trading212-4ojx.onrender.com/docs" target="_blank">API Docs</a>
+        </p>
+        <p style="margin-top: 0.75rem; font-size: 0.9rem;">
+            Last Updated: 2026-09-21 | Phase 4 Complete ✅ | 90% Overall
+        </p>
+    </footer>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        // Load theme preference
+        const isDark = localStorage.getItem('theme') === 'dark';
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkNow = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDarkNow ? 'dark' : 'light');
+            themeToggle.textContent = isDarkNow ? '☀️' : '🌙';
+        });
+
+        // Section Navigation
+        function showSection(sectionId, event) {
+            if (event) event.preventDefault();
+
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            event.target.closest('.nav-link, a[onclick]')?.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Hide search results if visible
+            document.getElementById('search-results').classList.remove('active');
+            document.getElementById('searchBox').value = '';
+        }
+
+        // Search Functionality
+        const searchBox = document.getElementById('searchBox');
+        const searchResultsSection = document.getElementById('search-results');
+        const searchResultsContainer = document.getElementById('search-results-container');
+        const searchResultsTitle = document.getElementById('search-results-title');
+
+        const docContent = {
+            'getting-started': ['project', 'overview', 'status', 'phase 4', 'production', 'features', 'tech stack'],
+            'architecture': ['architecture', 'design', 'components', 'data flow', 'react', 'fastapi', 'database', 'render', 'supabase'],
+            'api-docs': ['api', 'endpoints', 'authentication', 'strategies', 'isins', 'automation', 'orders', 'configuration', 'rest', 'http'],
+            'development': ['development', 'setup', 'local', 'backend', 'frontend', 'project structure', 'git', 'testing', 'debugging', 'performance'],
+            'deployment': ['deployment', 'render', 'production', 'database setup', 'environment variables', 'monitoring', 'checklist', 'auto-deploy'],
+            'knowledge-base': ['knowledge base', 'grid trading', 'automation engine', 't212 api', 'database schema', 'code examples', 'quick reference', 'concepts'],
+            'troubleshooting': ['troubleshooting', 'debug', 'errors', 'startup', 'authentication', 'database', 'automation', 't212', 'frontend', 'performance', 'deployment']
+        };
+
+        searchBox.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (!query) {
+                searchResultsSection.classList.remove('active');
+                return;
+            }
+
+            const results = [];
+            for (const [sectionId, keywords] of Object.entries(docContent)) {
+                const matches = keywords.filter(k => k.includes(query));
+                if (matches.length > 0) {
+                    results.push({
+                        sectionId,
+                        title: sectionId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                        matches: matches.length
+                    });
+                }
+            }
+
+            if (results.length === 0) {
+                searchResultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <span>🔎</span>
+                        <p>No results found for "<span class="highlight">${escapeHtml(query)}</span>"</p>
+                        <p style="font-size: 0.9rem; margin-top: 1rem;">Try searching for: API, Grid Trading, Deploy, Debug, Setup, Architecture</p>
+                    </div>
+                `;
+            } else {
+                const resultsHtml = results.map(r => `
+                    <div class="card">
+                        <div class="card-title">${r.title}</div>
+                        <div class="card-description">
+                            Found in section "${r.title}" with ${r.matches} keyword match${r.matches > 1 ? 'es' : ''}
+                        </div>
+                        <a href="#" onclick="showSection('${r.sectionId}', event)" class="card-link">
+                            Go to section →
+                        </a>
+                    </div>
+                `).join('');
+                searchResultsContainer.innerHTML = `<div class="grid">${resultsHtml}</div>`;
+            }
+
+            // Hide other sections and show search results
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            searchResultsSection.classList.add('active');
+            searchResultsTitle.textContent = `🔍 Search Results for "${escapeHtml(query)}"`;
+        });
+
+        // Allow Enter key to search
+        searchBox.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+
+        // Utility function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Focus search on Cmd/Ctrl+K
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchBox.focus();
+            }
+            // Escape to clear search
+            if (e.key === 'Escape' && searchBox.value) {
+                searchBox.value = '';
+                searchResultsSection.classList.remove('active');
+                showSection('getting-started', { preventDefault: () => {} });
+            }
+        });
+
+        console.log('Trading 212 Bot Documentation loaded successfully! 🚀');
+        console.log('Quick Tips:');
+        console.log('- Press Cmd/Ctrl+K to search');
+        console.log('- Press Escape to clear search');
+        console.log('- Use the sidebar to navigate sections');
+        console.log('- Toggle dark mode with the moon icon');
+    </script>
+</body>
+</html>
