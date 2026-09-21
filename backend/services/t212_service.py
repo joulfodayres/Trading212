@@ -65,9 +65,10 @@ class T212Service:
 
         except Exception as e:
             self.logger.error(
-                f"AutomationEngine | ❌ Error placing BUY order: {ticker} - {str(e)}", exc_info=True
+                f"AutomationEngine | ❌ Error placing BUY order: {ticker} - {str(e)}"
             )
-            return None
+            # Re-raise the exception so AutomationEngine's precision retry logic can handle it
+            raise
 
     async def place_sell_limit_order(
         self, ticker: str, quantity: float, limit_price: float, time_validity: str = "GOOD_TILL_CANCEL"
@@ -109,9 +110,10 @@ class T212Service:
 
         except Exception as e:
             self.logger.error(
-                f"AutomationEngine | ❌ Error placing SELL order: {ticker} - {str(e)}", exc_info=True
+                f"AutomationEngine | ❌ Error placing SELL order: {ticker} - {str(e)}"
             )
-            return None
+            # Re-raise the exception so AutomationEngine's precision retry logic can handle it
+            raise
 
     async def get_pending_order(self, order_id: int) -> Optional[Dict[str, Any]]:
         """
