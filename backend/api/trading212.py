@@ -153,13 +153,14 @@ class Trading212Client:
         if time_validity not in ["DAY", "GOOD_TILL_CANCEL"]:
             raise ValueError(f"time_validity deve ser 'DAY' ou 'GOOD_TILL_CANCEL', recebido: {time_validity}")
 
-        # Round quantity to 8 decimal places (T212 API requirement)
-        quantity_rounded = round(quantity, 8)
+        # Round quantity and limit_price to 3 decimal places (T212 API requirement)
+        quantity_rounded = round(quantity, 3)
+        limit_price_rounded = round(limit_price, 3)
 
         payload = {
             "ticker": ticker,
             "quantity": quantity_rounded,
-            "limitPrice": limit_price,
+            "limitPrice": limit_price_rounded,
             "timeValidity": time_validity
         }
 
@@ -167,7 +168,7 @@ class Trading212Client:
         self._handle_rate_limit(response)
 
         if response.status_code in [200, 201]:
-            logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity_rounded} @ {limit_price} (validity={time_validity})")
+            logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity_rounded} @ {limit_price_rounded} (validity={time_validity})")
             return response.json()
         else:
             logger.error(f"Erro ao colocar ordem limitada: {response.status_code} - {response.text}")
