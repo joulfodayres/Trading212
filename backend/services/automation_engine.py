@@ -255,25 +255,29 @@ class AutomationEngine:
         """
         try:
             # Query orders with automation_status='W'
+            self.logger.info(f"AutomationEngine | FASE 2 | 📖 Carregando ordens em status WATCH...")
             self._log_db_action("📖 Carregando ordens em status WATCH da base de dados...")
             db = get_db()
             result = db.client.table("orders").select("*").eq("automation_status", "W").execute()
             watch_orders = result.data or []
 
             if not watch_orders:
-                self.logger.debug("Nenhuma ordem 'W' para monitorar")
+                self.logger.info(f"AutomationEngine | FASE 2 | ℹ️ Nenhuma ordem em status WATCH para monitorar")
                 self._log_db_action("ℹ️ Nenhuma ordem em status WATCH encontrada")
                 return
 
-            self.logger.info(f"Fase 2: Monitorando {len(watch_orders)} ordens")
+            self.logger.info(f"AutomationEngine | FASE 2 | ✅ {len(watch_orders)} ordem(ns) carregada(s)")
             self._log_db_action(f"✅ Carregadas {len(watch_orders)} ordens em status WATCH", {"count": len(watch_orders)})
 
-            for order in watch_orders:
+            for idx, order in enumerate(watch_orders, 1):
+                ticker = order.get("ticker", "N/A")
+                order_id = order.get("t212_order_id")
+                self.logger.debug(f"AutomationEngine | FASE 2 | 🔄 Monitorando ordem {idx}/{len(watch_orders)}: {ticker} (Order ID: {order_id})")
                 await self._phase_2_monitor_order(order)
 
         except Exception as e:
-            self.logger.error(f"❌ Erro na Fase 2: {e}", exc_info=True)
-            self._log_db_action(f"❌ Erro na Fase 2 (Monitorar Ordens): {str(e)}", {"error": str(e)})
+            self.logger.error(f"AutomationEngine | FASE 2 | ❌ Erro: {str(e)}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 2: {str(e)}", {"error": str(e)})
 
     async def _phase_2_monitor_order(self, order_data: Dict):
         """
@@ -281,24 +285,34 @@ class AutomationEngine:
         """
         try:
             db = get_db()
+            order_id = order_data.get("t212_order_id")
+            ticker = order_data.get("ticker", "N/A")
+
+            self.logger.debug(f"AutomationEngine | FASE 2 | 🔍 Consultando T212 API para ordem {order_id}...")
+
             # Poll T212 API
-            t212_order = await self.t212_service.get_pending_order(order_data.get("t212_order_id"))
+            t212_order = await self.t212_service.get_pending_order(order_id)
 
             if not t212_order:
-                self.logger.debug(f"Ordem {order_data.get('t212_order_id')} não encontrada em T212 (pode estar FILLED)")
+                self.logger.info(f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) não encontrada em T212 - pode estar FILLED")
                 return
 
             # Update order status from T212 response
+            current_status = t212_order.get("status", "UNKNOWN")
+            filled_qty = t212_order.get("filledQuantity", 0)
+            self.logger.debug(f"AutomationEngine | FASE 2 | 📊 Status T212: {current_status}, Filled: {filled_qty}")
+
             update_data = {
-                "status": t212_order.get("status", order_data.get("status")),
-                "filled_quantity": t212_order.get("filledQuantity", order_data.get("filled_quantity")),
+                "status": current_status,
+                "filled_quantity": filled_qty,
                 "synced_at": datetime.utcnow().isoformat()
             }
 
             # If FILLED, mark as 'E' (Executed)
-            if update_data["status"] == "FILLED":
+            if current_status == "FILLED":
                 update_data["automation_status"] = "E"
-                self.logger.info(f"✅ Ordem {order_data.get('t212_order_id')} FILLED")
+                self.logger.info(f"AutomationEngine | FASE 2 | ✅ Ordem {order_id} ({ticker}) PREENCHIDA - marcando como EXECUTADA")
+                self._log_db_action(f"✅ Ordem FILLED: {ticker} (Order ID: {order_id})", {"order_id": order_id, "ticker": ticker})
 
             db.client.table("orders").update(update_data).eq("id", order_data.get("id")).execute()
 
@@ -324,25 +338,29 @@ class AutomationEngine:
         """
         try:
             # Query FILLED orders (status='FILLED', automation_status='E')
+            self.logger.info(f"AutomationEngine | FASE 3 | 📖 Carregando ordens FILLED para rebalanceamento...")
             self._log_db_action("📖 Carregando ordens FILLED para rebalanceamento...")
             db = get_db()
             result = db.client.table("orders").select("*").eq("status", "FILLED").eq("automation_status", "E").execute()
             filled_orders = result.data or []
 
             if not filled_orders:
-                self.logger.debug("Nenhuma ordem FILLED para processar")
+                self.logger.info(f"AutomationEngine | FASE 3 | ℹ️ Nenhuma ordem FILLED para processar")
                 self._log_db_action("ℹ️ Nenhuma ordem FILLED encontrada para rebalanceamento")
                 return
 
-            self.logger.info(f"Fase 3: Processando {len(filled_orders)} ordens FILLED")
+            self.logger.info(f"AutomationEngine | FASE 3 | ✅ {len(filled_orders)} ordem(ns) FILLED carregada(s)")
             self._log_db_action(f"✅ Carregadas {len(filled_orders)} ordens FILLED", {"count": len(filled_orders)})
 
-            for order in filled_orders:
+            for idx, order in enumerate(filled_orders, 1):
+                ticker = order.get("ticker", "N/A")
+                side = order.get("side", "N/A")
+                self.logger.debug(f"AutomationEngine | FASE 3 | 🔄 Processando ordem {idx}/{len(filled_orders)}: {ticker} ({side})")
                 await self._phase_3_handle_filled_order(order)
 
         except Exception as e:
-            self.logger.error(f"❌ Erro na Fase 3: {e}", exc_info=True)
-            self._log_db_action(f"❌ Erro na Fase 3 (Processar Fills): {str(e)}", {"error": str(e)})
+            self.logger.error(f"AutomationEngine | FASE 3 | ❌ Erro: {str(e)}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 3: {str(e)}", {"error": str(e)})
 
     async def _phase_3_handle_filled_order(self, order_data: Dict):
         """
@@ -350,15 +368,22 @@ class AutomationEngine:
         """
         try:
             db = get_db()
+            order_id = order_data.get("t212_order_id")
+            side = order_data.get("side", "N/A")
+            ticker = order_data.get("ticker", "N/A")
+
+            self.logger.info(f"AutomationEngine | FASE 3 | 📝 Processando fill: {ticker} ({side}) - Order ID: {order_id}")
+
             # Load ISIN
+            self.logger.debug(f"AutomationEngine | FASE 3 | 📖 Carregando dados ISIN...")
             isin_result = db.client.table("isins").select("*").eq("id", order_data.get("isin_id")).execute()
             isin = isin_result.data[0] if isin_result.data else None
             if not isin:
-                self.logger.error(f"ISIN não encontrado para ordem {order_data.get('id')}")
+                self.logger.error(f"AutomationEngine | FASE 3 | ❌ ISIN não encontrado para ordem {order_id}")
                 return
 
             ticker = isin.get("ticker")
-            self.logger.info(f"Fase 3: Processando {ticker} fill (side={order_data.get('side')})")
+            self.logger.info(f"AutomationEngine | FASE 3 | ✅ ISIN carregado: {ticker} - Atualizando posição...")
 
             # Get latest position from T212
             position = await self.t212_service.get_position(ticker)
