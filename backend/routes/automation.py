@@ -46,6 +46,9 @@ class LogLevelRequest(BaseModel):
 class RunCycleOnceRequest(BaseModel):
     """Request para executar um ciclo uma única vez"""
     pass
+
+
+def _get_db():
     """Get Supabase DB instance"""
     from db.supabase_client import get_db
     return get_db()
