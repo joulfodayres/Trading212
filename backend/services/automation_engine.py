@@ -555,6 +555,9 @@ class AutomationEngine:
 
             # Load new parameters for new trades_balance position
             trades_balance = isin_data.get("trades_balance", 0)
+            self.logger.debug(
+                f"AutomationEngine | FASE 3 | 📖 trades_balance carregado da BD para {isin_data.get('ticker')}: {trades_balance}"
+            )
             params = self._get_strategy_parameters(strategy_id, trades_balance)
 
             if not params:
@@ -586,10 +589,26 @@ class AutomationEngine:
             # Prices are NOT rounded - sent as-is with full precision
 
             self.logger.debug(
+                f"AutomationEngine | FASE 3 | 🧮 Variáveis calculadas para {isin_data.get('ticker')}: "
+                f"initial_investment={initial_investment}, param1={param1}, param2={param2}, param3={param3}, "
+                f"current_price={current_price}, quantity_precision={quantity_precision} | "
+                f"new_buy_investment={new_buy_investment}, new_sell_investment={new_sell_investment}, "
+                f"new_buy_price={new_buy_price}, new_sell_price={new_sell_price}, "
+                f"new_buy_quantity={new_buy_quantity} (rounded={new_buy_quantity_rounded}), "
+                f"new_sell_quantity={new_sell_quantity} (rounded={new_sell_quantity_rounded})"
+            )
+
+            self.logger.debug(
                 f"Novo pair: BUY @ {new_buy_price:.2f} qty={new_buy_quantity_rounded:.2f}, SELL @ {new_sell_price:.2f} qty={new_sell_quantity_rounded:.2f}"
             )
 
             # Place BUY order
+            self.logger.debug(
+                f"AutomationEngine | FASE 3 | 📤 Parâmetros BUY order para API: "
+                f"order_type=BUY, ticker={isin_data.get('ticker')}, "
+                f"quantity={new_buy_quantity_rounded}, limit_price={new_buy_price}, "
+                f"isin_id={isin_data.get('id')}, initial_precision={quantity_precision}"
+            )
             buy_response = await self._place_order_with_precision_retry(
                 order_type="BUY",
                 ticker=isin_data.get("ticker"),
@@ -603,6 +622,12 @@ class AutomationEngine:
                 return
 
             # Place SELL order
+            self.logger.debug(
+                f"AutomationEngine | FASE 3 | 📤 Parâmetros SELL order para API: "
+                f"order_type=SELL, ticker={isin_data.get('ticker')}, "
+                f"quantity={new_sell_quantity_rounded}, limit_price={new_sell_price}, "
+                f"isin_id={isin_data.get('id')}, initial_precision={quantity_precision}"
+            )
             sell_response = await self._place_order_with_precision_retry(
                 order_type="SELL",
                 ticker=isin_data.get("ticker"),
