@@ -27,7 +27,7 @@ class T212Service:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     async def place_buy_limit_order(
-        self, ticker: str, quantity: float, limit_price: float
+        self, ticker: str, quantity: float, limit_price: float, time_validity: str = "GOOD_TILL_CANCEL"
     ) -> Optional[Dict[str, Any]]:
         """
         Place a BUY limit order on T212.
@@ -36,23 +36,24 @@ class T212Service:
             ticker: Ticker symbol (ex: AAPL_US_EQ)
             quantity: Positive quantity (ex: 6.72)
             limit_price: Limit price (ex: 148.99)
+            time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
         """
         try:
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price}"
+                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=quantity, limit_price=limit_price
+                ticker=ticker, quantity=quantity, limit_price=limit_price, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price} (Order ID={order_id})"
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 
@@ -63,7 +64,7 @@ class T212Service:
             return None
 
     async def place_sell_limit_order(
-        self, ticker: str, quantity: float, limit_price: float
+        self, ticker: str, quantity: float, limit_price: float, time_validity: str = "GOOD_TILL_CANCEL"
     ) -> Optional[Dict[str, Any]]:
         """
         Place a SELL limit order on T212.
@@ -72,6 +73,7 @@ class T212Service:
             ticker: Ticker symbol
             quantity: Positive quantity to sell (ex: 6.72, will be converted to -6.72)
             limit_price: Limit price (ex: 150.00)
+            time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
@@ -81,17 +83,17 @@ class T212Service:
             sell_quantity = -abs(quantity) if quantity > 0 else quantity
 
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price}"
+                f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=sell_quantity, limit_price=limit_price
+                ticker=ticker, quantity=sell_quantity, limit_price=limit_price, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} @ {limit_price} (Order ID={order_id})"
+                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} @ {limit_price} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 

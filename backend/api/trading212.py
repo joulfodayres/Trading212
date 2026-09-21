@@ -137,7 +137,7 @@ class Trading212Client:
             logger.error(f"Erro ao colocar ordem de mercado: {response.status_code} - {response.text}")
             raise Exception(f"Erro T212 API: {response.status_code}")
 
-    def place_limit_order(self, ticker: str, quantity: float, limit_price: float) -> Dict[str, Any]:
+    def place_limit_order(self, ticker: str, quantity: float, limit_price: float, time_validity: str = "GOOD_TILL_CANCEL") -> Dict[str, Any]:
         """
         POST /equity/orders/limit — Coloca ordem limitada
 
@@ -145,20 +145,26 @@ class Trading212Client:
             ticker: Símbolo do instrumento
             quantity: Quantidade (positiva = buy, negativa = sell)
             limit_price: Preço limite para a ordem
+            time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
         """
         url = f"{self.base_url}/equity/orders/limit"
+
+        # Validar time_validity
+        if time_validity not in ["DAY", "GOOD_TILL_CANCEL"]:
+            raise ValueError(f"time_validity deve ser 'DAY' ou 'GOOD_TILL_CANCEL', recebido: {time_validity}")
+
         payload = {
             "ticker": ticker,
             "quantity": quantity,
             "limitPrice": limit_price,
-            "assetType": "EQUITY"
+            "timeValidity": time_validity
         }
 
         response = self.session.post(url, json=payload)
         self._handle_rate_limit(response)
 
         if response.status_code in [200, 201]:
-            logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity} @ {limit_price}")
+            logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity} @ {limit_price} (validity={time_validity})")
             return response.json()
         else:
             logger.error(f"Erro ao colocar ordem limitada: {response.status_code} - {response.text}")
