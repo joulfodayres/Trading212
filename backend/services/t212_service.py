@@ -32,32 +32,27 @@ class T212Service:
         """
         Place a BUY limit order on T212.
 
-        NOTE: T212 API doesn't support limit orders via REST API currently.
-        Using market orders as fallback. For actual limit orders, use the T212 app.
-
         Args:
             ticker: Ticker symbol (ex: AAPL_US_EQ)
             quantity: Positive quantity (ex: 6.72)
-            limit_price: Limit price (ex: 148.99) - stored for reference but not enforced
+            limit_price: Limit price (ex: 148.99)
 
         Returns:
             Order response from T212 API or None on error
         """
         try:
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing BUY order: {ticker} qty={quantity} @ limit {limit_price}"
+                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price}"
             )
 
-            # T212 API currently doesn't support limit orders, using market order
-            # The limit_price is stored in order details but actual execution is at market
-            response = self.client.place_market_order(
-                ticker=ticker, quantity=quantity
+            response = self.client.place_limit_order(
+                ticker=ticker, quantity=quantity, limit_price=limit_price
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} Order ID={order_id}"
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price} (Order ID={order_id})"
                 )
             return response
 
@@ -73,13 +68,10 @@ class T212Service:
         """
         Place a SELL limit order on T212.
 
-        NOTE: T212 API doesn't support limit orders via REST API currently.
-        Using market orders as fallback.
-
         Args:
             ticker: Ticker symbol
             quantity: Positive quantity to sell (ex: 6.72, will be converted to -6.72)
-            limit_price: Limit price (ex: 150.00) - stored for reference
+            limit_price: Limit price (ex: 150.00)
 
         Returns:
             Order response from T212 API or None on error
@@ -89,18 +81,17 @@ class T212Service:
             sell_quantity = -abs(quantity) if quantity > 0 else quantity
 
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing SELL order: {ticker} qty={sell_quantity} @ limit {limit_price}"
+                f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price}"
             )
 
-            # T212 API currently doesn't support limit orders, using market order
-            response = self.client.place_market_order(
-                ticker=ticker, quantity=sell_quantity
+            response = self.client.place_limit_order(
+                ticker=ticker, quantity=sell_quantity, limit_price=limit_price
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} Order ID={order_id}"
+                    f"AutomationEngine | ✅ SELL order placed: {ticker} qty={sell_quantity} @ {limit_price} (Order ID={order_id})"
                 )
             return response
 

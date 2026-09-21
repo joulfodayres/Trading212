@@ -134,7 +134,34 @@ class Trading212Client:
         if response.status_code in [200, 201]:
             return response.json()
         else:
-            logger.error(f"Erro ao colocar ordem: {response.status_code} - {response.text}")
+            logger.error(f"Erro ao colocar ordem de mercado: {response.status_code} - {response.text}")
+            raise Exception(f"Erro T212 API: {response.status_code}")
+
+    def place_limit_order(self, ticker: str, quantity: float, limit_price: float) -> Dict[str, Any]:
+        """
+        POST /equity/orders/limit — Coloca ordem limitada
+
+        Args:
+            ticker: Símbolo do instrumento
+            quantity: Quantidade (positiva = buy, negativa = sell)
+            limit_price: Preço limite para a ordem
+        """
+        url = f"{self.base_url}/equity/orders/limit"
+        payload = {
+            "ticker": ticker,
+            "quantity": quantity,
+            "limitPrice": limit_price,
+            "assetType": "EQUITY"
+        }
+
+        response = self.session.post(url, json=payload)
+        self._handle_rate_limit(response)
+
+        if response.status_code in [200, 201]:
+            logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity} @ {limit_price}")
+            return response.json()
+        else:
+            logger.error(f"Erro ao colocar ordem limitada: {response.status_code} - {response.text}")
             raise Exception(f"Erro T212 API: {response.status_code}")
 
     def cancel_order(self, order_id: str) -> bool:
