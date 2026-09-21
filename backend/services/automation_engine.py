@@ -140,14 +140,17 @@ class AutomationEngine:
     async def _phase_1_setup_isin(self, isin_data: Dict):
         """
         Setup initial orders for a single ISIN.
+        Loads quantity_precision from ISIN and uses it for rounding.
+        If T212 API returns precision error, updates precision and retries.
         """
         try:
             db = get_db()
             ticker = isin_data.get("ticker")
             current_price = isin_data.get("current_price")
             isin_id = isin_data.get("id")
+            quantity_precision = isin_data.get("quantity_precision", 3)  # Load precision from ISIN
 
-            self.logger.info(f"AutomationEngine | FASE 1 | 📝 Setup para {ticker} @ €{current_price} (ISIN ID: {isin_id})")
+            self.logger.info(f"AutomationEngine | FASE 1 | 📝 Setup para {ticker} @ €{current_price} (ISIN ID: {isin_id}, precision: {quantity_precision})")
 
             # Load strategy
             strategy_id = isin_data.get("strategy_id")
@@ -192,17 +195,37 @@ class AutomationEngine:
                 f"BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
             )
 
+            # Round quantities to ISIN's precision
+            buy_quantity_rounded = round(buy_quantity, quantity_precision)
+            sell_quantity_rounded = round(sell_quantity, quantity_precision)
+            buy_price_rounded = round(buy_price, 3)  # Price always 3 decimals
+            sell_price_rounded = round(sell_price, 3)
+
+            self.logger.debug(
+                f"After rounding (precision={quantity_precision}): BUY qty={buy_quantity_rounded}, SELL qty={sell_quantity_rounded}"
+            )
+
             # Place BUY order
-            buy_response = await self.t212_service.place_buy_limit_order(
-                ticker=ticker, quantity=buy_quantity, limit_price=buy_price
+            buy_response = await self._place_order_with_precision_retry(
+                order_type="BUY",
+                ticker=ticker,
+                quantity=buy_quantity_rounded,
+                limit_price=buy_price_rounded,
+                isin_id=isin_id,
+                initial_precision=quantity_precision
             )
             if not buy_response:
                 self.logger.error(f"Falha ao colocar BUY order para {ticker}")
                 return
 
             # Place SELL order
-            sell_response = await self.t212_service.place_sell_limit_order(
-                ticker=ticker, quantity=sell_quantity, limit_price=sell_price
+            sell_response = await self._place_order_with_precision_retry(
+                order_type="SELL",
+                ticker=ticker,
+                quantity=sell_quantity_rounded,
+                limit_price=sell_price_rounded,
+                isin_id=isin_id,
+                initial_precision=quantity_precision
             )
             if not sell_response:
                 self.logger.error(f"Falha ao colocar SELL order para {ticker}")
@@ -435,9 +458,13 @@ class AutomationEngine:
     async def _phase_3_place_new_pair(self, isin_data: Dict):
         """
         Place new BUY/SELL pair at new grid level (after fill).
+        Loads quantity_precision from ISIN and uses it for rounding.
+        If T212 API returns precision error, updates precision and retries.
         """
         try:
             db = get_db()
+            quantity_precision = isin_data.get("quantity_precision", 3)  # Load precision from ISIN
+
             # Load strategy
             strategy_id = isin_data.get("strategy_id")
             strategy_result = db.client.table("strategies").select("*").eq("id", strategy_id).execute()
@@ -473,21 +500,37 @@ class AutomationEngine:
             new_buy_quantity = new_buy_investment / new_buy_price if new_buy_price > 0 else 0
             new_sell_quantity = new_sell_investment / new_sell_price if new_sell_price > 0 else 0
 
+            # Round quantities to ISIN's precision
+            new_buy_quantity_rounded = round(new_buy_quantity, quantity_precision)
+            new_sell_quantity_rounded = round(new_sell_quantity, quantity_precision)
+            new_buy_price_rounded = round(new_buy_price, 3)  # Price always 3 decimals
+            new_sell_price_rounded = round(new_sell_price, 3)
+
             self.logger.debug(
-                f"Novo pair: BUY @ {new_buy_price:.2f} qty={new_buy_quantity:.2f}, SELL @ {new_sell_price:.2f} qty={new_sell_quantity:.2f}"
+                f"Novo pair: BUY @ {new_buy_price_rounded:.2f} qty={new_buy_quantity_rounded:.2f}, SELL @ {new_sell_price_rounded:.2f} qty={new_sell_quantity_rounded:.2f}"
             )
 
             # Place BUY order
-            buy_response = await self.t212_service.place_buy_limit_order(
-                ticker=isin_data.get("ticker"), quantity=new_buy_quantity, limit_price=new_buy_price
+            buy_response = await self._place_order_with_precision_retry(
+                order_type="BUY",
+                ticker=isin_data.get("ticker"),
+                quantity=new_buy_quantity_rounded,
+                limit_price=new_buy_price_rounded,
+                isin_id=isin_data.get("id"),
+                initial_precision=quantity_precision
             )
             if not buy_response:
                 self.logger.error(f"Falha ao colocar novo BUY order para {isin_data.get('ticker')}")
                 return
 
             # Place SELL order
-            sell_response = await self.t212_service.place_sell_limit_order(
-                ticker=isin_data.get("ticker"), quantity=new_sell_quantity, limit_price=new_sell_price
+            sell_response = await self._place_order_with_precision_retry(
+                order_type="SELL",
+                ticker=isin_data.get("ticker"),
+                quantity=new_sell_quantity_rounded,
+                limit_price=new_sell_price_rounded,
+                isin_id=isin_data.get("id"),
+                initial_precision=quantity_precision
             )
             if not sell_response:
                 self.logger.error(f"Falha ao colocar novo SELL order para {isin_data.get('ticker')}")
@@ -674,8 +717,142 @@ class AutomationEngine:
     # =========================================================================
     # LOGGING HELPERS (Task 3: Database logging conditional on log_level)
     # =========================================================================
+    # HELPER: PLACE ORDER WITH PRECISION RETRY
+    # =========================================================================
 
-    def _get_log_level(self) -> str:
+    async def _place_order_with_precision_retry(
+        self,
+        order_type: str,
+        ticker: str,
+        quantity: float,
+        limit_price: float,
+        isin_id: str,
+        initial_precision: int
+    ):
+        """
+        Place a limit order with automatic precision detection and retry.
+
+        If T212 API returns "invalid quantity precision X" error:
+        1. Extract X from error message
+        2. Update ISIN's quantity_precision to X
+        3. Round quantity to X decimals
+        4. Retry the order
+
+        Args:
+            order_type: "BUY" or "SELL"
+            ticker: Ticker symbol
+            quantity: Quantity to order (already rounded to initial_precision)
+            limit_price: Limit price (already rounded to 3 decimals)
+            isin_id: ISIN ID for updating quantity_precision
+            initial_precision: Current precision setting for this ISIN
+
+        Returns:
+            API response if successful, None on failure
+        """
+        try:
+            db = get_db()
+
+            # First attempt with current precision
+            self.logger.debug(
+                f"AutomationEngine | Order attempt 1: {order_type} {ticker} qty={quantity} @ {limit_price} (precision={initial_precision})"
+            )
+
+            if order_type == "BUY":
+                response = await self.t212_service.place_buy_limit_order(
+                    ticker=ticker, quantity=quantity, limit_price=limit_price
+                )
+            elif order_type == "SELL":
+                response = await self.t212_service.place_sell_limit_order(
+                    ticker=ticker, quantity=quantity, limit_price=limit_price
+                )
+            else:
+                self.logger.error(f"Invalid order_type: {order_type}")
+                return None
+
+            # If successful, return response
+            if response:
+                self.logger.info(
+                    f"AutomationEngine | {order_type} order successful on first attempt: {ticker} qty={quantity}"
+                )
+                return response
+
+            # If failed, we'll handle error below
+            return None
+
+        except Exception as e:
+            error_str = str(e)
+
+            # Check if it's a quantity precision error
+            if "invalid quantity precision" in error_str.lower():
+                self.logger.warning(
+                    f"AutomationEngine | Quantity precision error for {ticker}: {error_str}"
+                )
+
+                # Try to extract precision value from error message
+                # Format: "invalid quantity precision 2" or similar
+                try:
+                    parts = error_str.split("invalid quantity precision")
+                    if len(parts) > 1:
+                        precision_str = parts[1].strip().split()[0]
+                        new_precision = int(precision_str)
+
+                        self.logger.info(
+                            f"AutomationEngine | Detected required precision: {new_precision} (was {initial_precision})"
+                        )
+
+                        # Update ISIN's quantity_precision
+                        db.client.table("isins").update({
+                            "quantity_precision": new_precision
+                        }).eq("id", isin_id).execute()
+
+                        self.logger.info(
+                            f"AutomationEngine | Updated ISIN {isin_id} precision to {new_precision}"
+                        )
+
+                        # Round quantity to new precision
+                        quantity_retried = round(quantity, new_precision)
+
+                        # Retry the order
+                        self.logger.info(
+                            f"AutomationEngine | Retrying {order_type} order with new precision {new_precision}: qty={quantity_retried}"
+                        )
+
+                        if order_type == "BUY":
+                            response = await self.t212_service.place_buy_limit_order(
+                                ticker=ticker, quantity=quantity_retried, limit_price=limit_price
+                            )
+                        elif order_type == "SELL":
+                            response = await self.t212_service.place_sell_limit_order(
+                                ticker=ticker, quantity=quantity_retried, limit_price=limit_price
+                            )
+                        else:
+                            return None
+
+                        if response:
+                            self.logger.info(
+                                f"AutomationEngine | {order_type} order successful on retry: {ticker} qty={quantity_retried}"
+                            )
+                            return response
+                        else:
+                            self.logger.error(
+                                f"AutomationEngine | {order_type} order failed on retry: {ticker}"
+                            )
+                            return None
+
+                except (ValueError, IndexError) as parse_error:
+                    self.logger.error(
+                        f"AutomationEngine | Could not parse precision from error: {error_str} - {parse_error}"
+                    )
+                    return None
+
+            else:
+                # Not a precision error, log and return None
+                self.logger.error(
+                    f"AutomationEngine | {order_type} order failed: {ticker} - {error_str}"
+                )
+                return None
+
+    # =========================================================================
         """
         Read current log_level from app_parameters.
         Defaults to 'OFF' if not found or on error.

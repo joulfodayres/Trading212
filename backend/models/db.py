@@ -67,6 +67,9 @@ class ISIN(Base):
     quantity_available_for_trading = Column(Float, default=0)
     quantity_in_pies = Column(Float, default=0)
 
+    # T212 API Precision (adaptive per ISIN)
+    quantity_precision = Column(Integer, default=3)  # Decimal places T212 accepts for this ISIN
+
     # Wallet Impact (walletImpact da API)
     wi_currency = Column(String)
     wi_current_value = Column(Float)

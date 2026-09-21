@@ -1,0 +1,157 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                   T212 LIMIT ORDER API TESTER - QUICK START                    ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+WHAT IS THIS?
+─────────────
+A local desktop GUI tool to test T212 API Limit Order calls.
+No integration with the project. Local testing only.
+Safe to delete after testing.
+
+SETUP (Run Once)
+────────────────
+1. Open Command Prompt / Terminal
+2. Navigate to the project folder:
+   cd "C:\claude\401. Trading 212 Hub"
+
+3. Install dependencies:
+   python setup_tester.py
+
+   OR manually:
+   pip install requests
+
+
+USAGE
+─────
+Windows:
+  Double-click: RUN_LIMIT_ORDER_TESTER.bat
+
+  OR command line:
+  python test_limit_order_gui.py
+
+Linux/Mac:
+  python3 test_limit_order_gui.py
+
+
+THE GUI
+───────
+Window opens with 3 tabs:
+
+📤 REQUEST PAYLOAD
+   Shows the JSON being sent to T212 API
+   - Original quantity & price (with many decimals)
+   - Rounded quantity & price (3 decimals)
+   - Complete payload with all fields
+   - Endpoint URL & authentication info
+
+📥 RESPONSE PAYLOAD
+   Shows the JSON response from T212 API
+   - HTTP status code (200=success, 400=error, etc.)
+   - Full response body
+   - Response headers
+
+📊 REQUEST/RESPONSE INFO
+   Shows metadata about the API call
+   - Start/end times (with milliseconds)
+   - Total duration
+   - Status code & reason
+   - Error details (if any)
+
+
+INPUT FIELDS
+────────────
+Ticker:           Which stock to order (default: NQSEd_EQ)
+Quantity:         How many shares (default: 0.5777... - gets rounded to 0.578)
+Limit Price:      Price to buy/sell at (default: 17.326... - gets rounded to 17.327)
+Time Validity:    DAY or GOOD_TILL_CANCEL
+Order Type:       BUY or SELL
+
+
+TESTING THE FIX
+───────────────
+To verify the quantity/price precision fix:
+
+1. Launch the GUI
+2. Keep default values
+3. Click "🚀 Test Limit Order"
+4. Check "📤 REQUEST PAYLOAD" tab:
+   ✓ Should show Quantity rounded: 0.578 (3 decimals)
+   ✓ Should show Price rounded: 17.327 (3 decimals)
+5. Check "📥 RESPONSE PAYLOAD" tab:
+   ✓ Should get status 200 or 201 (success)
+   ✓ Should NOT get 400 precision error anymore
+
+If you get a 400 error:
+   Check the error detail in the Response tab
+   It will tell you exactly what's wrong
+
+
+CUSTOMIZING
+───────────
+To test different values:
+   1. Modify input fields
+   2. Click "Test Limit Order"
+   3. See new payload and response
+
+To use different API credentials:
+   1. Open test_limit_order_gui.py in editor
+   2. Find these lines (around line 18-20):
+      self.api_key = "..."
+      self.api_secret = "..."
+   3. Replace with your credentials
+   4. Save and run
+
+
+API DETAILS
+───────────
+Base URL:       https://demo.trading212.com/api/v0
+Endpoint:       POST /equity/orders/limit
+Environment:    DEMO (safe for testing)
+Authentication: HTTP Basic Auth (included automatically)
+
+
+REQUIREMENTS
+────────────
+✓ Python 3.7 or higher
+✓ requests library (installed via setup_tester.py)
+✓ Tkinter (built-in with Python)
+✓ Internet connection
+
+
+TROUBLESHOOTING
+───────────────
+"Cannot find Python"
+  → Make sure Python 3 is installed and in PATH
+  → Test: python --version
+
+"ModuleNotFoundError: No module named 'requests'"
+  → Run: pip install requests
+  → Or: python setup_tester.py
+
+"Connection refused / Cannot connect to T212"
+  → Check internet connection
+  → Verify T212 API is accessible
+
+"400 Bad Request"
+  → Check quantity/price decimal places
+  → Verify ticker is valid
+  → Check error detail in Response tab
+
+
+NOTES
+─────
+• This tool is STANDALONE - not part of project
+• All calls go to T212 DEMO environment (safe)
+• No data saved or persisted locally
+• Can be safely deleted after testing
+• No database access or project integration
+
+
+QUESTIONS?
+──────────
+If the limit order API fix is working, you should:
+1. Get 200/201 status (success)
+2. See order ID in response
+3. See "Rounded" values in request showing 3 decimals
+
+If you get 400 errors, the error details will tell you what's wrong.
