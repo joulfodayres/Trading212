@@ -973,6 +973,10 @@ class AutomationEngine:
                 return None
 
     # =========================================================================
+    # LOGGING HELPERS (Task 3: Database logging conditional on log_level)
+    # =========================================================================
+
+    def _get_log_level(self) -> str:
         """
         Read current log_level from app_parameters.
         Defaults to 'OFF' if not found or on error.
