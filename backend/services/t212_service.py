@@ -34,30 +34,34 @@ class T212Service:
 
         Args:
             ticker: Ticker symbol (ex: AAPL_US_EQ)
-            quantity: Positive quantity (ex: 6.72)
-            limit_price: Limit price (ex: 148.99)
+            quantity: Positive quantity (already rounded by AutomationEngine to ISIN's quantity_precision)
+            limit_price: Limit price (ex: 148.99, already rounded to 3 decimals)
             time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
+
+        NOTE: Quantity is already rounded by AutomationEngine to ISIN's quantity_precision.
+        We do NOT re-round it here - that would break the precision adaptation logic.
+        Only limit_price is validated to ensure it's properly formatted.
         """
         try:
-            # Round quantity and limit_price to 3 decimal places (T212 API requirement)
-            quantity_rounded = round(quantity, 3)
+            # Quantity is already rounded by AutomationEngine - use as-is
+            # Only ensure limit_price is properly formatted (should be rounded to 3 decimals already)
             limit_price_rounded = round(limit_price, 3)
 
             self.logger.info(
-                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity_rounded} @ {limit_price_rounded} ({time_validity})"
+                f"AutomationEngine | 🔄 Placing BUY limit order: {ticker} qty={quantity} @ {limit_price_rounded} ({time_validity})"
             )
 
             response = self.client.place_limit_order(
-                ticker=ticker, quantity=quantity_rounded, limit_price=limit_price_rounded, time_validity=time_validity
+                ticker=ticker, quantity=quantity, limit_price=limit_price_rounded, time_validity=time_validity
             )
 
             if response:
                 order_id = response.get('id')
                 self.logger.info(
-                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity_rounded} @ {limit_price_rounded} (Order ID={order_id}, validity={time_validity})"
+                    f"AutomationEngine | ✅ BUY order placed: {ticker} qty={quantity} @ {limit_price_rounded} (Order ID={order_id}, validity={time_validity})"
                 )
             return response
 
@@ -75,20 +79,24 @@ class T212Service:
 
         Args:
             ticker: Ticker symbol
-            quantity: Positive quantity to sell (ex: 6.72, will be converted to -6.72)
-            limit_price: Limit price (ex: 150.00)
+            quantity: Positive quantity to sell (already rounded by AutomationEngine to ISIN's quantity_precision)
+            limit_price: Limit price (ex: 150.00, already rounded to 3 decimals)
             time_validity: "DAY" ou "GOOD_TILL_CANCEL" (default: GOOD_TILL_CANCEL)
 
         Returns:
             Order response from T212 API or None on error
+
+        NOTE: Quantity is already rounded by AutomationEngine to ISIN's quantity_precision.
+        We do NOT re-round it here - that would break the precision adaptation logic.
+        Only limit_price is validated to ensure it's properly formatted.
         """
         try:
-            # Round quantity and limit_price to 3 decimal places (T212 API requirement)
-            quantity_rounded = round(quantity, 3)
+            # Quantity is already rounded by AutomationEngine - use as-is
+            # Only ensure limit_price is properly formatted (should be rounded to 3 decimals already)
             limit_price_rounded = round(limit_price, 3)
 
             # Ensure quantity is negative for SELL
-            sell_quantity = -abs(quantity_rounded) if quantity_rounded > 0 else quantity_rounded
+            sell_quantity = -abs(quantity) if quantity > 0 else quantity
 
             self.logger.info(
                 f"AutomationEngine | 🔄 Placing SELL limit order: {ticker} qty={sell_quantity} @ {limit_price_rounded} ({time_validity})"
