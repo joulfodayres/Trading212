@@ -56,7 +56,7 @@ class AutomationEngine:
 
         try:
             # Check if global automation is enabled
-            self.logger.debug(f"AutomationEngine | ⏳ Verificando se automação está ativada...")
+            self.logger.info(f"AutomationEngine | ⏳ Verificando se automação está ativada...")
             self._log_db_action("⏳ Verificando status global de automação...")
             grid_trading_enabled = self._check_grid_trading_enabled()
             if not grid_trading_enabled:
@@ -122,7 +122,7 @@ class AutomationEngine:
             isins = result.data or []
 
             if not isins:
-                self.logger.debug("Nenhum ISIN com initial_trade=TRUE encontrado")
+                self.logger.info("Nenhum ISIN com initial_trade=TRUE encontrado")
                 self._log_db_action("ℹ️ Nenhum ISIN com initial_trade=TRUE encontrado")
                 return
 
@@ -154,7 +154,7 @@ class AutomationEngine:
 
             # Load strategy
             strategy_id = isin_data.get("strategy_id")
-            self.logger.debug(f"AutomationEngine | FASE 1 | 📖 Carregando estratégia ID: {strategy_id}")
+            self.logger.info(f"AutomationEngine | FASE 1 | 📖 Carregando estratégia ID: {strategy_id}")
             strategy_result = db.client.table("strategies").select("*").eq("id", strategy_id).execute()
             strategy = strategy_result.data[0] if strategy_result.data else None
             if not strategy:
@@ -166,7 +166,7 @@ class AutomationEngine:
 
             # Load strategy parameters for current position (trades_balance)
             trades_balance = isin_data.get("trades_balance", 0)
-            self.logger.debug(f"AutomationEngine | FASE 1 | 📖 Carregando parâmetros para trades_balance={trades_balance}")
+            self.logger.info(f"AutomationEngine | FASE 1 | 📖 Carregando parâmetros para trades_balance={trades_balance}")
             params = self._get_strategy_parameters(strategy_id, trades_balance)
 
             if not params:
@@ -224,7 +224,7 @@ class AutomationEngine:
             buy_quantity = buy_investment / buy_price if buy_price > 0 else 0
             sell_quantity = sell_investment / sell_price if sell_price > 0 else 0
 
-            self.logger.debug(
+            self.logger.info(
                 f"BUY @ {buy_price:.2f} qty={buy_quantity:.2f}, SELL @ {sell_price:.2f} qty={sell_quantity:.2f}"
             )
 
@@ -233,7 +233,7 @@ class AutomationEngine:
             sell_quantity_rounded = round(sell_quantity, quantity_precision)
             # Prices are NOT rounded - sent as-is with full precision
 
-            self.logger.debug(
+            self.logger.info(
                 f"After rounding (precision={quantity_precision}): BUY qty={buy_quantity_rounded}, SELL qty={sell_quantity_rounded}"
             )
 
@@ -330,7 +330,7 @@ class AutomationEngine:
             for idx, order in enumerate(watch_orders, 1):
                 ticker = order.get("ticker", "N/A")
                 order_id = order.get("t212_order_id")
-                self.logger.debug(f"AutomationEngine | FASE 2 | 🔄 Monitorando ordem {idx}/{len(watch_orders)}: {ticker} (Order ID: {order_id})")
+                self.logger.info(f"AutomationEngine | FASE 2 | 🔄 Monitorando ordem {idx}/{len(watch_orders)}: {ticker} (Order ID: {order_id})")
                 await self._phase_2_monitor_order(order)
 
         except Exception as e:
@@ -346,7 +346,7 @@ class AutomationEngine:
             order_id = order_data.get("t212_order_id")
             ticker = order_data.get("ticker", "N/A")
 
-            self.logger.debug(f"AutomationEngine | FASE 2 | 🔍 Consultando T212 API para ordem {order_id}...")
+            self.logger.info(f"AutomationEngine | FASE 2 | 🔍 Consultando T212 API para ordem {order_id}...")
 
             # Poll T212 API
             t212_order = await self.t212_service.get_pending_order(order_id)
@@ -398,7 +398,7 @@ class AutomationEngine:
             # Update order status from T212 response
             current_status = t212_order.get("status", "UNKNOWN")
             filled_qty = t212_order.get("filledQuantity", 0)
-            self.logger.debug(f"AutomationEngine | FASE 2 | 📊 Status T212: {current_status}, Filled: {filled_qty}")
+            self.logger.info(f"AutomationEngine | FASE 2 | 📊 Status T212: {current_status}, Filled: {filled_qty}")
 
             update_data = {
                 "status": current_status,
@@ -454,7 +454,7 @@ class AutomationEngine:
             for idx, order in enumerate(filled_orders, 1):
                 ticker = order.get("ticker", "N/A")
                 side = order.get("side", "N/A")
-                self.logger.debug(f"AutomationEngine | FASE 3 | 🔄 Processando ordem {idx}/{len(filled_orders)}: {ticker} ({side})")
+                self.logger.info(f"AutomationEngine | FASE 3 | 🔄 Processando ordem {idx}/{len(filled_orders)}: {ticker} ({side})")
                 await self._phase_3_handle_filled_order(order)
 
         except Exception as e:
@@ -474,7 +474,7 @@ class AutomationEngine:
             self.logger.info(f"AutomationEngine | FASE 3 | 📝 Processando fill: {ticker} ({side}) - Order ID: {order_id}")
 
             # Load ISIN
-            self.logger.debug(f"AutomationEngine | FASE 3 | 📖 Carregando dados ISIN...")
+            self.logger.info(f"AutomationEngine | FASE 3 | 📖 Carregando dados ISIN...")
             isin_result = db.client.table("isins").select("*").eq("id", order_data.get("isin_id")).execute()
             isin = isin_result.data[0] if isin_result.data else None
             if not isin:
@@ -505,10 +505,10 @@ class AutomationEngine:
                 trades_balance = isin.get("trades_balance", 0)
                 if order_data.get("side") == "BUY":
                     update_isin["trades_balance"] = trades_balance - 1
-                    self.logger.debug(f"BUY fill: trades_balance {trades_balance} → {trades_balance - 1}")
+                    self.logger.info(f"BUY fill: trades_balance {trades_balance} → {trades_balance - 1}")
                 elif order_data.get("side") == "SELL":
                     update_isin["trades_balance"] = trades_balance + 1
-                    self.logger.debug(f"SELL fill: trades_balance {trades_balance} → {trades_balance + 1}")
+                    self.logger.info(f"SELL fill: trades_balance {trades_balance} → {trades_balance + 1}")
 
                 # Timestamp
                 update_isin["updated_at"] = datetime.utcnow().isoformat()
@@ -555,7 +555,7 @@ class AutomationEngine:
 
             # Load new parameters for new trades_balance position
             trades_balance = isin_data.get("trades_balance", 0)
-            self.logger.debug(
+            self.logger.info(
                 f"AutomationEngine | FASE 3 | 📖 trades_balance carregado da BD para {isin_data.get('ticker')}: {trades_balance}"
             )
             params = self._get_strategy_parameters(strategy_id, trades_balance)
@@ -588,7 +588,7 @@ class AutomationEngine:
             new_sell_quantity_rounded = round(new_sell_quantity, quantity_precision)
             # Prices are NOT rounded - sent as-is with full precision
 
-            self.logger.debug(
+            self.logger.info(
                 f"AutomationEngine | FASE 3 | 🧮 Variáveis calculadas para {isin_data.get('ticker')}: "
                 f"initial_investment={initial_investment}, param1={param1}, param2={param2}, param3={param3}, "
                 f"current_price={current_price}, quantity_precision={quantity_precision} | "
@@ -598,12 +598,12 @@ class AutomationEngine:
                 f"new_sell_quantity={new_sell_quantity} (rounded={new_sell_quantity_rounded})"
             )
 
-            self.logger.debug(
+            self.logger.info(
                 f"Novo pair: BUY @ {new_buy_price:.2f} qty={new_buy_quantity_rounded:.2f}, SELL @ {new_sell_price:.2f} qty={new_sell_quantity_rounded:.2f}"
             )
 
             # Place BUY order
-            self.logger.debug(
+            self.logger.info(
                 f"AutomationEngine | FASE 3 | 📤 Parâmetros BUY order para API: "
                 f"order_type=BUY, ticker={isin_data.get('ticker')}, "
                 f"quantity={new_buy_quantity_rounded}, limit_price={new_buy_price}, "
@@ -622,7 +622,7 @@ class AutomationEngine:
                 return
 
             # Place SELL order
-            self.logger.debug(
+            self.logger.info(
                 f"AutomationEngine | FASE 3 | 📤 Parâmetros SELL order para API: "
                 f"order_type=SELL, ticker={isin_data.get('ticker')}, "
                 f"quantity={new_sell_quantity_rounded}, limit_price={new_sell_price}, "
@@ -704,7 +704,7 @@ class AutomationEngine:
             result = db.client.table("strategy_parameters").select("*").eq("strategy_id", strategy_id).eq("pos", str(trades_balance)).execute()
 
             if result.data:
-                self.logger.debug(f"Strategy parameters encontrados exato: pos={trades_balance}")
+                self.logger.info(f"Strategy parameters encontrados exato: pos={trades_balance}")
                 return result.data[0]
 
             # Step 2: Fallback baseado na direção
@@ -735,7 +735,7 @@ class AutomationEngine:
                 if valid:
                     valid.sort(key=lambda x: x[0], reverse=True)
                     selected = valid[0][1]
-                    self.logger.debug(
+                    self.logger.info(
                         f"Strategy parameters fallback (positivo): pos={trades_balance} → pos={valid[0][0]}"
                     )
                     return selected
@@ -743,7 +743,7 @@ class AutomationEngine:
                     # Nenhum <= trades_balance, usar o máximo negativo/zero disponível
                     params_list.sort(key=lambda x: x[0], reverse=True)
                     selected = params_list[0][1]
-                    self.logger.debug(
+                    self.logger.info(
                         f"Strategy parameters fallback (positivo, nenhum válido): pos={trades_balance} → pos={params_list[0][0]}"
                     )
                     return selected
@@ -754,7 +754,7 @@ class AutomationEngine:
                 if valid:
                     valid.sort(key=lambda x: x[0])
                     selected = valid[0][1]
-                    self.logger.debug(
+                    self.logger.info(
                         f"Strategy parameters fallback (negativo): pos={trades_balance} → pos={valid[0][0]}"
                     )
                     return selected
@@ -762,7 +762,7 @@ class AutomationEngine:
                     # Nenhum >= trades_balance, usar o mínimo positivo/zero disponível
                     params_list.sort(key=lambda x: x[0])
                     selected = params_list[0][1]
-                    self.logger.debug(
+                    self.logger.info(
                         f"Strategy parameters fallback (negativo, nenhum válido): pos={trades_balance} → pos={params_list[0][0]}"
                     )
                     return selected
@@ -771,7 +771,7 @@ class AutomationEngine:
                 # Zero: buscar exato pos=0 (OBRIGATÓRIO)
                 for pos_int, param in params_list:
                     if pos_int == 0:
-                        self.logger.debug("Strategy parameters encontrados: pos=0")
+                        self.logger.info("Strategy parameters encontrados: pos=0")
                         return param
 
                 # pos=0 não existe - ERRO
@@ -857,7 +857,7 @@ class AutomationEngine:
             db = get_db()
 
             # First attempt with current precision
-            self.logger.debug(
+            self.logger.info(
                 f"AutomationEngine | Order attempt 1: {order_type} {ticker} qty={quantity} @ {limit_price} (precision={initial_precision})"
             )
 
@@ -1018,5 +1018,5 @@ class AutomationEngine:
 
         except Exception as e:
             # Silently fail - don't let logging break automation
-            self.logger.debug(f"⚠️ Erro ao criar log de ação: {e}")
+            self.logger.info(f"⚠️ Erro ao criar log de ação: {e}")
 
