@@ -516,6 +516,12 @@ class AutomationEngine:
                 # Save position update
                 db.client.table("isins").update(update_isin).eq("id", isin.get("id")).execute()
 
+                # Keep the in-memory isin dict in sync with what we just persisted,
+                # so the new BUY/SELL pair uses the UPDATED trades_balance (and price).
+                # Without this, _phase_3_place_new_pair would read the stale
+                # trades_balance and fetch strategy_parameters for the wrong position.
+                isin.update(update_isin)
+
             # Cancel related order
             if order_data.get("related_order_id"):
                 related_result = db.client.table("orders").select("*").eq("id", order_data.get("related_order_id")).execute()
