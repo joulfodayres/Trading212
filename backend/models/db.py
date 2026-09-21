@@ -23,7 +23,6 @@ class AppParameters(Base):
 
     # Scheduler configuration
     scheduler_interval_seconds = Column(Integer, default=15)
-    scheduler_enabled = Column(Boolean, default=True)
 
     # Grid trading configuration
     grid_trading_enabled = Column(Boolean, default=True)

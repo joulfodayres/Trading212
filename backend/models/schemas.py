@@ -11,7 +11,6 @@ from datetime import datetime
 class AppParametersResponse(BaseModel):
     """Schema para resposta de parâmetros da app"""
     scheduler_interval_seconds: int
-    scheduler_enabled: bool
     grid_trading_enabled: bool
     updated_at: datetime
 
@@ -22,7 +21,6 @@ class AppParametersResponse(BaseModel):
 class AppParametersUpdate(BaseModel):
     """Schema para atualizar parâmetros"""
     scheduler_interval_seconds: Optional[int] = None
-    scheduler_enabled: Optional[bool] = None
     grid_trading_enabled: Optional[bool] = None
 
 

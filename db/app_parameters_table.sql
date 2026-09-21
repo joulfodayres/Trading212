@@ -13,14 +13,9 @@ CREATE TABLE app_parameters (
 
   -- Scheduler configuration
   scheduler_interval_seconds INTEGER DEFAULT 15 CHECK (scheduler_interval_seconds >= 5),
-  scheduler_enabled BOOLEAN DEFAULT TRUE,
 
-  -- Grid trading configuration (future use)
+  -- Grid trading configuration
   grid_trading_enabled BOOLEAN DEFAULT TRUE,
-  max_positions_per_isin INTEGER DEFAULT 5,
-
-  -- Logging and monitoring
-  log_level VARCHAR DEFAULT 'INFO' CHECK (log_level IN ('DEBUG', 'INFO', 'WARNING', 'ERROR')),
 
   -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -31,8 +26,8 @@ CREATE TABLE app_parameters (
 CREATE UNIQUE INDEX idx_app_parameters_singleton ON app_parameters((1));
 
 -- Insert default row
-INSERT INTO app_parameters (scheduler_interval_seconds, scheduler_enabled)
-VALUES (15, TRUE)
+INSERT INTO app_parameters (scheduler_interval_seconds)
+VALUES (15)
 ON CONFLICT DO NOTHING;
 
 -- RLS (optional, single-user mode)
@@ -44,7 +39,6 @@ ALTER TABLE app_parameters ENABLE ROW LEVEL SECURITY;
 
 COMMENT ON TABLE app_parameters IS 'System-wide configuration parameters. Single row table for global settings.';
 COMMENT ON COLUMN app_parameters.scheduler_interval_seconds IS 'How often the automation engine runs (seconds). Minimum 5s. Default 15s.';
-COMMENT ON COLUMN app_parameters.scheduler_enabled IS 'Enable/disable the automation scheduler globally.';
 COMMENT ON COLUMN app_parameters.grid_trading_enabled IS 'Enable/disable grid trading strategy globally.';
 
 -- =====================================================
