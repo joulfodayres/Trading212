@@ -172,8 +172,17 @@ class Trading212Client:
             logger.info(f"AutomationEngine | ✅ Limit order placed: {ticker} qty={quantity} @ {limit_price} (validity={time_validity})")
             return response.json()
         else:
-            logger.error(f"Erro ao colocar ordem limitada: {response.status_code} - {response.text}")
-            raise Exception(f"Erro T212 API: {response.status_code}")
+            # Extract error detail from T212 API response for better error messages
+            try:
+                error_data = response.json()
+                error_detail = error_data.get("detail", f"HTTP {response.status_code}")
+            except:
+                error_detail = response.text or f"HTTP {response.status_code}"
+
+            logger.error(f"Erro ao colocar ordem limitada: {response.status_code} - {error_detail}")
+            # Raise exception with the actual error message from T212 API
+            # This allows AutomationEngine to detect "invalid quantity precision X" errors
+            raise Exception(error_detail)
 
     def cancel_order(self, order_id: str) -> bool:
         """DELETE /equity/orders/{id} — Cancela uma ordem"""
