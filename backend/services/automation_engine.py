@@ -788,11 +788,13 @@ class AutomationEngine:
 
                 # Try to extract precision value from error message
                 # Format: "invalid quantity precision 2" or similar
+                # Use regex for more robust parsing
+                import re
                 try:
-                    parts = error_str.split("invalid quantity precision")
-                    if len(parts) > 1:
-                        precision_str = parts[1].strip().split()[0]
-                        new_precision = int(precision_str)
+                    # Match pattern: "invalid quantity precision X" where X is a number
+                    match = re.search(r'invalid\s+quantity\s+precision\s+(\d+)', error_str, re.IGNORECASE)
+                    if match:
+                        new_precision = int(match.group(1))
 
                         self.logger.info(
                             f"AutomationEngine | Detected required precision: {new_precision} (was {initial_precision})"
@@ -815,29 +817,42 @@ class AutomationEngine:
                             f"AutomationEngine | Retrying {order_type} order with new precision {new_precision}: qty={quantity_retried}"
                         )
 
-                        if order_type == "BUY":
-                            response = await self.t212_service.place_buy_limit_order(
-                                ticker=ticker, quantity=quantity_retried, limit_price=limit_price
-                            )
-                        elif order_type == "SELL":
-                            response = await self.t212_service.place_sell_limit_order(
-                                ticker=ticker, quantity=quantity_retried, limit_price=limit_price
-                            )
-                        else:
-                            return None
+                        try:
+                            if order_type == "BUY":
+                                response = await self.t212_service.place_buy_limit_order(
+                                    ticker=ticker, quantity=quantity_retried, limit_price=limit_price
+                                )
+                            elif order_type == "SELL":
+                                response = await self.t212_service.place_sell_limit_order(
+                                    ticker=ticker, quantity=quantity_retried, limit_price=limit_price
+                                )
+                            else:
+                                return None
 
-                        if response:
-                            self.logger.info(
-                                f"AutomationEngine | {order_type} order successful on retry: {ticker} qty={quantity_retried}"
-                            )
-                            return response
-                        else:
+                            if response:
+                                self.logger.info(
+                                    f"AutomationEngine | {order_type} order successful on retry: {ticker} qty={quantity_retried}"
+                                )
+                                return response
+                            else:
+                                self.logger.error(
+                                    f"AutomationEngine | {order_type} order failed on retry: {ticker}"
+                                )
+                                return None
+                        except Exception as retry_error:
+                            # Retry failed with another error
                             self.logger.error(
-                                f"AutomationEngine | {order_type} order failed on retry: {ticker}"
+                                f"AutomationEngine | {order_type} order failed on retry with error: {str(retry_error)}"
                             )
                             return None
+                    else:
+                        # Could not extract precision number from error message
+                        self.logger.error(
+                            f"AutomationEngine | Could not extract precision number from error: {error_str}"
+                        )
+                        return None
 
-                except (ValueError, IndexError) as parse_error:
+                except (ValueError, IndexError, AttributeError) as parse_error:
                     self.logger.error(
                         f"AutomationEngine | Could not parse precision from error: {error_str} - {parse_error}"
                     )
