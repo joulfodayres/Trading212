@@ -56,10 +56,14 @@ class AutomationEngine:
 
         try:
             # Check if global automation is enabled
+            self._log_db_action("⏳ Verificando status global de automação...")
             grid_trading_enabled = self._check_grid_trading_enabled()
             if not grid_trading_enabled:
                 self.logger.debug("⏸️ Grid trading está desativado globalmente, ciclo ignorado")
+                self._log_db_action("⏸️ Grid trading desativado, ciclo ignorado")
                 return
+
+            self._log_db_action("✅ Automação ativada, iniciando ciclo de 3 fases")
 
             # PHASE 1: Setup initial BUY/SELL pairs
             self.logger.debug("Fase 1: Setup Inicial")
@@ -76,6 +80,7 @@ class AutomationEngine:
             cycle_duration = (datetime.utcnow() - cycle_start).total_seconds()
             self.last_cycle_duration = cycle_duration
             self.logger.info(f"✅ Ciclo #{self.cycle_count} completo ({cycle_duration:.2f}s)")
+            self._log_db_action(f"✅ Ciclo #{self.cycle_count} completo com sucesso", {"duration_seconds": cycle_duration})
 
         except Exception as e:
             cycle_duration = (datetime.utcnow() - cycle_start).total_seconds()
@@ -105,21 +110,25 @@ class AutomationEngine:
         """
         try:
             # Query ISINs ready for automation setup
+            self._log_db_action("📖 Carregando ISINs com initial_trade=TRUE...")
             db = get_db()
             result = db.client.table("isins").select("*").eq("initial_trade", True).eq("automation_enabled", True).execute()
             isins = result.data or []
 
             if not isins:
                 self.logger.debug("Nenhum ISIN com initial_trade=TRUE encontrado")
+                self._log_db_action("ℹ️ Nenhum ISIN com initial_trade=TRUE encontrado")
                 return
 
             self.logger.info(f"Fase 1: {len(isins)} ISINs para setup inicial")
+            self._log_db_action(f"✅ Carregados {len(isins)} ISINs para setup inicial", {"count": len(isins)})
 
             for isin_data in isins:
                 await self._phase_1_setup_isin(isin_data)
 
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 1: {e}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 1 (Setup Inicial): {str(e)}", {"error": str(e)})
 
     async def _phase_1_setup_isin(self, isin_data: Dict):
         """
@@ -234,21 +243,25 @@ class AutomationEngine:
         """
         try:
             # Query orders with automation_status='W'
+            self._log_db_action("📖 Carregando ordens em status WATCH da base de dados...")
             db = get_db()
             result = db.client.table("orders").select("*").eq("automation_status", "W").execute()
             watch_orders = result.data or []
 
             if not watch_orders:
                 self.logger.debug("Nenhuma ordem 'W' para monitorar")
+                self._log_db_action("ℹ️ Nenhuma ordem em status WATCH encontrada")
                 return
 
             self.logger.info(f"Fase 2: Monitorando {len(watch_orders)} ordens")
+            self._log_db_action(f"✅ Carregadas {len(watch_orders)} ordens em status WATCH", {"count": len(watch_orders)})
 
             for order in watch_orders:
                 await self._phase_2_monitor_order(order)
 
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 2: {e}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 2 (Monitorar Ordens): {str(e)}", {"error": str(e)})
 
     async def _phase_2_monitor_order(self, order_data: Dict):
         """
@@ -299,21 +312,25 @@ class AutomationEngine:
         """
         try:
             # Query FILLED orders (status='FILLED', automation_status='E')
+            self._log_db_action("📖 Carregando ordens FILLED para rebalanceamento...")
             db = get_db()
             result = db.client.table("orders").select("*").eq("status", "FILLED").eq("automation_status", "E").execute()
             filled_orders = result.data or []
 
             if not filled_orders:
                 self.logger.debug("Nenhuma ordem FILLED para processar")
+                self._log_db_action("ℹ️ Nenhuma ordem FILLED encontrada para rebalanceamento")
                 return
 
             self.logger.info(f"Fase 3: Processando {len(filled_orders)} ordens FILLED")
+            self._log_db_action(f"✅ Carregadas {len(filled_orders)} ordens FILLED", {"count": len(filled_orders)})
 
             for order in filled_orders:
                 await self._phase_3_handle_filled_order(order)
 
         except Exception as e:
             self.logger.error(f"❌ Erro na Fase 3: {e}", exc_info=True)
+            self._log_db_action(f"❌ Erro na Fase 3 (Processar Fills): {str(e)}", {"error": str(e)})
 
     async def _phase_3_handle_filled_order(self, order_data: Dict):
         """
@@ -616,3 +633,56 @@ class AutomationEngine:
             "related_order_id": related_order_id,
             "synced_at": datetime.utcnow().isoformat(),
         }
+
+    # =========================================================================
+    # LOGGING HELPERS (Task 3: Database logging conditional on log_level)
+    # =========================================================================
+
+    def _get_log_level(self) -> str:
+        """
+        Read current log_level from app_parameters.
+        Defaults to 'OFF' if not found or on error.
+        """
+        try:
+            db = get_db()
+            result = db.client.table("app_parameters").select("log_level").execute()
+            if result.data:
+                log_level = result.data[0].get("log_level", "OFF")
+                return log_level
+            return "OFF"
+        except Exception as e:
+            self.logger.warning(f"⚠️ Erro ao ler log_level: {e}")
+            return "OFF"
+
+    def _log_db_action(self, action: str, details: Optional[Dict[str, Any]] = None):
+        """
+        Log a database or API action to the database (if log_level == 'MEDIUM').
+
+        Args:
+            action: Action description (e.g., "📖 Reading ISINs from database...")
+            details: Optional dictionary with additional context
+
+        This method silently fails if:
+        - log_level != 'MEDIUM'
+        - Database operation fails
+        - Logging is disabled
+        """
+        try:
+            # Check log level - only log if MEDIUM
+            log_level = self._get_log_level()
+            if log_level != 'MEDIUM':
+                return
+
+            # Insert into logs table
+            db = get_db()
+            db.client.table("logs").insert({
+                "nivel": "INFO",
+                "mensagem": action,
+                "detalhes_json": details,
+                "created_at": datetime.utcnow().isoformat()
+            }).execute()
+
+        except Exception as e:
+            # Silently fail - don't let logging break automation
+            self.logger.debug(f"⚠️ Erro ao criar log de ação: {e}")
+
