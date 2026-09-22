@@ -836,7 +836,7 @@ export default function StrategiesPage() {
                         ) : (
                           // NORMAL MODE
                           <>
-                            <td className="font-semibold text-white cursor-pointer hover:text-blue-400"
+                            <td className="px-4 py-3 font-semibold text-white cursor-pointer hover:text-blue-400"
                                 onClick={() => startEditParameter(param)}>
                               {param.pos}
                             </td>
