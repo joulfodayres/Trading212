@@ -539,8 +539,26 @@ class AutomationEngine:
             # Place new BUY/SELL pair at new grid level
             await self._phase_3_place_new_pair(isin)
 
+            # Update order status to 'P' (Processed) - only after all rebalance logic complete
+            db.client.table("orders").update({
+                "automation_status": "P",
+                "updated_at": "now()"
+            }).eq("id", order_data.get("id")).execute()
+
+            self.logger.info(f"AutomationEngine | ✅ Order {order_id} marked as Processed (P)")
+
         except Exception as e:
-            self.logger.error(f"❌ Erro processando filled order: {e}", exc_info=True)
+            self.logger.error(f"AutomationEngine | ❌ Error processing order {order_id}: {e}", exc_info=True)
+
+            # Update order status to 'X' (Error) when processing fails
+            try:
+                db.client.table("orders").update({
+                    "automation_status": "X",
+                    "updated_at": "now()"
+                }).eq("id", order_data.get("id")).execute()
+                self.logger.info(f"AutomationEngine | ⚠️ Order {order_id} marked as Error (X)")
+            except Exception as update_err:
+                self.logger.error(f"AutomationEngine | ❌ Failed to update order status to X: {update_err}")
 
     async def _phase_3_place_new_pair(self, isin_data: Dict):
         """
