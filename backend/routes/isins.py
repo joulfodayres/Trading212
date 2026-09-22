@@ -266,7 +266,11 @@ async def sync_positions():
         synced = 0
         created = 0
         updated = 0
+        deleted = 0
         errors = 0
+
+        # Coletar ISINs que vêm do T212
+        t212_isins_set = set()
 
         # Processar cada posição
         for position in positions:
@@ -278,6 +282,9 @@ async def sync_positions():
                     logger.warning("Position without ISIN found, skipping")
                     errors += 1
                     continue
+
+                # Adicionar ISIN à lista de ISINs do T212
+                t212_isins_set.add(isin)
 
                 # Preparar dados para atualizar/inserir
                 # Cross-check com API T212 - guardar TODOS os campos
@@ -335,13 +342,58 @@ async def sync_positions():
                 errors += 1
                 continue
 
+        # Step 4: DELETE ISINs that are no longer in T212 (NEW - Cleanup orphaned ISINs)
+        try:
+            logger.info("Starting cleanup of orphaned ISINs...")
+
+            # Get all ISINs currently in database
+            all_db_isins_result = db.client.table("isins").select("id, isin").execute()
+            all_db_isins = all_db_isins_result.data or []
+
+            logger.info(f"T212 returned {len(t212_isins_set)} ISINs, DB has {len(all_db_isins)} ISINs")
+
+            # Find ISINs in DB but NOT in T212
+            for isin_row in all_db_isins:
+                isin = isin_row.get("isin")
+                isin_id = isin_row.get("id")
+
+                if isin not in t212_isins_set:
+                    logger.info(f"Found orphaned ISIN: {isin} (id={isin_id})")
+
+                    try:
+                        # Step 4a: DELETE related orders FIRST (foreign key constraint)
+                        orders_result = db.client.table("orders").select("id").eq("isin_id", isin_id).execute()
+                        orders_to_delete = orders_result.data or []
+
+                        for order in orders_to_delete:
+                            db.client.table("orders").delete().eq("id", order["id"]).execute()
+
+                        if orders_to_delete:
+                            logger.info(f"Deleted {len(orders_to_delete)} orders for orphaned ISIN {isin}")
+
+                        # Step 4b: DELETE the ISIN itself
+                        db.client.table("isins").delete().eq("id", isin_id).execute()
+                        deleted += 1
+                        logger.info(f"✅ Deleted orphaned ISIN: {isin}")
+
+                    except Exception as e:
+                        logger.error(f"Error deleting orphaned ISIN {isin}: {e}", exc_info=True)
+                        errors += 1
+
+            logger.info(f"Cleanup complete: deleted {deleted} ISINs")
+
+        except Exception as e:
+            logger.error(f"Error during cleanup phase: {e}", exc_info=True)
+            # Continue - don't let cleanup break the entire sync
+
         response = {
             "success": True,
             "synced": synced,
             "created": created,
             "updated": updated,
+            "deleted": deleted,
             "errors": errors,
-            "message": f"Synced {synced} positions ({created} new, {updated} updated)"
+            "message": f"Synced {synced} positions ({created} new, {updated} updated, {deleted} deleted)"
         }
 
         logger.info(f"Portfolio sync completed: {response}")
