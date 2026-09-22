@@ -149,16 +149,20 @@ export default function StrategiesPage() {
         const allRequiredPositionsExist = hasNegativeOne && hasZero && hasOne
         console.log(`[loadParameters] Positions check: -1=${hasNegativeOne}, 0=${hasZero}, 1=${hasOne}, valid=${allRequiredPositionsExist}`)
 
-        // [NEW] Update strategy validation state based on actual parameters
-        if (selectedStrategy) {
+        // [NEW] Update strategy validation state based on actual parameters.
+        // IMPORTANT: only call setSelectedStrategy if is_valid actually CHANGED.
+        // Otherwise we mutate selectedStrategy on every load, which re-triggers the
+        // [selectedStrategy, viewMode] useEffect -> loadParameters -> setSelectedStrategy
+        // -> infinite render loop (repeated GET /strategies/{id}, black screen).
+        if (selectedStrategy && selectedStrategy.is_valid !== allRequiredPositionsExist) {
           setSelectedStrategy({
             ...selectedStrategy,
             is_valid: allRequiredPositionsExist
           })
         }
       } else {
-        // No parameters at all - mark as invalid
-        if (selectedStrategy) {
+        // No parameters at all - mark as invalid (only if it changed)
+        if (selectedStrategy && selectedStrategy.is_valid !== false) {
           setSelectedStrategy({
             ...selectedStrategy,
             is_valid: false
@@ -366,11 +370,19 @@ export default function StrategiesPage() {
 
     if (!selectedStrategy) return
 
+    // Backend schema (StrategyParameterBase) requires 'pos', 'param1' and 'param2'.
+    // Send the full parameter object: keep the existing 'pos' + merge edited values.
+    const existingParam = parameters.find(p => p.id === paramId)
+    const payload = {
+      pos: existingParam?.pos,
+      ...editValues,
+    }
+
     setSavingParamId(paramId)
     try {
       await apiClient.put(
         `/v1/strategies/${selectedStrategy.id}/parameters/${paramId}`,
-        editValues
+        payload
       )
       setParameters(parameters.map(p =>
         p.id === paramId ? { ...p, ...editValues } : p
@@ -826,7 +838,7 @@ export default function StrategiesPage() {
                                       [`param${i}`]: e.target.value === '' ? 0 : Number(e.target.value),
                                     })
                                   }
-                                  className="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white text-center text-base"
+                                  className="w-full min-w-[8rem] bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white text-center text-base"
                                   style={{
                                     appearance: 'textfield',
                                     MozAppearance: 'textfield',
