@@ -1,10 +1,11 @@
 # Trading 212 Bot - MVP
 
 **Status:** ✅ **Phase 4 Complete - Automation Engine Live** 🚀  
-**Last Update:** 2026-09-20  
-**Version:** 0.4.0
+**Phase 5:** ⏳ **60% Progress** (6 of 12 items)  
+**Last Update:** 2026-09-22  
+**Version:** 0.5.0-beta
 
-Automação de trading algorítmico integrada com Trading 212 API, acessível via browser de qualquer lugar.
+Algorithmic trading platform with automated Grid Trading strategy. Built with React + FastAPI, hosted on Render + Supabase.
 
 ---
 
@@ -40,95 +41,91 @@ npm run dev  # http://localhost:5173
 ## 📚 Documentation
 
 ### 🎯 **Start Here: Documentation Hub**
-**👉 Open [`docs/index.html`](docs/index.html) in your browser for the complete documentation system**
+👉 **Open [`docs/index.html`](docs/index.html)** in your browser
 
-- Beautiful, searchable documentation hub
-- 7 main sections (Getting Started, Architecture, API, Development, Deployment, Knowledge Base, Troubleshooting)
-- Real-time search (Cmd/Ctrl+K)
-- Dark mode support
-- Mobile-responsive design
-- Learning paths for different roles
+Beautiful, interactive documentation hub with:
+- 📖 7 main documentation sections
+- 🔍 Quick navigation to all guides
+- ⚡ Getting started (5 min) + Quick Start guide
+- 🏗️ Architecture deep dives (Automation, Database, API)
+- 🛠️ Development setup + Deployment guide
+- 📋 Backlog & Roadmap
+- 🧠 Knowledge Base + Code Examples
 
-### Essential Reading
-| Document | Purpose |
-|----------|---------|
-| **`docs/index.html`** | 🎯 **Main documentation hub** (start here!) |
-| **`docs/KNOWLEDGE_BASE.md`** | Complete project overview + architecture |
-| **`docs/DEVELOPMENT.md`** | Local setup & development workflow |
-| **`docs/API_REFERENCE.md`** | Complete API endpoint documentation |
-| **`STATUS.md`** | Current project status & timeline |
-| **`CLAUDE.md`** | Architecture, database schema, tech stack |
-| **`COMECA_AQUI.md`** | Quick start & troubleshooting |
+### Quick Links to Key Documents
 
-### Detailed Guides
-| Document | Topic |
-|----------|-------|
-| **`docs/DOCUMENTATION_STRUCTURE.md`** | How documentation is organized |
-| **`docs/TROUBLESHOOTING.md`** | Common issues & solutions |
-| **`docs/CODE_EXAMPLES.md`** | Real code snippets |
-| **`docs/QUICK_REFERENCE.md`** | Quick lookup cheat sheet |
-| **`docs/t212-api/`** | Trading 212 API analysis (Phase 4) |
+| Document | Purpose | Read Time |
+|----------|---------|-----------|
+| **`docs/QUICK_START.md`** | 5-minute intro (what is this, how to use) | 5 min ⚡ |
+| **`docs/PHASE_5_STATUS.md`** | Current progress, what's done, what's next | 10 min |
+| **`docs/AUTOMATION_FLOW.md`** | How the 3-phase grid trading cycle works | 15 min 🔄 |
+| **`docs/DATABASE_SCHEMA.md`** | All tables, relationships, constraints | 10 min 💾 |
+| **`CLAUDE.md`** | Project overview, architecture, conventions | 20 min 🏗️ |
+| **`BACKLOG.md`** | Next features, effort estimates, priorities | 10 min 📋 |
+
+### Additional References
+- **`docs/API_REFERENCE.md`** — All 14 REST endpoints
+- **`docs/CODE_EXAMPLES.md`** — 25+ code snippets
+- **`docs/DEVELOPMENT.md`** — Local setup & development
+- **`docs/DEPLOYMENT_NOTES.md`** — Production deployment
+- **`docs/TROUBLESHOOTING.md`** — Common issues & fixes
+- **`docs/KNOWLEDGE_BASE.md`** — Full knowledge base
+- **`docs/QUICK_REFERENCE.md`** — One-page cheat sheet
 
 ---
 
-## ✅ What Works Now (Phase 4)
+## ✅ What Works Now (Phase 4 Complete)
 
-### Core Features
-- ✅ **Live ISINs data** from Trading 212 API
-- ✅ **Dashboard with real-time positions**
-- ✅ **Automation toggle** (enable/disable per ISIN)
-- ✅ **Strategy selection dialog**
-- ✅ **Audit trail** for all changes
-- ✅ **Modal dialog** (Trading 212 style UI)
-- ✅ **APScheduler automation engine** (15s interval)
-- ✅ **Portfolio sync endpoint** (POST /api/isins/sync)
-- ✅ **3-phase automation cycle** (setup → monitor → fill handling)
-- ✅ **Grid Trading strategy** (initial implementation)
+### Core Automation
+- ✅ **3-Phase Grid Trading Cycle** (Phase 1: Setup, Phase 2: Monitor, Phase 3: Rebalance)
+- ✅ **APScheduler Engine** running 24/7 every 15 seconds
+- ✅ **Order Management** (BUY/SELL pairs, watch, execute, process, handle errors)
+- ✅ **Strategy Parameters** (position-based: -1 sell, 0 hold, +1 buy)
+- ✅ **Automation Control** (enable/disable per ISIN, global toggle)
+- ✅ **Portfolio Sync** (fetch latest positions from T212)
+- ✅ **Complete Pair Handling** (when both grid legs fill between cycles)
 
-### Technical
-- ✅ Backend: FastAPI with 30+ endpoints
-- ✅ Frontend: React 18 + TypeScript
-- ✅ Database: PostgreSQL (Supabase)
-- ✅ Auth: JWT tokens
-- ✅ Deployment: Auto-deploy on git push
-- ✅ Encryption: API keys encrypted
-- ✅ Logging: Full audit trail + automation logs
-- ✅ **APScheduler:** Background automation running 24/7
-- ✅ **SchedulerService:** Lifecycle management
-- ✅ **AutomationEngine:** 3-phase strategy execution
+### Features
+- ✅ **Live Dashboard** (real-time ISIN positions from T212)
+- ✅ **Strategy Management** (CRUD strategies + parameters)
+- ✅ **Automation Dialog** (select strategy before enabling)
+- ✅ **Configuration UI** (scheduler interval, log level)
+- ✅ **Parameters Editor** (inline editing with validation)
+- ✅ **Database Cleanup** (remove orphaned ISINs on sync)
+- ✅ **Order Tracking** (status: W/E/P/X/C)
+
+### Infrastructure
+- ✅ **FastAPI Backend** with 14+ REST endpoints
+- ✅ **React 18 Frontend** with TypeScript
+- ✅ **PostgreSQL Database** (Supabase) with 8 tables
+- ✅ **Auto-Deploy** from GitHub to Render
+- ✅ **HTTPS/TLS** on all endpoints
+- ✅ **JWT Authentication** + API key encryption
+- ✅ **Full Audit Trail** + conditional logging
 
 ---
 
 ## 🚧 Next Phase (Phase 5: Features & Polish)
 
-Priority backlog items (5 items):
+**Progress:** 60% Complete (6 of 12 items done)
 
-1. **🎚️ Global Automation Toggle** (Low complexity, 2-3h)
-   - ON/OFF button in header for engine control
-   - Status visual indicator
-   - Confirmation dialog
+### ✅ Completed Phase 5 Items
+1. ✅ Strategy Management UI + Parameters CRUD
+2. ✅ Global Automation Toggle
+3. ✅ Automation Dialog with Strategy Selection
+4. ✅ ConfigPage Refactor
+5. ✅ Frontend Translation to English
+6. ✅ Parameters Inline Editing (fixed bugs)
 
-2. **🎛️ Strategy Parameter Tables** (Medium complexity, 4-6h)
-   - Editable UI for grid parameters per position
-   - CRUD endpoints for strategy_parameters
-   - Real-time validation
+### ⏳ TODO Phase 5 Items
+1. **Smart "Missing Parameters" Message** (1.5h) — Show validation warning only if needed
+2. **Rename Render Projects** (0.5h) — Better naming convention
+3. **Upload T212 Data** (7h) — CSV/Excel import
+4. **Charts & Statistics** (9h) — Equity curve, P&L, performance
+5. **Cybersecurity Testing** (10h) — Security audit + penetration testing
+6. **Architecture Review** (7h) — Design analysis + improvement recommendations
 
-3. **📁 Upload Real T212 Data** (High complexity, 6-8h)
-   - CSV/Excel import from Trading 212
-   - Parser + validator
-   - Batch ISIN + history import
-
-4. **📊 Charts & Statistics** (High complexity, 8-10h)
-   - Equity curve, P&L, drawdown graphs
-   - Performance metrics
-   - Trade history table
-
-5. **💬 Automation Preview Dialog** (Medium complexity, 3-4h)
-   - Show strategy details before activation
-   - Parameter summary
-   - Confirmation step
-
-See **`BACKLOG.md`** for full details.
+See **`BACKLOG.md`** for full details and time estimates.
 
 ---
 
@@ -251,16 +248,22 @@ See **`STATUS.md`** for full timeline.
 
 ## 🎯 Next Steps
 
-1. ✅ Phase 4: Grid Trading Automation Engine (DONE)
-2. 🚧 Phase 5: Backlog Features (Global ON/OFF, Parameter UI, Data Import, Charts)
-3. Phase 6: Real-time WebSocket updates
-4. Phase 7: Live trading mode
+1. ✅ **Phase 4:** Grid Trading Automation Engine (DONE ✅)
+2. 🚧 **Phase 5:** Backlog Features (60% complete)
+   - Quick wins (#9, #6): 2-3 hours
+   - Features (#2, #3): 16 hours
+   - Strategic (#11, #10): 17 hours
+3. 🔮 **Phase 6:** Production Polish (Real auth, WebSockets, monitoring)
+4. 🚀 **Phase 7:** Expansion (Live mode, more strategies, mobile)
 
-For detailed status, see **`STATUS.md`**.
+### Immediate Priorities
+- [ ] Item #9: Smart validation messages (1.5h)
+- [ ] Item #6: Rename Render projects (0.5h)
+- [ ] SQL: Fix `automation_status` CHECK constraint (for P/X states)
 
 ---
 
-**Version:** 0.4.0 (MVP Phase 4 - Automation Engine)  
-**Updated:** 2026-09-20  
-**Status:** ✅ Functional | 🚧 Phase 5 Backlog Ready
+**Version:** 0.5.0-beta (MVP Phase 4 + Phase 5 in progress)  
+**Updated:** 2026-09-22  
+**Status:** ✅ Production Ready | 🚧 Phase 5: 60% Progress | 🟢 Automation Live 24/7
 
