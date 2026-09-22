@@ -6,6 +6,24 @@ import { ToggleSwitch } from '../components/ui/ToggleSwitch'
 import { apiClient } from '../api/client'
 import { useToast } from '../components/ui/Toast'
 
+// Hide number input spinners globally
+const hideSpinnersStyle = `
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+`
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style')
+  style.textContent = hideSpinnersStyle
+  document.head.appendChild(style)
+}
+
 interface Strategy {
   id: string
   name: string
@@ -808,7 +826,11 @@ export default function StrategiesPage() {
                                       [`param${i}`]: e.target.value === '' ? 0 : Number(e.target.value),
                                     })
                                   }
-                                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-center text-sm"
+                                  className="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white text-center text-base"
+                                  style={{
+                                    appearance: 'textfield',
+                                    MozAppearance: 'textfield',
+                                  }}
                                   step="0.01"
                                   disabled={savingParamId === param.id}
                                 />
