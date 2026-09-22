@@ -343,47 +343,66 @@ async def sync_positions():
                 continue
 
         # Step 4: DELETE ISINs that are no longer in T212 (NEW - Cleanup orphaned ISINs)
+        deleted = 0
         try:
-            logger.info("Starting cleanup of orphaned ISINs...")
+            logger.info("[ISIN Cleanup] Starting cleanup phase...")
+
+            # Collect ISINs from T212 response
+            logger.info(f"[ISIN Cleanup] Building T212 ISIN set from {len(positions)} positions...")
+            t212_isins_set = set()
+            for position in positions:
+                isin = position.get("instrument", {}).get("isin")
+                if isin:
+                    t212_isins_set.add(isin)
+
+            logger.info(f"[ISIN Cleanup] T212 returned {len(t212_isins_set)} ISINs: {sorted(list(t212_isins_set))}")
 
             # Get all ISINs currently in database
+            logger.info("[ISIN Cleanup] Querying database for all ISINs...")
             all_db_isins_result = db.client.table("isins").select("id, isin").execute()
             all_db_isins = all_db_isins_result.data or []
 
-            logger.info(f"T212 returned {len(t212_isins_set)} ISINs, DB has {len(all_db_isins)} ISINs")
+            db_isin_list = sorted([r.get("isin") for r in all_db_isins])
+            logger.info(f"[ISIN Cleanup] Database has {len(all_db_isins)} ISINs: {db_isin_list}")
 
             # Find ISINs in DB but NOT in T212
+            logger.info(f"[ISIN Cleanup] Comparing T212 list with database...")
             for isin_row in all_db_isins:
                 isin = isin_row.get("isin")
                 isin_id = isin_row.get("id")
 
                 if isin not in t212_isins_set:
-                    logger.info(f"Found orphaned ISIN: {isin} (id={isin_id})")
+                    logger.info(f"[ISIN Cleanup] ⚠️ Found orphaned ISIN: {isin} (id={isin_id}) - NOT in T212 list")
 
                     try:
                         # Step 4a: DELETE related orders FIRST (foreign key constraint)
+                        logger.info(f"[ISIN Cleanup] Querying orders for orphaned ISIN {isin}...")
                         orders_result = db.client.table("orders").select("id").eq("isin_id", isin_id).execute()
                         orders_to_delete = orders_result.data or []
 
-                        for order in orders_to_delete:
-                            db.client.table("orders").delete().eq("id", order["id"]).execute()
+                        logger.info(f"[ISIN Cleanup] Found {len(orders_to_delete)} orders for {isin}")
 
-                        if orders_to_delete:
-                            logger.info(f"Deleted {len(orders_to_delete)} orders for orphaned ISIN {isin}")
+                        for order in orders_to_delete:
+                            order_id = order["id"]
+                            db.client.table("orders").delete().eq("id", order_id).execute()
+                            logger.info(f"[ISIN Cleanup] Deleted order {order_id} for ISIN {isin}")
 
                         # Step 4b: DELETE the ISIN itself
+                        logger.info(f"[ISIN Cleanup] Deleting ISIN {isin}...")
                         db.client.table("isins").delete().eq("id", isin_id).execute()
                         deleted += 1
-                        logger.info(f"✅ Deleted orphaned ISIN: {isin}")
+                        logger.info(f"[ISIN Cleanup] ✅ Successfully deleted orphaned ISIN {isin}")
 
                     except Exception as e:
-                        logger.error(f"Error deleting orphaned ISIN {isin}: {e}", exc_info=True)
+                        logger.error(f"[ISIN Cleanup] ❌ Error deleting orphaned ISIN {isin}: {e}", exc_info=True)
                         errors += 1
+                else:
+                    logger.info(f"[ISIN Cleanup] ✅ ISIN {isin} is in T212 list - keeping")
 
-            logger.info(f"Cleanup complete: deleted {deleted} ISINs")
+            logger.info(f"[ISIN Cleanup] Cleanup complete: deleted {deleted} ISINs total")
 
         except Exception as e:
-            logger.error(f"Error during cleanup phase: {e}", exc_info=True)
+            logger.error(f"[ISIN Cleanup] ❌ Error during cleanup phase: {e}", exc_info=True)
             # Continue - don't let cleanup break the entire sync
 
         response = {
