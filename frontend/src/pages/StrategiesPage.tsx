@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { ToggleSwitch } from '../components/ui/ToggleSwitch'
 import { apiClient } from '../api/client'
+import { useToast } from '../components/ui/Toast'
 
 interface Strategy {
   id: string
@@ -40,6 +41,12 @@ export default function StrategiesPage() {
   const [parameters, setParameters] = useState<StrategyParameter[]>([])
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const toast = useToast()
+
+  // Edit mode state for parameters
+  const [editingParamId, setEditingParamId] = useState<string | null>(null)
+  const [editValues, setEditValues] = useState<{ [key: string]: number }>({})
+  const [savingParamId, setSavingParamId] = useState<string | null>(null)
 
   // Modals
   const [showCreateStrategy, setShowCreateStrategy] = useState(false)
@@ -300,8 +307,64 @@ export default function StrategiesPage() {
     try {
       await apiClient.delete(`/v1/strategies/${selectedStrategy.id}/parameters/${paramId}`)
       setParameters(parameters.filter(p => p.id !== paramId))
+      toast.success('Parameter deleted', 3000)
     } catch (error) {
+      const errorMsg = (error as any)?.response?.data?.detail || 'Failed to delete parameter'
+      toast.error(errorMsg, 5000)
       console.error('Error deleting parameter:', error)
+    }
+  }
+
+  const startEditParameter = (param: StrategyParameter) => {
+    setEditingParamId(param.id)
+    setEditValues({
+      param1: param.param1 ?? 0,
+      param2: param.param2 ?? 0,
+      param3: param.param3 ?? 0,
+      param4: param.param4 ?? 0,
+      param5: param.param5 ?? 0,
+      param6: param.param6 ?? 0,
+      param7: param.param7 ?? 0,
+      param8: param.param8 ?? 0,
+      param9: param.param9 ?? 0,
+      param10: param.param10 ?? 0,
+    })
+  }
+
+  const cancelEditParameter = () => {
+    setEditingParamId(null)
+    setEditValues({})
+  }
+
+  const saveEditParameter = async (paramId: string) => {
+    // Validation: ensure all values are numeric
+    for (const [key, val] of Object.entries(editValues)) {
+      const numVal = Number(val)
+      if (isNaN(numVal)) {
+        toast.error(`${key} must be a number`, 5000)
+        return
+      }
+    }
+
+    if (!selectedStrategy) return
+
+    setSavingParamId(paramId)
+    try {
+      await apiClient.put(
+        `/v1/strategies/${selectedStrategy.id}/parameters/${paramId}`,
+        editValues
+      )
+      setParameters(parameters.map(p =>
+        p.id === paramId ? { ...p, ...editValues } : p
+      ))
+      toast.success('Parameter updated successfully', 3000)
+      setEditingParamId(null)
+      setEditValues({})
+    } catch (error) {
+      const errorMsg = (error as any)?.response?.data?.detail || 'Failed to update parameter'
+      toast.error(errorMsg, 5000)
+    } finally {
+      setSavingParamId(null)
     }
   }
 
@@ -730,25 +793,73 @@ export default function StrategiesPage() {
                   <tbody>
                     {parameters.map((param) => (
                       <tr key={param.id}>
-                        <td className="font-semibold">{param.pos}</td>
-                        <td>{param.param1}</td>
-                        <td>{param.param2}</td>
-                        <td>{param.param3 ?? '-'}</td>
-                        <td>{param.param4 ?? '-'}</td>
-                        <td>{param.param5 ?? '-'}</td>
-                        <td>{param.param6 ?? '-'}</td>
-                        <td>{param.param7 ?? '-'}</td>
-                        <td>{param.param8 ?? '-'}</td>
-                        <td>{param.param9 ?? '-'}</td>
-                        <td>{param.param10 ?? '-'}</td>
-                        <td>
-                          <button
-                            onClick={() => handleDeleteParameter(param.id)}
-                            className="text-t212-error hover:text-t212-warning transition"
-                          >
-                            <X size={16} />
-                          </button>
-                        </td>
+                        {editingParamId === param.id ? (
+                          // EDIT MODE
+                          <>
+                            <td className="font-semibold text-gray-500">{param.pos}</td>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                              <td key={`edit-${i}`} className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  value={editValues[`param${i}`] ?? ''}
+                                  onChange={(e) =>
+                                    setEditValues({
+                                      ...editValues,
+                                      [`param${i}`]: e.target.value === '' ? 0 : Number(e.target.value),
+                                    })
+                                  }
+                                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-center text-sm"
+                                  step="0.01"
+                                  disabled={savingParamId === param.id}
+                                />
+                              </td>
+                            ))}
+                            <td className="px-4 py-3 text-center space-x-2">
+                              <button
+                                onClick={() => saveEditParameter(param.id)}
+                                disabled={savingParamId === param.id}
+                                className="text-green-500 hover:text-green-400 transition disabled:opacity-50"
+                                title="Save"
+                              >
+                                {savingParamId === param.id ? '⏳' : '✓'}
+                              </button>
+                              <button
+                                onClick={cancelEditParameter}
+                                disabled={savingParamId === param.id}
+                                className="text-yellow-500 hover:text-yellow-400 transition disabled:opacity-50"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          // NORMAL MODE
+                          <>
+                            <td className="font-semibold text-white cursor-pointer hover:text-blue-400"
+                                onClick={() => startEditParameter(param)}>
+                              {param.pos}
+                            </td>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                              <td
+                                key={`cell-${i}`}
+                                className="px-4 py-3 text-center text-gray-300 cursor-pointer hover:text-blue-400"
+                                onClick={() => startEditParameter(param)}
+                              >
+                                {param[`param${i}`] ?? '-'}
+                              </td>
+                            ))}
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleDeleteParameter(param.id)}
+                                className="text-red-500 hover:text-red-400 transition"
+                                title="Delete"
+                              >
+                                <X size={16} />
+                              </button>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
