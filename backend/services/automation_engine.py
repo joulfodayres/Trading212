@@ -452,11 +452,51 @@ class AutomationEngine:
             self.logger.info(f"AutomationEngine | FASE 3 | ✅ {len(filled_orders)} ordem(ns) FILLED carregada(s)")
             self._log_db_action(f"✅ Carregadas {len(filled_orders)} ordens FILLED", {"count": len(filled_orders)})
 
-            for idx, order in enumerate(filled_orders, 1):
+            # Group filled orders into COMPLETE PAIRS (both legs of the same grid
+            # pair executed) vs ISOLATED fills (sibling still pending).
+            # A complete pair is detected when an order's related_order_id is ALSO
+            # in this cycle's filled set. Grouping up-front guarantees each leg is
+            # processed exactly once (avoids double-processing the same grid pair).
+            filled_by_id = {o.get("id"): o for o in filled_orders}
+            processed_ids = set()
+            complete_pairs = []
+            isolated_fills = []
+
+            for order in filled_orders:
+                oid = order.get("id")
+                if oid in processed_ids:
+                    continue
+                related_id = order.get("related_order_id")
+                if related_id and related_id in filled_by_id:
+                    sibling = filled_by_id[related_id]
+                    complete_pairs.append((order, sibling))
+                    processed_ids.add(oid)
+                    processed_ids.add(related_id)
+                else:
+                    isolated_fills.append(order)
+                    processed_ids.add(oid)
+
+            self.logger.info(
+                f"AutomationEngine | FASE 3 | 🔎 {len(complete_pairs)} par(es) completo(s), "
+                f"{len(isolated_fills)} fill(s) isolado(s)"
+            )
+            self._log_db_action(
+                "🔎 Classificação de fills",
+                {"complete_pairs": len(complete_pairs), "isolated_fills": len(isolated_fills)}
+            )
+
+            # Process ISOLATED fills (existing behaviour: cancel pending sibling + new pair)
+            for idx, order in enumerate(isolated_fills, 1):
                 ticker = order.get("ticker", "N/A")
                 side = order.get("side", "N/A")
-                self.logger.info(f"AutomationEngine | FASE 3 | 🔄 Processando ordem {idx}/{len(filled_orders)}: {ticker} ({side})")
+                self.logger.info(f"AutomationEngine | FASE 3 | 🔄 Fill isolado {idx}/{len(isolated_fills)}: {ticker} ({side})")
                 await self._phase_3_handle_filled_order(order)
+
+            # Process COMPLETE PAIRS (Option A: no cancel, balance unchanged, ONE new pair)
+            for idx, (order_a, order_b) in enumerate(complete_pairs, 1):
+                ticker = order_a.get("ticker", "N/A")
+                self.logger.info(f"AutomationEngine | FASE 3 | 🔄 Par completo {idx}/{len(complete_pairs)}: {ticker}")
+                await self._phase_3_handle_complete_pair(order_a, order_b)
 
         except Exception as e:
             self.logger.error(f"AutomationEngine | FASE 3 | ❌ Erro: {str(e)}", exc_info=True)
@@ -559,6 +599,83 @@ class AutomationEngine:
                 self.logger.info(f"AutomationEngine | ⚠️ Order {order_id} marked as Error (X)")
             except Exception as update_err:
                 self.logger.error(f"AutomationEngine | ❌ Failed to update order status to X: {update_err}")
+
+    async def _phase_3_handle_complete_pair(self, order_a: Dict, order_b: Dict):
+        """
+        Handle a COMPLETE PAIR: both legs of the same grid pair executed between
+        cycles (one BUY + one SELL).
+
+        Option A behaviour:
+        - trades_balance is UNCHANGED (BUY -1 and SELL +1 net to zero)
+        - Nothing is cancelled (there is no pending sibling to cancel)
+        - Exactly ONE new BUY/SELL pair is placed, at the SAME grid pos
+        - Both filled orders are marked 'P' (Processed)
+        - Fresh market price is fetched from T212 before placing the new pair
+        """
+        order_ids = [order_a.get("id"), order_b.get("id")]
+        try:
+            db = get_db()
+
+            # Load ISIN (both orders share the same isin_id)
+            isin_result = db.client.table("isins").select("*").eq("id", order_a.get("isin_id")).execute()
+            isin = isin_result.data[0] if isin_result.data else None
+            if not isin:
+                self.logger.error(f"AutomationEngine | FASE 3 | ❌ ISIN não encontrado para par completo {order_ids}")
+                return
+
+            ticker = isin.get("ticker")
+            self.logger.info(
+                f"AutomationEngine | FASE 3 | ✅ Par completo em {ticker} "
+                f"(trades_balance INALTERADO = {isin.get('trades_balance', 0)})"
+            )
+
+            # Refresh position/price from T212 (trades_balance intentionally NOT changed)
+            position = await self.t212_service.get_position(ticker)
+            if position:
+                update_isin = {
+                    "quantity": position.get("quantity", isin.get("quantity")),
+                    "current_price": position.get("currentPrice", isin.get("current_price")),
+                    "average_price_paid": position.get("averagePricePaid", isin.get("average_price_paid")),
+                    "quantity_available_for_trading": position.get("quantityAvailableForTrading", isin.get("quantity_available_for_trading")),
+                }
+                wi = position.get("walletImpact", {})
+                update_isin["wi_current_value"] = wi.get("currentValue", isin.get("wi_current_value"))
+                update_isin["wi_total_cost"] = wi.get("totalCost", isin.get("wi_total_cost"))
+                update_isin["wi_unrealized_profit_loss"] = wi.get("unrealizedProfitLoss", isin.get("wi_unrealized_profit_loss"))
+                update_isin["updated_at"] = datetime.utcnow().isoformat()
+
+                db.client.table("isins").update(update_isin).eq("id", isin.get("id")).execute()
+                # Keep in-memory dict in sync so the new pair uses the fresh price
+                isin.update(update_isin)
+            else:
+                self.logger.warning(
+                    f"AutomationEngine | FASE 3 | ⚠️ Sem posição T212 para {ticker}; "
+                    f"novo par usará current_price da BD"
+                )
+
+            # Place exactly ONE new pair at the SAME grid pos (trades_balance unchanged)
+            await self._phase_3_place_new_pair(isin)
+
+            # Mark BOTH filled orders as Processed ('P')
+            for oid in order_ids:
+                db.client.table("orders").update({
+                    "automation_status": "P",
+                    "updated_at": "now()"
+                }).eq("id", oid).execute()
+
+            self.logger.info(f"AutomationEngine | ✅ Par completo processado, ambas as ordens marcadas 'P': {order_ids}")
+
+        except Exception as e:
+            self.logger.error(f"AutomationEngine | ❌ Erro processando par completo {order_ids}: {e}", exc_info=True)
+            # Mark BOTH orders as Error ('X')
+            for oid in order_ids:
+                try:
+                    db.client.table("orders").update({
+                        "automation_status": "X",
+                        "updated_at": "now()"
+                    }).eq("id", oid).execute()
+                except Exception as update_err:
+                    self.logger.error(f"AutomationEngine | ❌ Falha ao marcar ordem {oid} como 'X': {update_err}")
 
     async def _phase_3_place_new_pair(self, isin_data: Dict):
         """
