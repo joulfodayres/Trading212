@@ -133,6 +133,141 @@
 
 ---
 
+### Item #13: Dynamic Grid Strategy - Variable Delta Intervals (NEW)
+**Estimated:** 8-10 hours
+**Priority:** MEDIUM (Feature enhancement)
+**Description:**
+- Implement new strategy type: "Dynamic Grid" with varying BUY/SELL deltas
+- Current grid: Fixed delta every cycle (e.g., always buy at -1%, always sell at +2%)
+- New feature: **Adjust delta every N days** based on market conditions
+  - Example: Week 1 buy at -0.5%, sell at +1.5% (tight grid, more trades)
+  - Example: Week 2 buy at -1%, sell at +2% (normal grid)
+  - Example: Week 3 buy at -2%, sell at +3% (wide grid, fewer trades)
+- Support multiple delta "schedules" per strategy
+- Allow user to define: delta values, time intervals (days), cycling pattern
+
+**Current State (Fixed Grid):**
+```
+Strategy: Grid ±1% on VWRL
+Position -1: SELL @ +2% (fixed)
+Position +1: BUY @ -1% (fixed)
+↓
+Every cycle uses SAME deltas
+↓
+No adaptation to market volatility
+```
+
+**Proposed State (Dynamic Grid):**
+```
+Strategy: Dynamic Grid on VWRL
+Schedule A (Days 1-7): BUY @ -0.5%, SELL @ +1.5%
+Schedule B (Days 8-14): BUY @ -1%, SELL @ +2%
+Schedule C (Days 15-21): BUY @ -2%, SELL @ +3%
+↓
+Cycle 1-168 cycles: Use Schedule A
+Cycle 169-336: Use Schedule B
+Cycle 337+: Use Schedule C
+↓
+Adapts to market conditions over time
+```
+
+**Detailed Requirements:**
+
+1. **Database Changes:**
+   - Add column `strategy_type` to strategies table (grid_trading vs dynamic_grid)
+   - Create new table `strategy_delta_schedules`:
+     ```
+     id (UUID, PK)
+     strategy_id (UUID, FK → strategies)
+     schedule_name (VARCHAR) — e.g., "Tight", "Normal", "Wide"
+     day_start (INT) — Which day this schedule starts (1-indexed)
+     day_end (INT) — Which day this schedule ends
+     param1_delta (DECIMAL) — Delta % for SELL (position -1)
+     param2_delta (DECIMAL) — Delta % for BUY (position +1)
+     created_at (TIMESTAMP)
+     ```
+
+2. **UI Changes (Frontend):**
+   - Strategy creation: Radio buttons: "Fixed Grid" vs "Dynamic Grid"
+   - If "Dynamic Grid" selected:
+     - Input: "Cycle interval in days" (e.g., 7 days per schedule)
+     - Table to add multiple delta schedules:
+       - Schedule name (Tight, Normal, Wide, etc)
+       - Day range (1-7, 8-14, etc)
+       - BUY delta % and SELL delta %
+       - Add/Remove/Edit rows
+   - Parameter section: Shows current active schedule based on elapsed days
+   - Automation preview: Shows schedule that will be used next
+
+3. **AutomationEngine Changes (Backend):**
+   - New method: `_get_current_delta_schedule(strategy)`:
+     - Calculate days elapsed since strategy creation
+     - Determine which schedule is active based on day_start/day_end
+     - Return current delta values
+   - Modify Phase 1 (Setup):
+     - Instead of using fixed param1/param2
+     - Call `_get_current_delta_schedule()` to get current deltas
+     - Use those for order price calculation
+   - Add logging: Track which schedule is active each cycle
+
+4. **Grid Trading Strategy Enhancement:**
+   - Current fixed grid: 0% complexity, always same prices
+   - New dynamic grid: Adds market adaptation capability
+   - Helps capture different market regimes:
+     - Low volatility weeks: tight delta (more frequent trades, smaller profits)
+     - High volatility weeks: wide delta (fewer trades, larger profits per trade)
+
+5. **Example Use Cases:**
+   - **Volatility Adapting Grid:**
+     ```
+     Week 1: Tight (±1%) - Capture sideways market
+     Week 2: Normal (±2%) - Standard market
+     Week 3: Wide (±5%) - Prepare for volatility
+     Repeat 3-week cycle
+     ```
+   - **Profit Taking Grid:**
+     ```
+     Month 1: Tight (±0.5%) - Quick profits, short hold times
+     Month 2: Normal (±1.5%) - Balanced
+     Month 3: Wide (±3%) - Let winners run longer
+     ```
+   - **Cost Averaging Grid:**
+     ```
+     Week 1: Wide (buy/sell far apart) - Initial positions
+     Week 2-3: Tighter - Average into position
+     Week 4+: Wide again - Unwind position
+     ```
+
+**Deliverables:**
+- ✅ New strategy type: "Dynamic Grid"
+- ✅ Delta schedule management UI (CRUD)
+- ✅ Backend logic to calculate current schedule
+- ✅ AutomationEngine integration (Phase 1 uses dynamic deltas)
+- ✅ Audit trail: Track which schedule was active for each order
+- ✅ Example strategy templates (3-4 pre-built patterns)
+
+**Dependencies:**
+- [ ] Database schema update + migration
+- [ ] New API endpoints: CRUD delta schedules
+- [ ] Frontend: Strategy type selector + schedule table
+- [ ] Backend: Schedule calculation logic
+- [ ] Testing: Verify correct schedule selection over multiple days
+
+**Testing Scenarios:**
+1. Create dynamic grid with 7-day schedules
+2. Run automation for 21 cycles (simulating 3 weeks)
+3. Verify orders use different deltas each week
+4. Check audit trail shows correct schedules were applied
+5. Verify UI shows current + next schedule
+
+**Impact:**
+- Opens new trading strategy possibilities (market adaptation)
+- Enables sophisticated grid strategies (not just fixed)
+- Allows experimentation with different delta patterns
+- Foundation for future: AI-powered delta optimization
+
+---
+
 ### Item #10: Cybersecurity Testing & Penetration Testing
 **Estimated:** 8-12 hours
 **Description:**
@@ -300,6 +435,7 @@
 | 9. Smart Missing Msg | ⏳ TODO | - |
 | 6. Rename Render | ⏳ TODO | - |
 | **12. Enhanced Login Security** | ⏳ TODO | - |
+| **13. Dynamic Grid Strategy** | ⏳ TODO | - |
 | 2. Upload T212 Data | ⏳ TODO | - |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
@@ -323,9 +459,9 @@
 2. **Item #6:** Rename Render (0.5h) - Quick win
 
 ### High Impact / Medium Effort (Security & User Features)
-3. **Item #12:** Enhanced Login Security (6-8h) - **NEW** - Prevent brute force, rate limiting, real auth
-4. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
-5. **Item #8:** Parameters Edit Row (2-3h) - Better parameter UX ✅ DONE
+3. **Item #12:** Enhanced Login Security (6-8h) - Prevent brute force, rate limiting, real auth
+4. **Item #13:** Dynamic Grid Strategy (8-10h) - **NEW** - Variable BUY/SELL deltas by day
+5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
 
 ### High Impact / High Effort (Strategic)
 6. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
@@ -334,7 +470,8 @@
 
 **Suggested workflow:**
 - Quick wins first (#9, #6) — 2-3 hours, pure polish
-- Then security (#12) — 6-8 hours, HIGH priority, critical for production
+- Then security (#12) — 6-8 hours, HIGH priority
+- Then new feature (#13) — 8-10 hours, interesting trading strategy
 - Then strategic reviews (#11, #10) — build confidence before wider use
 - Then data import (#2) and analytics (#3) — user-facing features
 
@@ -375,5 +512,5 @@
 ---
 
 **Last Updated:** 2026-09-23
-**Status:** Phase 5: 60% complete (7 of 14 items) + NEW Item #12 (Enhanced Login Security)
-**Recent:** Documentation reorganization ✅ DONE | NEW: Security-focused item added
+**Status:** Phase 5: 50% complete (7 of 15 items) + NEW Items #12 & #13
+**Recent:** Documentation reorganization ✅ | NEW: Login Security + Dynamic Grid Strategy
