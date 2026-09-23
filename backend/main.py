@@ -161,7 +161,7 @@ async def health_check():
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     """Handler genérico de exceções"""
-    logger.error(f"Erro não tratado: {str(exc)}")
+    logger.error(f"Erro não tratado em {request.method} {request.url.path}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Erro interno do servidor"}

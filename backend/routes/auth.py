@@ -253,7 +253,16 @@ async def register(request: RegisterRequest):
     Cria a conta única desta app (bootstrap-only).
     Bloqueado assim que existir 1 utilizador — não há registo público.
     """
-    if _count_users() > 0:
+    try:
+        existing_users = _count_users()
+    except Exception as e:
+        logger.error(f"❌ Erro ao consultar tabela `users` (RLS? tabela em falta?): {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao aceder à tabela users: {e}",
+        )
+
+    if existing_users > 0:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Registo desativado — esta aplicação já tem um utilizador configurado",
@@ -264,14 +273,26 @@ async def register(request: RegisterRequest):
     if request.password != request.password_confirm:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords não coincidem")
 
-    supabase = get_supabase()
-    auth_response = supabase.auth.sign_up({"email": request.email, "password": request.password})
+    try:
+        supabase = get_supabase()
+        auth_response = supabase.auth.sign_up({"email": request.email, "password": request.password})
+    except Exception as e:
+        logger.error(f"❌ Supabase Auth sign_up falhou para {request.email}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Erro no Supabase Auth: {e}")
 
     if not auth_response or not auth_response.user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao criar conta")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao criar conta (resposta vazia do Supabase Auth)")
 
     user_id = str(auth_response.user.id)
-    _upsert_user(user_id, request.email)
+
+    try:
+        _upsert_user(user_id, request.email)
+    except Exception as e:
+        logger.error(f"❌ Conta criada no Auth mas falhou o upsert na tabela `users` ({user_id}): {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Conta criada no Supabase Auth mas falhou ao gravar na tabela users: {e}",
+        )
 
     logger.info(f"✅ Conta única criada (bootstrap): {request.email}")
     return {"message": "Conta criada com sucesso. Faz login e configura o MFA antes de continuar."}
