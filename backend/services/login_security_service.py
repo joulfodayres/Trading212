@@ -50,8 +50,12 @@ def record_attempt(ip_address: str, email: Optional[str], success: bool, stage: 
         logger.error(f"Erro ao registar tentativa de login: {e}")
 
 
-def count_recent_failures(ip_address: str) -> int:
-    """Conta falhas consecutivas recentes para um IP (janela deslizante)."""
+def _get_failure_streak(ip_address: str) -> tuple[int, Optional[datetime]]:
+    """
+    Conta falhas consecutivas recentes para um IP (janela deslizante) e devolve
+    também o timestamp da falha mais recente — necessário para saber quanto
+    tempo já passou, não só quantas falhas houve.
+    """
     try:
         client = get_supabase_client()
         window_start = _now() - timedelta(minutes=FAILURE_WINDOW_MINUTES)
@@ -69,31 +73,46 @@ def count_recent_failures(ip_address: str) -> int:
         rows = response.data or []
         # Contar falhas consecutivas a partir da mais recente, parar no primeiro sucesso
         failures = 0
+        last_failure_at: Optional[datetime] = None
         for row in rows:
             if row.get("success"):
                 break
             failures += 1
-        return failures
+            if last_failure_at is None:
+                last_failure_at = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")).replace(tzinfo=None)
+        return failures, last_failure_at
 
     except Exception as e:
         logger.error(f"Erro ao contar falhas recentes: {e}")
-        return 0  # Fail-open no cálculo do atraso (nunca bloquear por erro interno)
+        return 0, None  # Fail-open no cálculo do atraso (nunca bloquear por erro interno)
+
+
+def count_recent_failures(ip_address: str) -> int:
+    """Conta falhas consecutivas recentes para um IP (janela deslizante)."""
+    failures, _ = _get_failure_streak(ip_address)
+    return failures
 
 
 def get_retry_after_seconds(ip_address: str) -> int:
     """
-    Calcula o atraso progressivo (em segundos) para um IP, baseado em falhas recentes.
+    Calcula quantos segundos FALTAM até a próxima tentativa ser permitida.
 
-    Exponencial: 0s, 2s, 4s, 8s, 16s, 32s... com teto configurável.
-    Retorna 0 se o IP pode tentar imediatamente.
+    Exponencial: 0s, 2s, 4s, 8s, 16s, 32s... com teto configurável, contado a
+    partir do momento da última falha — não apenas do número de falhas, senão
+    o atraso nunca expira mesmo depois de esperado.
+    Retorna 0 se o IP já pode tentar.
     """
-    failures = count_recent_failures(ip_address)
-    if failures == 0:
+    failures, last_failure_at = _get_failure_streak(ip_address)
+    if failures == 0 or last_failure_at is None:
         return 0
 
     max_seconds = settings.LOGIN_DELAY_MAX_MINUTES * 60
-    delay = min(2 ** (failures - 1), max_seconds)
-    return delay
+    required_delay = min(2 ** (failures - 1), max_seconds)
+
+    elapsed = (_now() - last_failure_at).total_seconds()
+    remaining = required_delay - elapsed
+
+    return max(0, int(remaining) + (1 if remaining > int(remaining) else 0))
 
 
 def check_and_alert_threshold(ip_address: str, email: Optional[str]) -> None:
