@@ -9,10 +9,10 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 sys.path.insert(0, '.')
 
 from api.trading212 import Trading212Client
+from config.settings import settings
 
-# Credenciais DEMO (já testadas)
-API_KEY = "40512867ZyijwBGwduNcUlkHinVZrCXhzxAqU"
-API_SECRET = "iEQfVWUq3un1rGbM3ruzUWZweTRZYVLah-c8EFnCXW0"
+API_KEY = settings.T212_API_KEY
+API_SECRET = settings.T212_API_SECRET
 
 print("=" * 60)
 print("🧪 TESTE DA API TRADING 212")
@@ -21,7 +21,7 @@ print("=" * 60)
 try:
     # Inicializar cliente
     print("\n1️⃣  Inicializando cliente T212...")
-    client = Trading212Client(API_KEY, API_SECRET, environment="demo")
+    client = Trading212Client(API_KEY, API_SECRET, environment=settings.T212_ENVIRONMENT)
     print("    Cliente criado com sucesso")
 
     # Teste 1: Saldo
