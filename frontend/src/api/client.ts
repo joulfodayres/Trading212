@@ -20,6 +20,10 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// Endpoints where a 401 is an *expected* possible outcome, not a sign that
+// an established session died mid-use — never react to a 401 on these.
+const AUTH_FLOW_PATHS = ['/auth/login', '/auth/login/verify-mfa', '/auth/me', '/auth/register']
+
 apiClient.interceptors.response.use(
   (response) => {
     console.log('[apiClient.response] Received response from:', response.config.url, 'status:', response.status)
@@ -33,11 +37,21 @@ apiClient.interceptors.response.use(
       message: error.message
     })
 
-    // If 401, the cookie is gone/invalid — redirect to login (avoid loop on the login call itself)
-    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
-      console.warn('[apiClient.response] 401 Unauthorized, redirecting to login')
-      window.location.href = '/login'
+    const isAuthFlowCall = AUTH_FLOW_PATHS.some((path) => error.config?.url?.includes(path))
+
+    // A 401 on any *other* protected endpoint means an established session
+    // died mid-use (expired token, or a killswitch fired elsewhere) — drop
+    // the local auth state so React Router (App.tsx) naturally routes back
+    // to /login on next render. No window.location reload here: that caused
+    // an infinite loop when /auth/me legitimately returns 401 on first load
+    // (no session yet is the normal case, not an error to react to).
+    if (error.response?.status === 401 && !isAuthFlowCall) {
+      console.warn('[apiClient.response] 401 on a protected call — clearing session state')
+      import('../stores/authStore').then(({ useAuthStore }) => {
+        useAuthStore.setState({ user: null, isAuthenticated: false })
+      })
     }
+
     return Promise.reject(error)
   }
 )
