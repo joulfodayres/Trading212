@@ -5,79 +5,96 @@ interface User {
   id: string
   email: string
   is_admin: boolean
+  totp_enabled: boolean
 }
 
 interface AuthStore {
   user: User | null
-  token: string | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
+
+  // MFA login flow (step 1 -> step 2)
+  mfaRequired: boolean
+  mfaSetupRequired: boolean
+  preAuthToken: string | null
+
   login: (email: string, password: string) => Promise<void>
+  verifyMfa: (code: string, trustDevice: boolean) => Promise<void>
   register: (email: string, password: string, passwordConfirm: string) => Promise<void>
   logout: () => Promise<void>
-  setUser: (user: User) => void
+  logoutAll: () => Promise<void>
   checkAuth: () => Promise<void>
   clearError: () => void
+  clearMfaFlow: () => void
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  isAuthenticated: false,
   isLoading: false,
   error: null,
+
+  mfaRequired: false,
+  mfaSetupRequired: false,
+  preAuthToken: null,
 
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null })
     try {
-      console.log('[authStore.login] Starting login request to /api/auth/login', { email })
-      const response = await apiClient.post('/auth/login', {
-        email,
-        password
-      })
+      const response = await apiClient.post('/auth/login', { email, password })
+      const { mfa_required, mfa_setup_required, pre_auth_token } = response.data
 
-      console.log('[authStore.login] Login response received:', response.status, response.data)
-
-      // Backend returns: { access_token, token_type, user_id, email, message }
-      const { access_token, user_id, email: userEmail } = response.data
-
-      if (!access_token) {
-        throw new Error('No access_token in response')
+      if (mfa_required) {
+        set({
+          isLoading: false,
+          mfaRequired: true,
+          preAuthToken: pre_auth_token
+        })
+        return
       }
 
-      console.log('[authStore.login] Token received, saving to localStorage', { user_id, userEmail })
-
-      // Save token to localStorage
-      localStorage.setItem('token', access_token)
-
-      // Add token to axios header
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
-
-      set({
-        user: {
-          id: user_id,
-          email: userEmail,
-          is_admin: false
-        },
-        token: access_token,
-        isAuthenticated: true,
-        isLoading: false
-      })
-
-      console.log('[authStore.login] Login state updated successfully')
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || error?.message || 'Error logging in'
-      console.error('[authStore.login] Login error:', {
-        status: error?.response?.status,
-        detail: error?.response?.data?.detail,
-        message: error?.message,
-        fullError: error
-      })
+      // Login completo (MFA não ativo ainda, ou dispositivo confiável)
+      await get().checkAuth()
       set({
         isLoading: false,
-        error: message
+        mfaSetupRequired: !!mfa_setup_required
       })
+    } catch (error: any) {
+      const status = error?.response?.status
+      let message = error?.response?.data?.detail || 'Erro ao fazer login'
+
+      if (status === 429) {
+        const retryAfter = error?.response?.headers?.['retry-after']
+        message = retryAfter
+          ? `Demasiadas tentativas. Tenta novamente em ${retryAfter}s`
+          : 'Demasiadas tentativas. Aguarda um pouco.'
+      }
+
+      set({ isLoading: false, error: message })
+      throw new Error(message)
+    }
+  },
+
+  verifyMfa: async (code: string, trustDevice: boolean) => {
+    set({ isLoading: true, error: null })
+    try {
+      const preAuthToken = get().preAuthToken
+      if (!preAuthToken) {
+        throw new Error('Sessão de login expirada, tenta novamente')
+      }
+
+      await apiClient.post('/auth/login/verify-mfa', {
+        pre_auth_token: preAuthToken,
+        code,
+        trust_device: trustDevice
+      })
+
+      await get().checkAuth()
+      set({ isLoading: false, mfaRequired: false, preAuthToken: null })
+    } catch (error: any) {
+      const message = error?.response?.data?.detail || 'Código inválido'
+      set({ isLoading: false, error: message })
       throw new Error(message)
     }
   },
@@ -85,37 +102,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   register: async (email: string, password: string, passwordConfirm: string) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post('/auth/register', {
+      await apiClient.post('/auth/register', {
         email,
         password,
         password_confirm: passwordConfirm
       })
-
-      // Backend returns: { access_token, token_type, user_id, email, message }
-      const { access_token, user_id, email: userEmail } = response.data
-
-      // Save token to localStorage
-      localStorage.setItem('token', access_token)
-
-      // Add token to axios header
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
-
-      set({
-        user: {
-          id: user_id,
-          email: userEmail,
-          is_admin: false
-        },
-        token: access_token,
-        isAuthenticated: true,
-        isLoading: false
-      })
+      set({ isLoading: false })
+      // Registo não faz login automático — o utilizador entra a seguir e configura o MFA
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Error creating account'
-      set({
-        isLoading: false,
-        error: message
-      })
+      const message = error?.response?.data?.detail || 'Erro ao criar conta'
+      set({ isLoading: false, error: message })
       throw new Error(message)
     }
   },
@@ -124,60 +120,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       await apiClient.post('/auth/logout')
     } catch (error) {
-      console.error('Error logging out:', error)
+      console.error('[authStore.logout] Error:', error)
     } finally {
-      // Remove token from localStorage and headers
-      localStorage.removeItem('token')
-      delete apiClient.defaults.headers.common['Authorization']
-
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        error: null
-      })
+      set({ user: null, isAuthenticated: false, error: null })
     }
   },
 
-  setUser: (user: User) => {
-    set({ user })
+  logoutAll: async () => {
+    try {
+      await apiClient.post('/auth/logout-all')
+    } finally {
+      set({ user: null, isAuthenticated: false, error: null })
+    }
   },
 
   checkAuth: async () => {
-    const token = get().token
-    if (!token) return
-
     try {
-      const response = await apiClient.get('/auth/me', {
-        params: { token }
-      })
-
-      const { user } = response.data
-
-      set({
-        user,
-        isAuthenticated: true
-      })
+      const response = await apiClient.get('/auth/me')
+      set({ user: response.data.user, isAuthenticated: true })
     } catch (error) {
-      // Invalid or expired token
-      localStorage.removeItem('token')
-      delete apiClient.defaults.headers.common['Authorization']
-
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false
-      })
+      set({ user: null, isAuthenticated: false })
     }
   },
 
-  clearError: () => {
-    set({ error: null })
-  }
-}))
+  clearError: () => set({ error: null }),
 
-// Restore token from localStorage and add to axios header on initialization
-const token = localStorage.getItem('token')
-if (token) {
-  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
-}
+  clearMfaFlow: () => set({ mfaRequired: false, preAuthToken: null, error: null })
+}))

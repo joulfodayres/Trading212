@@ -7,9 +7,7 @@ export const authAPI = {
   register: (email: string, password: string, password_confirm: string) =>
     api.post('/auth/register', { email, password, password_confirm }),
 
-  logout: () => {
-    localStorage.removeItem('token')
-  }
+  logout: () => api.post('/auth/logout')
 }
 
 export const isinsAPI = {

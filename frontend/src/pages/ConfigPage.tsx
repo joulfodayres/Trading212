@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { apiClient } from '../api/client'
 import { ConfigForm } from '../components/ConfigForm'
+import { SecuritySection } from '../components/SecuritySection'
 
 export default function ConfigPage() {
   const [schedulerInterval, setSchedulerInterval] = useState<number>(15)
@@ -131,6 +132,8 @@ export default function ConfigPage() {
               </div>
             )}
           </div>
+
+          <SecuritySection />
         </CardContent>
       </Card>
 

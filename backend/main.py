@@ -120,9 +120,12 @@ app = FastAPI(
 )
 
 # CORS middleware
+# allow_credentials=True exige origins explícitos (o browser rejeita "*" + credentials)
+# — necessário para o cookie httpOnly do login (Item #12) funcionar entre frontend/backend
+_cors_origins = [settings.FRONTEND_URL, "http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Restringir em produção
+    allow_origins=list(set(_cors_origins)),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

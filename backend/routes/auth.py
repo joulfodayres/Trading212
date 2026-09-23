@@ -1,488 +1,465 @@
 """
-Rotas de autenticação com JWT e Supabase
+Rotas de autenticação — JWT + Supabase + MFA (Item #12)
+
+Modelo: single-user, uma camada forte (email + password + TOTP obrigatório).
+- Sem registo público (bootstrap-only: só funciona se não existir nenhum user)
+- Atraso progressivo por IP (nunca bloqueia a conta)
+- Dispositivos confiáveis (skip MFA, duração configurável)
+- Sessões revogáveis + killswitch
+- Token em cookie httpOnly (não em localStorage)
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends, Header, Request, Response
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 from typing import Optional
+import base64
+import io
 import logging
+import uuid
+
+import pyotp
+import qrcode
 from jose import JWTError, jwt
-from passlib.context import CryptContext
-from config.settings import settings
 from supabase import create_client, Client
+
+from config.settings import settings
+from db.supabase_client import get_supabase_client
+from services import login_security_service as security
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# Inicializar cliente Supabase (lazy - apenas quando necessário)
-_supabase_client = None
+ACCESS_COOKIE_NAME = "access_token"
+DEVICE_COOKIE_NAME = "device_id"
+
+_supabase_auth_client: Optional[Client] = None
+
 
 def get_supabase() -> Client:
-    """Obter cliente Supabase (lazy initialization)"""
-    global _supabase_client
-    if _supabase_client is None:
-        try:
-            _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-            logger.info("Supabase client initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize Supabase client: {e}")
-            raise
-    return _supabase_client
+    """Cliente Supabase para autenticação (lazy init)"""
+    global _supabase_auth_client
+    if _supabase_auth_client is None:
+        _supabase_auth_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    return _supabase_auth_client
 
-# Configurar password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_client_ip(request: Request) -> str:
+    """Extrai o IP real do cliente, considerando o proxy do Render."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 # ===== SCHEMAS =====
 
-class LoginRequest(BaseModel):
-    """Requisição de login"""
-    email: EmailStr
-    password: str
-
-
 class RegisterRequest(BaseModel):
-    """Requisição de registo"""
     email: EmailStr
     password: str
     password_confirm: str
 
 
-class TokenResponse(BaseModel):
-    """Resposta com token JWT"""
-    access_token: str
-    token_type: str = "Bearer"
-    user_id: str
-    email: str
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginResponse(BaseModel):
+    mfa_required: bool
+    mfa_setup_required: bool = False
+    pre_auth_token: Optional[str] = None
     message: str
 
 
-class AuthResponse(BaseModel):
-    """Resposta de autenticação (compatível com API)"""
-    access_token: str
-    user: dict
-    message: str
+class VerifyMfaRequest(BaseModel):
+    pre_auth_token: str
+    code: str
+    trust_device: bool = False
+
+
+class MfaSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+    qr_code_base64: str
+
+
+class MfaConfirmRequest(BaseModel):
+    code: str
+
+
+class MfaDisableRequest(BaseModel):
+    password: str
 
 
 class UserInfo(BaseModel):
-    """Informações do utilizador"""
     id: str
     email: str
     is_admin: bool
+    totp_enabled: bool
 
 
 class UserResponse(BaseModel):
-    """Resposta com user info"""
     user: UserInfo
     message: str
 
 
 # ===== JWT HELPERS =====
 
-def create_jwt_token(user_id: str, email: str, expires_delta: Optional[timedelta] = None) -> str:
-    """
-    Cria um JWT token assinado com a chave secreta
-
-    Args:
-        user_id: ID do utilizador
-        email: Email do utilizador
-        expires_delta: Tempo de expiração (padrão: 24 horas)
-
-    Returns:
-        JWT token string
-    """
-    if expires_delta is None:
-        expires_delta = timedelta(hours=settings.JWT_EXPIRATION_HOURS)
-
-    expire = datetime.utcnow() + expires_delta
+def create_access_token(user_id: str, email: str, jti: str) -> str:
+    expire = datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     payload = {
         "user_id": user_id,
         "email": email,
+        "jti": jti,
+        "stage": "full",
         "exp": expire,
-        "iat": datetime.utcnow()
+        "iat": datetime.utcnow(),
     }
-
-    encoded_jwt = jwt.encode(
-        payload,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
-    return encoded_jwt
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def verify_jwt_token(token: str) -> dict:
-    """
-    Verifica e decodifica um JWT token
+def create_pre_auth_token(user_id: str, email: str) -> str:
+    """Token de curta duração (5 min) para o intervalo entre password OK e código MFA."""
+    expire = datetime.utcnow() + timedelta(minutes=5)
+    payload = {
+        "user_id": user_id,
+        "email": email,
+        "stage": "mfa_pending",
+        "exp": expire,
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    Args:
-        token: JWT token string
 
-    Returns:
-        Payload do token (contém user_id e email)
-
-    Raises:
-        HTTPException: Se token inválido ou expirado
-    """
+def decode_token(token: str) -> dict:
     try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
-        user_id = payload.get("user_id")
-        email = payload.get("email")
-
-        if user_id is None or email is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token inválido"
-            )
-        return payload
+        return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as e:
-        logger.error(f"Erro ao verificar JWT: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido ou expirado"
+        logger.warning(f"JWT inválido: {e}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido ou expirado")
+
+
+def get_current_user(request: Request, authorization: Optional[str] = Header(None)) -> dict:
+    """
+    Dependency: extrai o utilizador do cookie httpOnly (preferencial) ou do
+    header Authorization (fallback, útil para Swagger/testes).
+    Rejeita tokens de estágio 'mfa_pending' e sessões revogadas.
+    """
+    token = request.cookies.get(ACCESS_COOKIE_NAME)
+
+    if not token and authorization:
+        try:
+            scheme, header_token = authorization.split()
+            if scheme.lower() == "bearer":
+                token = header_token
+        except ValueError:
+            pass
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
+
+    payload = decode_token(token)
+
+    if payload.get("stage") != "full":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticação incompleta")
+
+    jti = payload.get("jti")
+    if not jti or not security.is_session_active(jti):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessão terminada")
+
+    return {"id": payload.get("user_id"), "email": payload.get("email"), "jti": jti}
+
+
+# ===== USER TABLE HELPERS =====
+
+def _count_users() -> int:
+    client = get_supabase_client()
+    response = client.table("users").select("id", count="exact").execute()
+    return response.count or 0
+
+
+def _upsert_user(user_id: str, email: str) -> dict:
+    """Garante que existe uma row na tabela pública `users` para este utilizador."""
+    client = get_supabase_client()
+    existing = client.table("users").select("*").eq("id", user_id).execute()
+    if existing.data:
+        return existing.data[0]
+
+    response = client.table("users").insert({
+        "id": user_id,
+        "email": email,
+        "is_admin": True,  # Single-user: o único user é sempre admin
+        "totp_enabled": False,
+    }).execute()
+    return response.data[0] if response.data else {"id": user_id, "email": email, "totp_enabled": False}
+
+
+def _get_user(user_id: str) -> Optional[dict]:
+    client = get_supabase_client()
+    response = client.table("users").select("*").eq("id", user_id).execute()
+    return response.data[0] if response.data else None
+
+
+def _set_cookies(response: Response, access_token: str, device_token: Optional[str] = None) -> None:
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=access_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600,
+        path="/",
+    )
+    if device_token:
+        response.set_cookie(
+            key=DEVICE_COOKIE_NAME,
+            value=device_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite="lax",
+            max_age=settings.TRUSTED_DEVICE_DAYS * 86400,
+            path="/",
         )
 
 
-def get_current_user_from_token(token: str) -> dict:
-    """
-    Verifica token JWT e retorna user info
-    Levanta HTTPException 401 se inválido
+def _finish_login(response: Response, request: Request, user_id: str, email: str, trust_device: bool) -> None:
+    """Emite o token final (stage=full), cria a sessão, e opcionalmente marca o dispositivo como confiável."""
+    jti = str(uuid.uuid4())
+    access_token = create_access_token(user_id, email, jti)
+    expires_at = datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
 
-    Args:
-        token: JWT token string
+    security.create_session(
+        user_id=user_id,
+        jti=jti,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        expires_at=expires_at,
+    )
 
-    Returns:
-        Dicionário com dados do user
-    """
-    payload = verify_jwt_token(token)
-    return {
-        "id": payload.get("user_id"),
-        "email": payload.get("email")
-    }
+    device_token = None
+    if trust_device:
+        device_token = security.generate_device_token()
+        security.trust_device(user_id, device_token, get_client_ip(request), request.headers.get("user-agent"))
 
-
-def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    """
-    Dependency para extrair user do Authorization header
-    Espera formato: "Bearer <token>"
-
-    Args:
-        authorization: Authorization header
-
-    Returns:
-        Dicionário com dados do user
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header ausente"
-        )
-
-    try:
-        scheme, token = authorization.split()
-        if scheme.lower() != "bearer":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Scheme de autenticação inválido"
-            )
-        return get_current_user_from_token(token)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header malformado"
-        )
+    _set_cookies(response, access_token, device_token)
 
 
 # ===== ENDPOINTS =====
 
-@router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
-    """
-    Fazer login com email e password
-    Retorna JWT access_token (válido por 24h)
-
-    Request body:
-    - email: EmailStr
-    - password: str
-
-    Response:
-    - access_token: JWT token
-    - token_type: "Bearer"
-    - user_id: UUID do utilizador
-    - email: Email do utilizador
-    - message: Mensagem de sucesso
-    """
-    try:
-        logger.info(f" Tentativa de login: {request.email}")
-
-        # Em desenvolvimento, aceitar conta de teste sem validação Supabase
-        if settings.FASTAPI_ENV == "development" and request.email == "teste@trading212.com":
-            logger.info(f" Login dev (sem Supabase): {request.email}")
-
-            # User ID criado em Supabase
-            user_id = "17780beb-e61f-4604-ba5a-b6329312ac90"
-            access_token = create_jwt_token(user_id, request.email)
-
-            return TokenResponse(
-                access_token=access_token,
-                token_type="Bearer",
-                user_id=user_id,
-                email=request.email,
-                message="Login bem-sucedido (modo desenvolvimento)"
-            )
-
-        # Autenticar com Supabase Auth
-        supabase = get_supabase()
-        response = supabase.auth.sign_in_with_password({
-            "email": request.email,
-            "password": request.password
-        })
-
-        if not response or not response.user:
-            logger.warning(f" Falha de login: {request.email} (credenciais inválidas)")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Email ou password inválidos"
-            )
-
-        user = response.user
-        user_id = str(user.id)
-
-        # Criar JWT token próprio
-        access_token = create_jwt_token(user_id, request.email)
-
-        logger.info(f" Login bem-sucedido: {request.email} (ID: {user_id})")
-
-        return TokenResponse(
-            access_token=access_token,
-            token_type="Bearer",
-            user_id=user_id,
-            email=request.email,
-            message="Login realizado com sucesso"
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f" Erro ao fazer login: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou password inválidos"
-        )
-
-
-@router.post("/register", response_model=TokenResponse)
+@router.post("/register", response_model=dict)
 async def register(request: RegisterRequest):
     """
-    Criar nova conta com email e password
-    Retorna JWT access_token (válido por 24h)
-
-    Request body:
-    - email: EmailStr
-    - password: str (mínimo 8 caracteres)
-    - password_confirm: str (deve ser igual a password)
-
-    Response:
-    - access_token: JWT token
-    - token_type: "Bearer"
-    - user_id: UUID do utilizador
-    - email: Email do utilizador
-    - message: Mensagem de sucesso
+    Cria a conta única desta app (bootstrap-only).
+    Bloqueado assim que existir 1 utilizador — não há registo público.
     """
+    if _count_users() > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registo desativado — esta aplicação já tem um utilizador configurado",
+        )
+
+    if len(request.password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password deve ter mínimo 8 caracteres")
+    if request.password != request.password_confirm:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords não coincidem")
+
+    supabase = get_supabase()
+    auth_response = supabase.auth.sign_up({"email": request.email, "password": request.password})
+
+    if not auth_response or not auth_response.user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao criar conta")
+
+    user_id = str(auth_response.user.id)
+    _upsert_user(user_id, request.email)
+
+    logger.info(f"✅ Conta única criada (bootstrap): {request.email}")
+    return {"message": "Conta criada com sucesso. Faz login e configura o MFA antes de continuar."}
+
+
+@router.post("/login", response_model=LoginResponse)
+async def login(request: LoginRequest, req: Request, response: Response):
+    """
+    Passo 1 do login: valida email/password.
+    Aplica atraso progressivo por IP. Se MFA estiver ativo e o dispositivo
+    não for confiável, devolve um pre_auth_token para o passo 2.
+    """
+    ip = get_client_ip(req)
+
+    retry_after = security.get_retry_after_seconds(ip)
+    if retry_after > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Demasiadas tentativas. Tenta novamente em {retry_after}s",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     try:
-        logger.info(f" Tentativa de registo: {request.email}")
-
-        # Validações
-        if len(request.password) < 8:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password deve ter mínimo 8 caracteres"
-            )
-
-        if request.password != request.password_confirm:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Passwords não coincidem"
-            )
-
-        # Criar conta em Supabase Auth
         supabase = get_supabase()
-        response = supabase.auth.sign_up({
+        auth_response = supabase.auth.sign_in_with_password({
             "email": request.email,
-            "password": request.password
+            "password": request.password,
         })
+    except Exception:
+        auth_response = None
 
-        if not response or not response.user:
-            logger.warning(f" Falha de registo: {request.email} (email já registado ou erro interno)")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Este email já está registado ou erro ao criar conta"
-            )
+    if not auth_response or not auth_response.user:
+        security.record_attempt(ip, request.email, success=False, stage="password")
+        security.check_and_alert_threshold(ip, request.email)
+        logger.warning(f"❌ Login falhado: {request.email} (IP: {ip})")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou password inválidos")
 
-        user = response.user
-        user_id = str(user.id)
+    user_id = str(auth_response.user.id)
+    user_row = _upsert_user(user_id, request.email)
+    security.record_attempt(ip, request.email, success=True, stage="password")
 
-        # TODO: Guardar user em BD (users table) com is_admin=False
-        # await db.users.insert({
-        #     "id": user_id,
-        #     "email": request.email,
-        #     "is_admin": False
-        # })
+    totp_enabled = bool(user_row.get("totp_enabled", False))
 
-        # Criar JWT token
-        access_token = create_jwt_token(user_id, request.email)
+    if not totp_enabled:
+        # Primeiro login (ou MFA nunca configurado): entra, mas fica marcado para configurar MFA
+        _finish_login(response, req, user_id, request.email, trust_device=False)
+        logger.info(f"✅ Login sem MFA (setup pendente): {request.email}")
+        return LoginResponse(mfa_required=False, mfa_setup_required=True, message="Login efetuado. Configura o MFA.")
 
-        logger.info(f" Registo bem-sucedido: {request.email} (ID: {user_id})")
+    device_token = req.cookies.get(DEVICE_COOKIE_NAME)
+    if security.is_device_trusted(user_id, device_token):
+        _finish_login(response, req, user_id, request.email, trust_device=False)
+        logger.info(f"✅ Login com dispositivo confiável (MFA skip): {request.email}")
+        return LoginResponse(mfa_required=False, message="Login efetuado")
 
-        return TokenResponse(
-            access_token=access_token,
-            token_type="Bearer",
-            user_id=user_id,
-            email=request.email,
-            message="Conta criada com sucesso"
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f" Erro ao registar: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao criar conta"
-        )
+    pre_auth_token = create_pre_auth_token(user_id, request.email)
+    logger.info(f"🔐 Password OK, aguarda código MFA: {request.email}")
+    return LoginResponse(mfa_required=True, pre_auth_token=pre_auth_token, message="Introduz o código do teu autenticador")
 
 
-@router.post("/logout")
-async def logout(current_user: dict = Depends(get_current_user)):
-    """
-    Logout (invalida JWT no cliente)
+@router.post("/login/verify-mfa", response_model=dict)
+async def verify_mfa(request: VerifyMfaRequest, req: Request, response: Response):
+    """Passo 2 do login: valida o código TOTP e completa a sessão."""
+    ip = get_client_ip(req)
 
-    Headers:
-    - Authorization: Bearer <token>
+    payload = decode_token(request.pre_auth_token)
+    if payload.get("stage") != "mfa_pending":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido para este passo")
 
-    Response:
-    - message: Confirmação de logout
-    """
+    user_id = payload.get("user_id")
+    email = payload.get("email")
+
+    user_row = _get_user(user_id)
+    if not user_row or not user_row.get("totp_secret"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MFA não configurado para este utilizador")
+
+    totp = pyotp.TOTP(user_row["totp_secret"])
+    if not totp.verify(request.code, valid_window=1):
+        security.record_attempt(ip, email, success=False, stage="mfa")
+        security.check_and_alert_threshold(ip, email)
+        logger.warning(f"❌ Código MFA inválido: {email} (IP: {ip})")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Código inválido")
+
+    security.record_attempt(ip, email, success=True, stage="mfa")
+    _finish_login(response, req, user_id, email, trust_device=request.trust_device)
+
+    logger.info(f"✅ Login completo com MFA: {email}")
+    return {"message": "Login efetuado com sucesso"}
+
+
+@router.post("/mfa/setup", response_model=MfaSetupResponse)
+async def mfa_setup(current_user: dict = Depends(get_current_user)):
+    """Gera um novo segredo TOTP (ainda não ativado até /mfa/confirm)."""
+    secret = pyotp.random_base32()
+    email = current_user["email"]
+
+    client = get_supabase_client()
+    client.table("users").update({"totp_secret": secret, "totp_enabled": False}).eq("id", current_user["id"]).execute()
+
+    totp = pyotp.TOTP(secret)
+    otpauth_uri = totp.provisioning_uri(name=email, issuer_name="Trading212 Bot")
+
+    qr = qrcode.make(otpauth_uri)
+    buf = io.BytesIO()
+    qr.save(buf, format="PNG")
+    qr_base64 = base64.b64encode(buf.getvalue()).decode()
+
+    logger.info(f"🔐 MFA setup iniciado: {email}")
+    return MfaSetupResponse(secret=secret, otpauth_uri=otpauth_uri, qr_code_base64=qr_base64)
+
+
+@router.post("/mfa/confirm", response_model=dict)
+async def mfa_confirm(request: MfaConfirmRequest, current_user: dict = Depends(get_current_user)):
+    """Confirma o código gerado a partir do QR code e ativa o MFA definitivamente."""
+    user_row = _get_user(current_user["id"])
+    if not user_row or not user_row.get("totp_secret"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nenhum setup de MFA em curso")
+
+    totp = pyotp.TOTP(user_row["totp_secret"])
+    if not totp.verify(request.code, valid_window=1):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Código inválido")
+
+    client = get_supabase_client()
+    client.table("users").update({"totp_enabled": True}).eq("id", current_user["id"]).execute()
+
+    logger.info(f"✅ MFA ativado: {current_user['email']}")
+    return {"message": "MFA ativado com sucesso"}
+
+
+@router.post("/mfa/disable", response_model=dict)
+async def mfa_disable(request: MfaDisableRequest, req: Request, current_user: dict = Depends(get_current_user)):
+    """Desativa o MFA — exige a password novamente (re-auth) por segurança."""
+    supabase = get_supabase()
     try:
-        logger.info(f" Logout: {current_user.get('email')}")
-        return {"message": "Logout realizado com sucesso"}
-    except Exception as e:
-        logger.error(f" Erro ao fazer logout: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Erro ao fazer logout"
-        )
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": current_user["email"],
+            "password": request.password,
+        })
+    except Exception:
+        auth_response = None
+
+    if not auth_response or not auth_response.user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password incorreta")
+
+    client = get_supabase_client()
+    client.table("users").update({"totp_enabled": False, "totp_secret": None}).eq("id", current_user["id"]).execute()
+
+    logger.warning(f"⚠️ MFA desativado: {current_user['email']}")
+    return {"message": "MFA desativado"}
+
+
+@router.post("/refresh", response_model=dict)
+async def refresh_token(response: Response, req: Request, current_user: dict = Depends(get_current_user)):
+    """Renova o access_token (mesma sessão) sem repetir password, enquanto a sessão não for revogada."""
+    security.revoke_session(current_user["jti"])  # substitui a sessão antiga por uma nova
+    _finish_login(response, req, current_user["id"], current_user["email"], trust_device=False)
+    return {"message": "Sessão renovada"}
+
+
+@router.post("/logout", response_model=dict)
+async def logout(response: Response, current_user: dict = Depends(get_current_user)):
+    """Termina a sessão atual."""
+    security.revoke_session(current_user["jti"])
+    response.delete_cookie(ACCESS_COOKIE_NAME, path="/")
+    logger.info(f"👋 Logout: {current_user['email']}")
+    return {"message": "Logout realizado com sucesso"}
+
+
+@router.post("/logout-all", response_model=dict)
+async def logout_all(response: Response, current_user: dict = Depends(get_current_user)):
+    """Killswitch: termina TODAS as sessões ativas (todos os dispositivos)."""
+    count = security.revoke_all_sessions(current_user["id"])
+    response.delete_cookie(ACCESS_COOKIE_NAME, path="/")
+    response.delete_cookie(DEVICE_COOKIE_NAME, path="/")
+    logger.warning(f"🔴 Killswitch acionado por: {current_user['email']} ({count} sessões terminadas)")
+    return {"message": f"{count} sessão(ões) terminada(s)"}
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
-    """
-    Obter informações do utilizador autenticado
-
-    Headers:
-    - Authorization: Bearer <token>
-
-    Response:
-    - user: UserInfo (id, email, is_admin)
-    - message: Mensagem
-
-    Levanta 401 se token inválido ou ausente
-    """
-    try:
-        logger.info(f"📋 Fetch user info: {current_user.get('email')}")
-
-        return UserResponse(
-            user=UserInfo(
-                id=current_user.get("id"),
-                email=current_user.get("email", ""),
-                is_admin=False  # TODO: Buscar de BD (users table)
-            ),
-            message="Informações de utilizador obtidas com sucesso"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f" Erro ao obter user: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao obter informações"
-        )
-
-
-@router.post("/verify-token")
-async def verify_token(current_user: dict = Depends(get_current_user)):
-    """
-    Verificar se um token JWT é válido
-
-    Headers:
-    - Authorization: Bearer <token>
-
-    Response:
-    - valid: bool (sempre True se chegar aqui)
-    - user_id: UUID
-    - email: Email
-
-    Levanta 401 se token inválido ou ausente
-    """
-    try:
-        return {
-            "valid": True,
-            "user_id": current_user.get("id"),
-            "email": current_user.get("email")
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f" Erro ao verificar token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido"
-        )
-
-
-@router.post("/test-token")
-async def get_test_token():
-    """
-    🧪 DEBUG ONLY - Obter JWT token de teste para testes do CRUD
-    Retorna um token válido para o utilizador de teste (teste@trading212.com)
-
-     REMOVE EM PRODUÇÃO
-
-    Response:
-    - token: JWT token válido por 24h
-    - user_id: UUID do utilizador de teste
-    - email: Email do utilizador de teste
-    """
-    if settings.FASTAPI_ENV == "production":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Endpoint de teste não disponível em produção"
-        )
-
-    try:
-        logger.info("🧪 Gerando token de teste")
-
-        # Fixed test user ID (created in Supabase)
-        test_user_id = "17780beb-e61f-4604-ba5a-b6329312ac90"
-        test_email = "teste@trading212.com"
-
-        # Create JWT token
-        access_token = create_jwt_token(test_user_id, test_email)
-
-        return {
-            "token": access_token,
-            "access_token": access_token,  # Compatibilidade
-            "user_id": test_user_id,
-            "email": test_email,
-            "message": "Token de teste gerado com sucesso"
-        }
-    except Exception as e:
-        logger.error(f" Erro ao gerar token de teste: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro ao gerar token de teste"
-        )
+    """Informações do utilizador autenticado."""
+    user_row = _get_user(current_user["id"]) or {}
+    return UserResponse(
+        user=UserInfo(
+            id=current_user["id"],
+            email=current_user["email"],
+            is_admin=bool(user_row.get("is_admin", False)),
+            totp_enabled=bool(user_row.get("totp_enabled", False)),
+        ),
+        message="OK",
+    )
