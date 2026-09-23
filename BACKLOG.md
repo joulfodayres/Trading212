@@ -86,50 +86,87 @@
 ### Item #12: Enhanced Login Security & Authentication (NEW)
 **Estimated:** 6-8 hours
 **Priority:** HIGH (Security-critical)
-**Description:**
-- Review and improve login process security
-- Implement rate limiting on login attempts (prevent brute force)
-- Add CAPTCHA after N failed login attempts
-- Implement real Supabase Auth integration (replace stub login)
-- Add password hashing + validation rules
-- Implement account lockout mechanism after failed attempts
-- Add login attempt logging + monitoring
-- Email verification for password reset flow
-- Session management & token expiration
-- Multi-factor authentication (MFA) preparedness
+**Scope:** Single-user app (personal trading account). Protect: (a) T212 API access (critical), (b) Supabase data (important)
 
-**Current State (Stub):**
-- ❌ Login accepts any email/password (no validation)
-- ❌ No rate limiting (brute force possible)
-- ❌ No account lockout mechanism
-- ❌ No failed login tracking
-- ❌ No Supabase Auth integration
+**Functional Design (Brainstormed & Finalized):**
 
-**Deliverable:**
-- Secure login flow with rate limiting
-- Failed login attempt tracking
-- Account lockout after N attempts
-- Integration with Supabase Auth (real authentication)
-- Login security audit report
+#### Login Flow
+- Email + Password (Supabase Auth — already integrated ✅)
+- **MFA/TOTP mandatory** (Google Authenticator, Authy, etc.)
+- No registo público (account created manually, once)
+- Remove dev backdoor (`teste@trading212.com` entry point)
 
-**Dependencies:**
-- [ ] Supabase Auth setup (already available, not yet integrated)
-- [ ] Rate limiting library (slowapi or similar)
-- [ ] CAPTCHA service (reCAPTCHA v3 or similar)
-- [ ] Email service for notifications (SendGrid or Supabase email)
-- [ ] Failed login attempt tracking in database
+#### Brute Force Protection
+- **Atraso progressivo por IP** (NOT account lockout):
+  - 1ª falha: 0s | 2ª: 2s | 3ª: 4s | 4ª: 8s ... (exponencial)
+  - Configurable teto: `LOGIN_DELAY_MAX_MINUTES` (env var, default 15 min)
+  - Reset after successful login
+  - Advantage: blocks attackers without blocking legitimate user if on same IP
+  
+#### Trusted Devices
+- Mark browser/device as "trusted" after successful login + MFA
+- Configurable duration: `TRUSTED_DEVICE_DAYS` (env var, default 30)
+- Value 0 = always ask for MFA (option for maximum security)
+- Trusted devices skip atraso progression on this IP
 
-**Security Checklist:**
-- [ ] Rate limiting: max 5 login attempts per 15 minutes per IP
-- [ ] Account lockout: 30 min after 5 failed attempts
-- [ ] CAPTCHA: After 2 failed attempts
-- [ ] Failed login logging: timestamp, IP, email, outcome
-- [ ] Session tokens: 24h expiration (configurable)
-- [ ] Password requirements: min 8 chars, uppercase, number, special char
-- [ ] Email verification: for password reset workflow
-- [ ] Audit trail: all login attempts logged
+#### Session Management
+- JWT token: strong secret (not hardcoded), 24h expiration
+- Refresh token: to extend sessions without re-entering password
+- Logout button: invalidates token immediately
+- **Killswitch** endpoint: terminate all active sessions (emergency)
+- Token storage: `httpOnly` cookie (not `localStorage` — protects vs XSS)
 
-**Impact:** Prevent brute force attacks, improve security posture, enable real auth
+#### Logging & Alerts
+- Log all login attempts (successful + failed): IP, email, timestamp, device
+- After 5 failed attempts on same IP: send email alert to user
+- Alert includes: timestamp, IP origin, attempts count
+- User can then act (change password, terminate all sessions, etc.)
+
+#### Environment Variables (Configurable)
+```
+LOGIN_DELAY_MAX_MINUTES=15        # Teto do atraso (1-60)
+TRUSTED_DEVICE_DAYS=30            # Duração do "trusted" (0-90, 0=always MFA)
+JWT_SECRET_KEY=<strong-random>    # NEVER in docs, only in .env
+JWT_EXPIRATION_HOURS=24           # Token validity
+FASTAPI_ENV=production            # Remove dev mode bypass
+```
+
+#### DEMO vs PROD
+- Same login rules in both environments
+- Separate passwords: demo_user@trading212.com vs prod_user@trading212.com (or single email, different password)
+- Separate MFA: different Authenticator entries for each environment
+- Each environment has its own JWT secret (via separate .env files)
+- Allows testing security mechanisms in DEMO before trusting PROD
+
+#### Deliverables
+- ✅ Remove public registration + dev backdoor
+- ✅ Implement MFA/TOTP (Supabase Auth native support)
+- ✅ Atraso progressivo por IP with configurable max
+- ✅ Trusted devices (cookie-based tracking)
+- ✅ Revogable sessions + killswitch endpoint
+- ✅ Strong JWT secret + short expiry + refresh token
+- ✅ Login attempt logging + email alerts
+- ✅ httpOnly cookie storage (no localStorage)
+- ✅ Environment variables for all tuning
+- ✅ Same rules DEMO/PROD, independent credentials
+
+#### Dependencies
+- [ ] Supabase Auth native TOTP support (already available ✅)
+- [ ] Backend logging table for login attempts
+- [ ] Email service for alerts (Supabase email or SendGrid)
+- [ ] Device fingerprinting/tracking (browser cookies)
+- [ ] Refresh token mechanism in JWT flow
+
+#### Testing Checklist (DEMO first, then replicate in PROD)
+- [ ] MFA required: can't login without code from phone
+- [ ] Atraso progressivo: 5 wrong attempts slow down the 6th
+- [ ] Trusted device: after 1st successful login+MFA, 2nd login skips code
+- [ ] Killswitch: logout all sessions works from any device
+- [ ] Email alert: received after 5 failed attempts
+- [ ] IP isolation: same IP blocked doesn't block different IP
+- [ ] JWT secret strong: verify not in docs, random in .env
+
+**Impact:** Secure the door to your trading account. MFA + atraso block brute-force. Single-user design simplifies (no lockout DoS risk). Testable in DEMO first.
 
 ---
 
