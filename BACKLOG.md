@@ -83,6 +83,56 @@
 
 ## ⏳ TODO (Phase 5 - Remaining)
 
+### Item #12: Enhanced Login Security & Authentication (NEW)
+**Estimated:** 6-8 hours
+**Priority:** HIGH (Security-critical)
+**Description:**
+- Review and improve login process security
+- Implement rate limiting on login attempts (prevent brute force)
+- Add CAPTCHA after N failed login attempts
+- Implement real Supabase Auth integration (replace stub login)
+- Add password hashing + validation rules
+- Implement account lockout mechanism after failed attempts
+- Add login attempt logging + monitoring
+- Email verification for password reset flow
+- Session management & token expiration
+- Multi-factor authentication (MFA) preparedness
+
+**Current State (Stub):**
+- ❌ Login accepts any email/password (no validation)
+- ❌ No rate limiting (brute force possible)
+- ❌ No account lockout mechanism
+- ❌ No failed login tracking
+- ❌ No Supabase Auth integration
+
+**Deliverable:**
+- Secure login flow with rate limiting
+- Failed login attempt tracking
+- Account lockout after N attempts
+- Integration with Supabase Auth (real authentication)
+- Login security audit report
+
+**Dependencies:**
+- [ ] Supabase Auth setup (already available, not yet integrated)
+- [ ] Rate limiting library (slowapi or similar)
+- [ ] CAPTCHA service (reCAPTCHA v3 or similar)
+- [ ] Email service for notifications (SendGrid or Supabase email)
+- [ ] Failed login attempt tracking in database
+
+**Security Checklist:**
+- [ ] Rate limiting: max 5 login attempts per 15 minutes per IP
+- [ ] Account lockout: 30 min after 5 failed attempts
+- [ ] CAPTCHA: After 2 failed attempts
+- [ ] Failed login logging: timestamp, IP, email, outcome
+- [ ] Session tokens: 24h expiration (configurable)
+- [ ] Password requirements: min 8 chars, uppercase, number, special char
+- [ ] Email verification: for password reset workflow
+- [ ] Audit trail: all login attempts logged
+
+**Impact:** Prevent brute force attacks, improve security posture, enable real auth
+
+---
+
 ### Item #10: Cybersecurity Testing & Penetration Testing
 **Estimated:** 8-12 hours
 **Description:**
@@ -246,8 +296,10 @@
 | 7. Knowledge Base | ✅ DONE | Multiple |
 | 8. Parameters Edit Row | ✅ DONE | `f10d0d0` |
 | (ISIN Cleanup) | ✅ DONE | `3d342c3` |
+| (Documentation Reorganization) | ✅ DONE | `3b6e12e` |
 | 9. Smart Missing Msg | ⏳ TODO | - |
 | 6. Rename Render | ⏳ TODO | - |
+| **12. Enhanced Login Security** | ⏳ TODO | - |
 | 2. Upload T212 Data | ⏳ TODO | - |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
@@ -266,22 +318,23 @@
 
 ## 🎯 Recommended Next Steps
 
-### High Impact / Low Effort
+### High Impact / Low Effort (Quick Wins)
 1. **Item #9:** Smart "Missing Parameters" Message (1-2h) - Quick validation fix
 2. **Item #6:** Rename Render (0.5h) - Quick win
 
-### High Impact / Medium Effort
-3. **Item #8:** Parameters Edit Row (2-3h) - Better parameter UX ✅ DONE
-4. **Item #(ISIN):** ISIN Cleanup on Sync (3-4h) - Data consistency ✅ DONE
-5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
+### High Impact / Medium Effort (Security & User Features)
+3. **Item #12:** Enhanced Login Security (6-8h) - **NEW** - Prevent brute force, rate limiting, real auth
+4. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
+5. **Item #8:** Parameters Edit Row (2-3h) - Better parameter UX ✅ DONE
 
 ### High Impact / High Effort (Strategic)
 6. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
-7. **Item #10:** Cybersecurity Testing (8-12h) - Find and fix vulnerabilities
+7. **Item #10:** Cybersecurity Testing (8-12h) - Find and fix vulnerabilities (after #12)
 8. **Item #3:** Charts & Stats (8-10h) - Critical for production use
 
 **Suggested workflow:**
-- Quick wins first (#9, #6) — polish
+- Quick wins first (#9, #6) — 2-3 hours, pure polish
+- Then security (#12) — 6-8 hours, HIGH priority, critical for production
 - Then strategic reviews (#11, #10) — build confidence before wider use
 - Then data import (#2) and analytics (#3) — user-facing features
 
@@ -321,6 +374,6 @@
 
 ---
 
-**Last Updated:** 2026-09-22
-**Status:** Phase 5: 60% complete (6 of 12 items), with 2 new security/architecture items
-**Recent:** Items #8 (Parameters Edit) and ISIN Cleanup both ✅ DONE
+**Last Updated:** 2026-09-23
+**Status:** Phase 5: 60% complete (7 of 14 items) + NEW Item #12 (Enhanced Login Security)
+**Recent:** Documentation reorganization ✅ DONE | NEW: Security-focused item added
