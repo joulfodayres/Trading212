@@ -268,6 +268,250 @@ Adapts to market conditions over time
 
 ---
 
+### Item #14: Dashboard Analytics & Statistics Widgets (NEW)
+**Estimated:** 10-12 hours
+**Priority:** HIGH (Core dashboard feature)
+**Description:**
+- Add real-time analytics widgets to main dashboard
+- Track automation performance metrics over time
+- Enable time-period filtering (day/week/month/year)
+- Provide insights into trading activity and profitability
+
+**Widget #1: Automated Orders Executed**
+- Count of orders automatically executed by automation engine
+- Filter by time period: Today | Week | Month | Year
+- Break down by: ISIN, Strategy, BUY vs SELL
+- Displays:
+  - Total orders: 24
+  - BUY orders: 12 (50%)
+  - SELL orders: 12 (50%)
+  - Success rate: 100% (24/24 executed without errors)
+  - Failed orders: 0
+
+**Widget #2: P&L (Profit & Loss)**
+- Calculate realized P&L from executed trades
+- Filter by time period: Today | Week | Month | Year
+- Display:
+  - Total P&L: €125.50
+  - P&L %: +2.3%
+  - Winning trades: 18
+  - Losing trades: 6
+  - Win rate: 75%
+  - Avg profit per win: €7.50
+  - Avg loss per loss: €-4.20
+- Show trend: 📈 (up), 📉 (down), ➡️ (flat)
+
+**Widget #3: Automation Cycles Executed**
+- Count of complete automation cycles (Phase 1→2→3)
+- Filter by time period: Today | Week | Month | Year
+- Display:
+  - Total cycles: 96 (every 15s for 24h)
+  - Successful cycles: 95 (98.96%)
+  - Failed cycles: 1 (1.04%)
+  - Avg cycle duration: 8.5s
+  - Fastest cycle: 6.2s
+  - Slowest cycle: 12.1s
+
+**Data Model Changes:**
+
+1. **New Table: `cycle_executions`** (for tracking cycles)
+   ```
+   id (UUID, PK)
+   user_id (UUID, FK → users)
+   cycle_number (INT)
+   started_at (TIMESTAMP)
+   completed_at (TIMESTAMP)
+   duration_ms (INT)
+   phase_1_duration (INT)  -- time for Phase 1
+   phase_2_duration (INT)  -- time for Phase 2
+   phase_3_duration (INT)  -- time for Phase 3
+   orders_processed (INT)  -- how many orders in this cycle
+   status (VARCHAR)  -- SUCCESS, PARTIAL, ERROR
+   details_json (JSONB)  -- Error details if failed
+   ```
+
+2. **New Table: `trade_executions`** (for P&L calculation)
+   ```
+   id (UUID, PK)
+   user_id (UUID, FK → users)
+   order_id (UUID, FK → orders)
+   isin_id (UUID, FK → isins)
+   type (VARCHAR)  -- BUY, SELL
+   entry_price (DECIMAL)
+   entry_quantity (DECIMAL)
+   entry_timestamp (TIMESTAMP)
+   exit_price (DECIMAL)  -- populated when pair closes
+   exit_quantity (DECIMAL)
+   exit_timestamp (TIMESTAMP)
+   pnl_gross (DECIMAL)  -- (exit_price - entry_price) * quantity
+   pnl_net (DECIMAL)  -- gross - fees/commissions
+   pnl_percent (DECIMAL)  -- pnl_net / (entry_price * quantity)
+   fees_paid (DECIMAL)
+   status (VARCHAR)  -- OPEN, CLOSED, CANCELLED
+   ```
+
+3. **Enhancements to `orders` table:**
+   - Add `cycle_execution_id` (link to cycle_executions)
+   - Add `entry_timestamp`, `exit_timestamp` (precise timing)
+   - Add `fees` column (commission/spread)
+
+4. **Query Examples:**
+   ```sql
+   -- Orders executed today
+   SELECT COUNT(*) FROM orders 
+   WHERE user_id = 'user' AND status IN ('P', 'E')
+   AND DATE(executed_at) = CURDATE();
+
+   -- P&L for this month
+   SELECT 
+     SUM((exit_price - entry_price) * quantity) as pnl,
+     COUNT(*) as trade_count,
+     SUM(CASE WHEN pnl_net > 0 THEN 1 ELSE 0 END) as winners,
+     SUM(CASE WHEN pnl_net <= 0 THEN 1 ELSE 0 END) as losers
+   FROM trade_executions
+   WHERE user_id = 'user' AND status = 'CLOSED'
+   AND MONTH(exit_timestamp) = MONTH(NOW());
+
+   -- Cycles executed this week
+   SELECT COUNT(*) FROM cycle_executions
+   WHERE user_id = 'user'
+   AND completed_at >= NOW() - INTERVAL 7 DAY
+   AND status = 'SUCCESS';
+   ```
+
+**Frontend Implementation:**
+
+1. **Dashboard Layout Changes:**
+   - Add new section below portfolio table: "Automation Performance"
+   - 3-column grid of metric cards:
+     - [Orders Card] | [P&L Card] | [Cycles Card]
+   - Each card has:
+     - Title + big number (e.g., "24 Orders")
+     - Sparkline chart (trend over time)
+     - Time filter buttons: [Today] [Week] [Month] [Year]
+     - Secondary metrics below
+     - Color coding: 🟢 green if positive, 🔴 red if negative
+
+2. **Component: `MetricCard.tsx`**
+   ```
+   Props:
+   - title: string
+   - value: number
+   - unit: string (optional)
+   - trend: 'up' | 'down' | 'flat'
+   - secondaryMetrics: {label, value}[]
+   - selectedPeriod: 'day' | 'week' | 'month' | 'year'
+   - onPeriodChange: (period) => void
+   - isLoading: boolean
+   - sparklineData: [timestamp, value][]
+   ```
+
+3. **Hook: `useAutomationMetrics.ts`**
+   ```
+   - Fetches metrics from backend
+   - Caches results (refresh every 30s)
+   - Handles time period changes
+   - Returns loading/error states
+   ```
+
+4. **New Endpoints:**
+   - `GET /api/v1/metrics/orders?period=day|week|month|year`
+   - `GET /api/v1/metrics/pnl?period=day|week|month|year`
+   - `GET /api/v1/metrics/cycles?period=day|week|month|year`
+   - Each returns:
+     ```json
+     {
+       "value": 24,
+       "trend": "up",
+       "breakdowns": {...},
+       "sparkline": [[timestamp, value], ...]
+     }
+     ```
+
+**Backend Implementation:**
+
+1. **New Service: `MetricsService`** (`backend/services/metrics_service.py`)
+   ```python
+   class MetricsService:
+     async def get_orders_executed(period: str) -> dict
+     async def get_pnl(period: str) -> dict
+     async def get_cycles_executed(period: str) -> dict
+     async def calculate_pnl_pair(buy_order, sell_order) -> dict
+   ```
+
+2. **New Routes: `backend/routes/metrics.py`**
+   ```python
+   @router.get("/metrics/orders")
+   @router.get("/metrics/pnl")
+   @router.get("/metrics/cycles")
+   ```
+
+3. **AutomationEngine Integration:**
+   - After each cycle, log to `cycle_executions` table
+   - When orders pair completes, calculate P&L and log to `trade_executions`
+   - Track cycle duration + phase durations
+
+**Testing:**
+
+1. Unit tests for P&L calculations
+2. Integration tests for metrics endpoints
+3. Frontend tests for metric card rendering + period changes
+4. E2E: Run automation, verify metrics update correctly
+
+**Example Dashboard with Metrics:**
+```
+┌─ Trading 212 Bot Dashboard ─────────────────────────────────┐
+│                                                              │
+│ [Portfolio Table with ISINs]                                │
+│ ┌────────────────────────────────────────────────────────┐  │
+│ │ ISIN | Qty | Price | Automation | Strategy             │  │
+│ │ VWRL | 10  | €50   | 🟢 ON      | Grid ±1%            │  │
+│ └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│ ┌─ Automation Performance (Week) ──────────────────────────┐ │
+│ ├──────────┬──────────────┬───────────────────────────────┤ │
+│ │ Orders   │ P&L          │ Cycles                        │ │
+│ │ Executed │ (Auto)       │ Executed                      │ │
+│ ├──────────┼──────────────┼───────────────────────────────┤ │
+│ │ 📊 145   │ 📈 €2,345.67 │ ⚙️ 672                       │ │
+│ │ +12% WoW │ +8.5% trend  │ 99.1% success rate           │ │
+│ │          │              │                               │ │
+│ │ BUY: 73  │ Wins: 124    │ Avg cycle: 8.3s              │ │
+│ │ SELL: 72 │ Losses: 21   │ Fastest: 6.1s                │ │
+│ │          │ Win rate:86% │ Slowest: 12.5s               │ │
+│ │ [T][W][M][Y] │ [T][W][M][Y] │ [T][W][M][Y]            │ │
+│ └──────────┴──────────────┴───────────────────────────────┘ │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Deliverables:**
+- ✅ 3 new metric widgets on dashboard
+- ✅ Time period filtering (Day/Week/Month/Year)
+- ✅ P&L calculation engine
+- ✅ Cycle execution tracking
+- ✅ Backend metrics endpoints
+- ✅ Frontend components + responsive design
+- ✅ Real-time updates every 30s
+- ✅ Historical sparkline charts
+
+**Dependencies:**
+- [ ] Database schema changes (3 new/enhanced tables)
+- [ ] Cycle execution logging in AutomationEngine
+- [ ] P&L calculation logic
+- [ ] Recharts for sparklines (already included)
+- [ ] Backend metrics service + routes
+- [ ] Frontend metric card components
+
+**Impact:**
+- Provides visibility into automation performance
+- Enables data-driven strategy refinement
+- Builds confidence in automation (show it's working)
+- Critical for production dashboard (users need metrics)
+- Foundation for alerts, notifications, advanced analytics
+
+---
+
 ### Item #10: Cybersecurity Testing & Penetration Testing
 **Estimated:** 8-12 hours
 **Description:**
@@ -436,6 +680,7 @@ Adapts to market conditions over time
 | 6. Rename Render | ⏳ TODO | - |
 | **12. Enhanced Login Security** | ⏳ TODO | - |
 | **13. Dynamic Grid Strategy** | ⏳ TODO | - |
+| **14. Dashboard Analytics** | ⏳ TODO | - |
 | 2. Upload T212 Data | ⏳ TODO | - |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
@@ -460,20 +705,20 @@ Adapts to market conditions over time
 
 ### High Impact / Medium Effort (Security & User Features)
 3. **Item #12:** Enhanced Login Security (6-8h) - Prevent brute force, rate limiting, real auth
-4. **Item #13:** Dynamic Grid Strategy (8-10h) - **NEW** - Variable BUY/SELL deltas by day
+4. **Item #13:** Dynamic Grid Strategy (8-10h) - Variable BUY/SELL deltas by day
 5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
 
-### High Impact / High Effort (Strategic)
-6. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
-7. **Item #10:** Cybersecurity Testing (8-12h) - Find and fix vulnerabilities (after #12)
-8. **Item #3:** Charts & Stats (8-10h) - Critical for production use
+### High Impact / High Effort (Core Features & Strategic)
+6. **Item #14:** Dashboard Analytics & Metrics (10-12h) - **NEW** - Orders, P&L, cycles tracking
+7. **Item #3:** Charts & Stats (8-10h) - Advanced performance analytics
+8. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
+9. **Item #10:** Cybersecurity Testing (8-12h) - Security audit + penetration testing
 
 **Suggested workflow:**
-- Quick wins first (#9, #6) — 2-3 hours, pure polish
+- Quick wins first (#9, #6) — 2-3 hours, polish
 - Then security (#12) — 6-8 hours, HIGH priority
-- Then new feature (#13) — 8-10 hours, interesting trading strategy
-- Then strategic reviews (#11, #10) — build confidence before wider use
-- Then data import (#2) and analytics (#3) — user-facing features
+- Then new features (#13, #14) — 18-22 hours, visible on dashboard
+- Then strategic reviews + advanced features (#11, #10, #3, #2)
 
 ---
 
@@ -512,5 +757,5 @@ Adapts to market conditions over time
 ---
 
 **Last Updated:** 2026-09-23
-**Status:** Phase 5: 50% complete (7 of 15 items) + NEW Items #12 & #13
-**Recent:** Documentation reorganization ✅ | NEW: Login Security + Dynamic Grid Strategy
+**Status:** Phase 5: 47% complete (7 of 16 items) + 3 NEW items (#12, #13, #14)
+**Recent:** Documentation ✅ | NEW: Login Security, Dynamic Grid, Dashboard Analytics
