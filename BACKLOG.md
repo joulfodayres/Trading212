@@ -630,6 +630,186 @@ Adapts to market conditions over time
 
 ---
 
+### Item #15: Production Environment Setup - Real Money API (NEW)
+**Estimated:** 4-6 hours
+**Priority:** HIGH (Pre-production infrastructure)
+**Description:**
+- Create separate Render environment for PROD (currently on DEMO)
+- Switch from T212 DEMO API (sandbox) to REAL MONEY API
+- Set up production database (separate Supabase instance or database)
+- Configure environment variables for PROD (API keys, URLs, etc)
+- Implement safety controls and warnings for live trading
+- Set up monitoring, alerting, and backup procedures
+- Document PROD deployment checklist
+
+**Current State (DEMO Only):**
+```
+Environment: DEMO
+API Endpoint: https://demo.trading212.com/api/v0
+Account: Sandbox with €5,889.99 (play money)
+Frontend: https://trading212-1.onrender.com (single env)
+Backend: https://trading212-4ojx.onrender.com (single env)
+Database: Supabase (single instance)
+```
+
+**Proposed State (DEMO + PROD):**
+```
+DEMO Environment:
+  - API: https://demo.trading212.com/api/v0 (sandbox)
+  - Frontend: https://trading212-1.onrender.com
+  - Backend: https://trading212-4ojx.onrender.com
+  - Database: Supabase demo instance
+  - Purpose: Testing, development, user onboarding
+
+PROD Environment (NEW):
+  - API: https://live.trading212.com/api/v0 (real money)
+  - Frontend: https://trading212-prod.onrender.com (NEW)
+  - Backend: https://trading212-prod-api.onrender.com (NEW)
+  - Database: Supabase prod instance (NEW)
+  - Purpose: Real trading with real funds
+```
+
+**Implementation Details:**
+
+1. **Render Setup:**
+   - Create new Render projects:
+     - `trading212-prod` (frontend)
+     - `trading212-prod-api` (backend)
+   - Copy configurations from existing services
+   - Set separate environment variables
+   - Enable auto-deploy from same GitHub repo (different branch or tags)
+
+2. **Supabase Setup:**
+   - Create new production Supabase project (or dedicated database)
+   - Run migrations to create all tables
+   - Set up separate user accounts for PROD
+   - Configure Row-Level Security (RLS) for production
+   - Set up automated backups
+
+3. **Environment Variables (PROD):**
+   ```
+   ENVIRONMENT=production
+   T212_API_KEY=[real-money-api-key]
+   T212_API_SECRET=[real-money-api-secret]
+   T212_ENVIRONMENT=live  (instead of demo)
+   T212_BASE_URL=https://live.trading212.com/api/v0
+   SUPABASE_URL=[prod-supabase-url]
+   SUPABASE_KEY=[prod-supabase-key]
+   SUPABASE_JWT_SECRET=[prod-jwt-secret]
+   FASTAPI_ENV=production
+   FASTAPI_DEBUG=False  (critical for security)
+   ```
+
+4. **Safety Controls & Warnings:**
+   - Add "PRODUCTION MODE" warning banner on frontend (red/bold)
+   - Disable or restrict certain features (test mode only)
+   - Add account verification step before enabling automation
+   - Implement max position size limits (safety circuit breaker)
+   - Add manual approval workflow for large orders
+   - Rate limiting on critical endpoints
+   - Disable demo/sandbox mode warnings in PROD
+
+5. **Frontend Indicators:**
+   - Environment badge: "DEMO" (blue) vs "PRODUCTION" (red)
+   - Warning message: "⚠️ LIVE TRADING - REAL MONEY AT RISK"
+   - Show account type clearly (Demo vs Live)
+   - Different color scheme or styling for PROD
+
+6. **Backend Safeguards:**
+   - Verify T212_ENVIRONMENT=live before executing trades
+   - Log all trades with "PRODUCTION" marker
+   - Alert system for unusual activity
+   - Killswitch endpoint: emergency stop all automation
+   - Daily/weekly spending limits
+   - Position size limits per ISIN
+
+7. **Monitoring & Alerting:**
+   - Set up error monitoring (Sentry or similar)
+   - Email alerts for:
+     - Automation errors
+     - Large trades (>€1000)
+     - Failed orders
+     - Account balance changes
+   - Dashboard: real-time performance metrics
+   - Audit trail: all trades logged
+
+8. **Backup & Disaster Recovery:**
+   - Automated Supabase backups (daily)
+   - Database export to cloud storage
+   - Order/trade history export
+   - Disaster recovery plan documented
+
+9. **Deployment Checklist:**
+   ```
+   ✅ Create Render services (frontend + backend)
+   ✅ Create Supabase project
+   ✅ Set environment variables
+   ✅ Run database migrations
+   ✅ Test API connectivity (live.trading212.com)
+   ✅ Test authentication (real API keys)
+   ✅ Implement safety controls
+   ✅ Set up monitoring
+   ✅ Document runbook
+   ✅ Load test (ensure stability)
+   ✅ Security audit (before going live)
+   ✅ User acceptance testing (UAT)
+   ✅ Go-live procedure
+   ```
+
+10. **Branching Strategy:**
+    - `main` → DEMO deployment (current)
+    - `prod` → PRODUCTION deployment (new)
+    - Merge from `main` to `prod` only after testing
+    - Separate CI/CD pipelines for each
+
+**Dependencies:**
+- [ ] Real Trading 212 API account (live credentials)
+- [ ] Production Supabase instance
+- [ ] Render services setup (2 new services)
+- [ ] Environment configuration management
+- [ ] Safety controls implementation
+- [ ] Monitoring setup (Sentry or similar)
+- [ ] Documentation + runbook
+
+**Deliverables:**
+- ✅ Separate DEMO and PROD environments
+- ✅ PROD frontend + backend on Render
+- ✅ PROD database on Supabase
+- ✅ Safety controls + warnings
+- ✅ Monitoring + alerting system
+- ✅ Deployment runbook
+- ✅ Disaster recovery plan
+
+**Testing:**
+- Test automation in PROD with small positions
+- Verify P&L calculations with real data
+- Test error handling + killswitch
+- Verify all safety limits work
+- Audit trail completeness
+
+**Risk Mitigation:**
+- Start with small account balance
+- Use strict position size limits
+- Daily spending caps
+- Manual approval for large trades
+- 24/7 monitoring initially
+- Documented kill procedures
+
+**Impact:**
+- ✅ Enable real money trading (major milestone)
+- ✅ Production-ready infrastructure
+- ✅ Professional-grade monitoring
+- ✅ Safety mechanisms in place
+- ✅ Ready for wider user adoption
+
+**Timeline:**
+- Week 1: Infrastructure setup (Render, Supabase)
+- Week 2: Safety controls + monitoring
+- Week 3: Testing + UAT
+- Week 4: Go-live procedure
+
+---
+
 ### Item #3: Charts & Statistics Dashboard
 **Estimated:** 8-10 hours
 **Description:**
@@ -677,12 +857,13 @@ Adapts to market conditions over time
 | 8. Parameters Edit Row | ✅ DONE | `f10d0d0` |
 | (ISIN Cleanup) | ✅ DONE | `3d342c3` |
 | (Documentation Reorganization) | ✅ DONE | `3b6e12e` |
-| **2. Upload T212 Data** | ✅ DONE | - |
+| 2. Upload T212 Data | ✅ DONE | - |
 | 9. Smart Missing Msg | ⏳ TODO | - |
 | 6. Rename Render | ⏳ TODO | - |
 | **12. Enhanced Login Security** | ⏳ TODO | - |
 | **13. Dynamic Grid Strategy** | ⏳ TODO | - |
 | **14. Dashboard Analytics** | ⏳ TODO | - |
+| **15. Production Environment (PROD)** | ⏳ TODO | - |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
 | 11. Architecture Analysis | ⏳ TODO | - |
@@ -707,19 +888,21 @@ Adapts to market conditions over time
 ### High Impact / Medium Effort (Security & User Features)
 3. **Item #12:** Enhanced Login Security (6-8h) - Prevent brute force, rate limiting, real auth
 4. **Item #13:** Dynamic Grid Strategy (8-10h) - Variable BUY/SELL deltas by day
-5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow
+5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow ✅ DONE
 
 ### High Impact / High Effort (Core Features & Strategic)
-6. **Item #14:** Dashboard Analytics & Metrics (10-12h) - **NEW** - Orders, P&L, cycles tracking
-7. **Item #3:** Charts & Stats (8-10h) - Advanced performance analytics
-8. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
-9. **Item #10:** Cybersecurity Testing (8-12h) - Security audit + penetration testing
+6. **Item #14:** Dashboard Analytics & Metrics (10-12h) - Orders, P&L, cycles tracking
+7. **Item #15:** Production Environment Setup - PROD (4-6h) - **NEW** - Real money API integration (CRITICAL before live trading)
+8. **Item #3:** Charts & Stats (8-10h) - Advanced performance analytics
+9. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
+10. **Item #10:** Cybersecurity Testing (8-12h) - Security audit + penetration testing
 
 **Suggested workflow:**
 - Quick wins first (#9, #6) — 2-3 hours, polish
 - Then security (#12) — 6-8 hours, HIGH priority
 - Then new features (#13, #14) — 18-22 hours, visible on dashboard
-- Then strategic reviews + advanced features (#11, #10, #3, #2)
+- Then PRODUCTION setup (#15) — 4-6 hours, CRITICAL for live trading
+- Then strategic reviews + advanced features (#11, #10, #3)
 
 ---
 
@@ -758,5 +941,5 @@ Adapts to market conditions over time
 ---
 
 **Last Updated:** 2026-09-23
-**Status:** Phase 5: 50% complete (8 of 16 items) + 3 NEW items (#12, #13, #14)
-**Recent:** Item #2 (Upload T212 Data) marked DONE | Documentation ✅ | NEW: Login Security, Dynamic Grid, Dashboard Analytics
+**Status:** Phase 5: 50% complete (8 of 17 items) + 4 NEW items (#12, #13, #14, #15)
+**Recent:** Item #2 (Upload T212 Data) ✅ DONE | Item #15 (PROD Environment) ✅ ADDED
