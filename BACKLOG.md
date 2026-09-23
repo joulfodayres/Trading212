@@ -612,6 +612,7 @@ Adapts to market conditions over time
 
 ### Item #2: Upload T212 Data Files
 **Estimated:** 6-8 hours
+**Status:** ✅ DONE
 **Description:**
 - Endpoint to upload CSV/Excel from T212 exports
 - Parser for trade history, positions, accounts
@@ -620,10 +621,10 @@ Adapts to market conditions over time
 - User feedback (X ISINs imported, Y errors, Z warnings)
 
 **Dependencies:**
-- [ ] Backend: POST `/api/v1/upload/t212-data` (file upload)
-- [ ] Backend: CSV parser + validator
-- [ ] Frontend: Upload form with drag-and-drop
-- [ ] Database: Verify if new history table needed
+- ✅ Backend: POST `/api/v1/upload/t212-data` (file upload)
+- ✅ Backend: CSV parser + validator
+- ✅ Frontend: Upload form with drag-and-drop
+- ✅ Database: Verify if new history table needed
 
 **Impact:** Start with real data instead of mock data
 
@@ -676,12 +677,12 @@ Adapts to market conditions over time
 | 8. Parameters Edit Row | ✅ DONE | `f10d0d0` |
 | (ISIN Cleanup) | ✅ DONE | `3d342c3` |
 | (Documentation Reorganization) | ✅ DONE | `3b6e12e` |
+| **2. Upload T212 Data** | ✅ DONE | - |
 | 9. Smart Missing Msg | ⏳ TODO | - |
 | 6. Rename Render | ⏳ TODO | - |
 | **12. Enhanced Login Security** | ⏳ TODO | - |
 | **13. Dynamic Grid Strategy** | ⏳ TODO | - |
 | **14. Dashboard Analytics** | ⏳ TODO | - |
-| 2. Upload T212 Data | ⏳ TODO | - |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
 | 11. Architecture Analysis | ⏳ TODO | - |
@@ -757,5 +758,5 @@ Adapts to market conditions over time
 ---
 
 **Last Updated:** 2026-09-23
-**Status:** Phase 5: 47% complete (7 of 16 items) + 3 NEW items (#12, #13, #14)
-**Recent:** Documentation ✅ | NEW: Login Security, Dynamic Grid, Dashboard Analytics
+**Status:** Phase 5: 50% complete (8 of 16 items) + 3 NEW items (#12, #13, #14)
+**Recent:** Item #2 (Upload T212 Data) marked DONE | Documentation ✅ | NEW: Login Security, Dynamic Grid, Dashboard Analytics
