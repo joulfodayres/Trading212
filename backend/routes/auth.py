@@ -321,13 +321,18 @@ async def login(request: LoginRequest, req: Request, response: Response):
             "email": request.email,
             "password": request.password,
         })
-    except Exception:
+    except Exception as e:
+        # Log the real reason for diagnosis, but keep the HTTP response generic
+        # (never reveal "wrong password" vs "email not confirmed" vs "no such user" to a client).
+        logger.warning(f"❌ Login falhado: {request.email} (IP: {ip}) — motivo real: {e}")
         auth_response = None
 
     if not auth_response or not auth_response.user:
         security.record_attempt(ip, request.email, success=False, stage="password")
         security.check_and_alert_threshold(ip, request.email)
-        logger.warning(f"❌ Login falhado: {request.email} (IP: {ip})")
+        if auth_response is not None:
+            # sign_in_with_password didn't raise, but returned no user — log that too
+            logger.warning(f"❌ Login falhado: {request.email} (IP: {ip}) — resposta sem user")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou password inválidos")
 
     user_id = str(auth_response.user.id)
