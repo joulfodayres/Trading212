@@ -1193,6 +1193,38 @@ That said, `SameSite=None` still removes a **browser-level** defense layer and m
 
 ---
 
+### Item #20: API Endpoints Have No Authentication (NEW)
+**Estimated:** 4-6 hours
+**Priority:** HIGH (Security gap — predates Item #15, found while auditing during Phase 1)
+**Context:** While reviewing routes for Item #15 Phase 1, found that `routes/isins.py`, `routes/config.py`, `routes/automation.py`, `routes/strategies.py`, and `routes/reports.py` have no auth dependency at all — unlike `routes/auth.py`, none of their endpoints use `Depends(get_current_user)`. Anyone with the backend URL can call them directly (list/edit ISINs, change strategies, enable/disable automation, read trading limits, etc.) without a session or cookie.
+
+**Why this wasn't caught by Item #12:** Item #12 built the login/MFA/session system itself and gated the *frontend* routes (`App.tsx` won't render the dashboard without `isAuthenticated`), but never went back and added `Depends(get_current_user)` to the existing business-logic endpoints. The frontend gate is cosmetic if the API itself has no equivalent server-side check — a script or curl request bypasses it entirely.
+
+**Scope:**
+- Add `current_user: dict = Depends(get_current_user)` (from `routes/auth.py`) to every endpoint in `routes/isins.py`, `routes/config.py`, `routes/automation.py`, `routes/strategies.py`, `routes/reports.py`
+- Decide what (if anything) stays public — e.g. `GET /api/config/status` and `/health` are low-sensitivity and arguably fine unauthenticated; everything that reads or writes trading state should not be
+- Update frontend error handling: a 401 on any of these now needs to behave like the existing `/auth/me` 401 handling (client.ts interceptor already drops session state on 401 for non-auth-flow calls — verify it covers all of these)
+- Test each route family after the change (ISINs CRUD, strategies CRUD, automation enable/disable/limits, config status, reports)
+
+**Impact:** Closes a real gap — right now MFA/login (Item #12) only protects the UI, not the API it talks to. Should be prioritized before Item #15 Phase 2 (PROD), since PROD is exactly where an unauthenticated endpoint calling `PUT /automation/enable` or editing trading limits actually matters.
+
+---
+
+### Item #21: Configure SMTP for Email Alerts (NEW)
+**Estimated:** 1-2 hours
+**Priority:** MEDIUM (needed to actually test Item #15 Phase 1's alert flows end-to-end)
+**Context:** Item #12 and Item #15 Phase 1 both send alerts via `backend/services/email_service.py`, but without `SMTP_HOST` / `ALERT_EMAIL_TO` configured, every alert just falls back to a log line — nothing is actually emailed. Can't verify the alert flows (limit reached, order rejected, invalid credentials, deploy auto-disable, MFA disabled, killswitch, login threshold) actually reach an inbox without this.
+
+**Scope:**
+- Choose an SMTP provider (Gmail app password is the simplest for personal use — no separate account needed on top of what's already there)
+- Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `ALERT_EMAIL_TO` in Render (DEMO first, then PROD independently)
+- Send a test alert (e.g. temporarily lower a trading limit to trigger `limit_reached`, or use the existing failed-login-threshold path) and confirm it arrives
+- Document the setup steps (env vars only — no code changes expected, `email_service.py` already handles the send)
+
+**Impact:** Without this, every alert built in #12/#15 is silent — defeats the purpose of having them. Low effort, should be done before calling Item #15 Phase 1 "tested".
+
+---
+
 **Last Updated:** 2026-09-24
-**Status:** Phase 5: 60% complete (8 of 18 items) + 8 NEW items (#12-#19)
+**Status:** Phase 5: 60% complete (8 of 18 items) + 10 NEW items (#12-#21)
 **Recent:** Item #18 (Migration Tracking) ✅ ADDED | Item #19 (Extra Safety Limits) ✅ ADDED
