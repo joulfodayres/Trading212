@@ -670,7 +670,28 @@ Adapts to market conditions over time
 ### Item #15: Production Environment Setup - Real Money API (NEW)
 **Estimated:** 4-6 hours
 **Priority:** HIGH (Pre-production infrastructure)
-**Description:**
+
+#### ✅ Decisions from brainstorming (2026-09-24) — these supersede the original description below
+- **Isolation:** separate Supabase project for PROD; independent credentials (own account, password, MFA entry, JWT/encryption secrets)
+- **Code flow:** `main` → DEMO (auto-deploy); `prod` branch → PROD (auto-deploy off, manual deploy); promotion = merge `main` → `prod`; never commit directly to `prod`
+- **SQL:** run scripts manually in PROD before promoting code (tracking deferred to Item #18)
+- **Limits** (in `app_parameters`, editable per parameter in UI, independent values per environment):
+  - Max value per BUY order; max value per SELL order (checked before placing)
+  - Max daily spend = executed BUYs − executed SELLs with positive P&L (full sell value), since 00:00 Europe/Lisbon. Values from T212 `fill.walletImpact.netValue` (EUR) and `realisedProfitLoss`
+  - Any limit hit → whole automation stops, pending orders stay on T212, resume only manually (also next day)
+  - Dashboard shows consumption vs max
+  - Deferred to Item #19: orders/day, per-ISIN exposure, price deviation, daily loss, reinforced confirmation to raise limits. No absolute ceiling, no protected stock, no simulation mode
+- **Automation starts OFF after a deploy that changes code** (compare `RENDER_GIT_COMMIT` with stored value) — same in DEMO and PROD
+- **Backend: exactly 1 instance, no autoscaling** (embedded scheduler → 2 instances = duplicate orders)
+- **Alerts:** critical alerts first, on in DEMO and PROD, each toggleable in UI (JSON column `alert_settings` in `app_parameters`); requires SMTP config on Render
+- **T212 environment: single source of truth = `T212_ENVIRONMENT` env var.** Remove the non-functional credentials card in UI, `PUT /config`, `config.t212_environment`, `T212_BASE_URL`; replace with a read-only status panel
+- **Red permanent banner in PROD** ("PRODUÇÃO — DINHEIRO REAL"), driven by backend-reported environment
+- **T212 API keys:** new keys for DEMO and PROD, IP-restricted (Render outbound ranges + home IP), minimum permissions; revoke old keys; remove T212 keys, `ENCRYPTION_KEY` and `JWT_SECRET_KEY` values from `CLAUDE.md`
+- **Only LIMIT orders** (confirmed: engine only calls `place_limit_order`)
+- **Go-live:** current MVP, automation off at start, 1 ISIN, low limits, raise gradually
+- **Execution:** Phase 1 (code, tested in DEMO) delivered in one go; Phases 2-4 (PROD infra, IP-restricted keys, go-live) discussed after Phase 1 is validated
+
+**Original description:**
 - Create separate Render environment for PROD (currently on DEMO)
 - Switch from T212 DEMO API (sandbox) to REAL MONEY API
 - Set up production database (separate Supabase instance or database)
