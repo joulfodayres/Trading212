@@ -691,6 +691,14 @@ Adapts to market conditions over time
 - **Go-live:** current MVP, automation off at start, 1 ISIN, low limits, raise gradually
 - **Execution:** Phase 1 (code, tested in DEMO) delivered in one go; Phases 2-4 (PROD infra, IP-restricted keys, go-live) discussed after Phase 1 is validated
 
+#### ✅ Phase 1 delivered (commit `52b11c4`, 2026-09-24) — pending DEMO validation
+- Trading limits (max buy/sell order, max daily spend) + consumption bar on dashboard
+- Automation auto-disables after a code deploy (RENDER_GIT_COMMIT check)
+- Alerts: order rejected, invalid credentials, cycle errors, auto-disabled, MFA disabled, killswitch — all toggleable in UI
+- T212 environment cleanup: removed the non-functional credentials card, single source of truth (T212_ENVIRONMENT), read-only status panel
+- **Before deploying:** run `db/trading_limits_and_alerts.sql` in Supabase first
+- **Not yet done:** SMTP not configured on Render — alerts currently only log, don't email (needed to actually test the alert flows end-to-end)
+
 **Original description:**
 - Create separate Render environment for PROD (currently on DEMO)
 - Switch from T212 DEMO API (sandbox) to REAL MONEY API
