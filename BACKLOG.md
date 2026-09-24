@@ -1131,6 +1131,39 @@ That said, `SameSite=None` still removes a **browser-level** defense layer and m
 
 ---
 
+### Item #18: Database Migration Tracking (NEW)
+**Estimated:** 2-3 hours
+**Priority:** LOW (becomes more valuable as DEMO and PROD schemas need to stay in sync)
+**Context:** Raised during Item #15 (DEMO/PROD) brainstorming. Decision for now: run SQL scripts manually in PROD before promoting code. This item hardens that later.
+
+**Description:**
+- Number every schema change (`db/migrations/001_...sql`, `002_...sql`, ...)
+- New table `schema_migrations` records which scripts ran in each database — shows at a glance what's missing in PROD
+- Backend checks the expected schema version at startup; if it doesn't match, it starts with automation blocked and sends an alert, instead of failing mid-trading-cycle
+- Write migrations backward-compatible (add columns with defaults; never drop a column in the same step the code stops using it), so "SQL first, code after" is always safe
+
+---
+
+### Item #19: Additional Trading Safety Limits + Reinforced Confirmation (NEW)
+**Estimated:** 4-6 hours
+**Priority:** MEDIUM (after Item #15 is live)
+**Context:** Item #15 starts with only two limits (max value per order, max daily spend on executed orders). These were discussed and deferred.
+
+**Additional limits:**
+| Limit | Protects against |
+|---|---|
+| Max orders per day | A bug placing orders in a loop — each under the per-order max, hundreds in total |
+| Max exposure per ISIN | Concentrating too much money in a single asset |
+| Max price deviation (e.g. ±5% vs last price) | Bad API data generating orders at absurd prices |
+| Max daily loss | Runaway losses (depends on Item #14 P&L tracking) |
+
+**Reinforced confirmation to raise limits:**
+- Raising any limit requires password or MFA code re-entry; lowering stays free
+- Rationale: if someone hijacks a session, raising the limits is the first thing they'd do
+- Log every limit change (old value, new value, timestamp) + send a security alert
+
+---
+
 **Last Updated:** 2026-09-24
-**Status:** Phase 5: 60% complete (8 of 18 items) + 6 NEW items (#12, #13, #14, #15, #16, #17)
-**Recent:** Item #16 (Scheduler Time Window) ✅ ADDED | Item #17 (Same-Domain Cookie Hardening) ✅ ADDED
+**Status:** Phase 5: 60% complete (8 of 18 items) + 8 NEW items (#12-#19)
+**Recent:** Item #18 (Migration Tracking) ✅ ADDED | Item #19 (Extra Safety Limits) ✅ ADDED
