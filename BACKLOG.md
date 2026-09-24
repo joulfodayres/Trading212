@@ -977,6 +977,127 @@ PROD Environment (NEW):
 
 ---
 
-**Last Updated:** 2026-09-23
-**Status:** Phase 5: 50% complete (8 of 17 items) + 4 NEW items (#12, #13, #14, #15)
-**Recent:** Item #2 (Upload T212 Data) ✅ DONE | Item #15 (PROD Environment) ✅ ADDED
+### Item #16: Scheduler Time Window - Parametrize Operating Hours (NEW)
+**Estimated:** 2-3 hours
+**Priority:** MEDIUM (Operational tuning)
+**Description:** Allow user to configure a time window during which AutomationEngine should operate (e.g., 9:00-17:00 market hours). Outside this window, scheduler runs but skips cycle execution. Useful for:
+- Trading during market hours only (avoid off-hours volatility)
+- Reduce server load outside trading hours
+- Adapt to different market opening times (US, UK, EU markets)
+- Manual control over when money is at risk
+
+**Design:**
+
+#### Database Schema:
+Add two columns to `app_parameters` table:
+```sql
+scheduler_time_window_start VARCHAR DEFAULT '00:00'  -- HH:MM format (e.g., "09:00")
+scheduler_time_window_end VARCHAR DEFAULT '23:59'    -- HH:MM format (e.g., "17:00")
+-- Note: If start > end (e.g., "22:00"-"06:00"), wraps around midnight
+```
+
+#### Frontend Changes:
+- **ConfigPage.tsx** → Add new section "Scheduler Time Window"
+  - Two time pickers: "Start time" (HH:MM) and "End time" (HH:MM)
+  - Show current setting: "Active hours: 09:00 - 17:00"
+  - Show next window: "Next execution: at 09:00 tomorrow"
+  - Show if currently inside/outside window: "🟢 WITHIN window" or "🔴 OUTSIDE window"
+  - Save button: `PUT /api/v1/automation/config/time-window`
+  - Display example: "During market hours: 9 AM to 5 PM"
+
+- **Sidebar.tsx** → Add visual indicator
+  - Show status: "🟢 Active (within window)" or "⏸️ Paused (outside window)"
+  - Tooltip: "Scheduler will resume at 09:00"
+
+#### Backend Changes:
+- **`backend/models/schemas.py`**
+  - Add `scheduler_time_window_start`, `scheduler_time_window_end` to `AppParametersResponse`
+  - Add validation: must be valid HH:MM format, must be different (or same for 24/7)
+
+- **`backend/routes/automation.py`**
+  - Add new endpoint: `PUT /api/v1/automation/config/time-window`
+  - Request: `{"start": "09:00", "end": "17:00"}`
+  - Response: Updated config + next execution time
+
+- **`backend/services/automation_engine.py`**
+  - Add method: `_is_within_time_window()` → bool
+    - Compare current time with `scheduler_time_window_start/end`
+    - Handle midnight wrap: if start > end (e.g., 22:00-06:00), consider current time in window if > start OR < end
+  - Modify `run_cycle()`:
+    - At start, check `if not _is_within_time_window(): return`
+    - Skip cycle without error (just log and return)
+  - Log: "[Scheduler] ⏸️ Outside time window (09:00-17:00), skipping cycle"
+
+#### Example Usage:
+```
+User sets: Start 09:00, End 17:00
+Scheduler runs every 15s (always)
+
+9:00 AM:
+  ✅ Cycle 1 executes (within window)
+  ✅ Cycle 2 executes (within window)
+
+5:01 PM:
+  ⏸️ Cycle skipped (outside window)
+  ⏸️ Cycle skipped (outside window)
+  
+Next day at 9:00 AM:
+  ✅ Cycle resumes
+```
+
+#### Edge Cases:
+1. **Overnight wrap** (e.g., start 22:00, end 06:00):
+   - 21:00: Outside (before 22:00)
+   - 23:00: Inside (after 22:00, before midnight)
+   - 00:30: Inside (after midnight, before 06:00)
+   - 07:00: Outside (after 06:00, before 22:00)
+
+2. **Window disabled** (set to "00:00"-"23:59"):
+   - Scheduler always active (24/7)
+
+3. **Single-minute window** (e.g., "09:00"-"09:01"):
+   - Only cycles at exactly 09:00-09:00:59
+   - Next execution at 09:00 next day
+
+#### Testing Checklist:
+- [ ] Set window to 09:00-17:00
+- [ ] Verify cycles execute during 9 AM-5 PM
+- [ ] Verify cycles skip outside 9 AM-5 PM
+- [ ] Test midnight wrap: 22:00-06:00
+- [ ] Verify log messages show window status
+- [ ] Sidebar shows correct indicator (🟢 Active / ⏸️ Paused)
+- [ ] Change window, verify new time takes effect immediately
+- [ ] Set to 24/7 (00:00-23:59), verify always active
+
+#### Deliverables:
+- ✅ Two time picker fields in ConfigPage
+- ✅ Time window validation (HH:MM format)
+- ✅ Backend endpoint to save/retrieve window
+- ✅ AutomationEngine respects window (skip cycles outside)
+- ✅ Logging for window status
+- ✅ Sidebar indicator
+- ✅ Next execution time display
+
+#### Dependencies:
+- [ ] Time picker component (or use HTML5 `<input type="time">`)
+- [ ] Time zone handling (assume server timezone = user timezone for now)
+- [ ] Database migration to add columns
+
+#### Impact:**
+- ✅ Reduce unnecessary cycles outside trading hours
+- ✅ Lower server costs (skip 16+ hours/day if only 9-17)
+- ✅ User control over when automation is active
+- ✅ Foundation for multi-timezone support (future)
+- ✅ Better operational awareness (visual indicator)
+
+#### Future Enhancements:
+- Support multiple time windows per week (e.g., different hours Mon-Fri vs Sat-Sun)
+- Time zone configuration (currently assumes server timezone)
+- Market calendar integration (auto-detect market holidays)
+- Event-based scheduling (trigger before/after market open/close)
+
+---
+
+**Last Updated:** 2026-09-24
+**Status:** Phase 5: 60% complete (8 of 18 items) + 5 NEW items (#12, #13, #14, #15, #16)
+**Recent:** Item #2 (Upload T212 Data) ✅ DONE | Item #16 (Scheduler Time Window) ✅ ADDED
