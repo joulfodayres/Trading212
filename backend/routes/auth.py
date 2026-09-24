@@ -203,7 +203,7 @@ def _get_user(user_id: str) -> Optional[dict]:
 
 def _set_cookies(response: Response, access_token: str, device_token: Optional[str] = None) -> None:
     # samesite="none" is required because frontend and backend live on different
-    # Render subdomains (trading212-1.onrender.com vs trading212-4ojx.onrender.com)
+    # Render subdomains (trading-212-automation-front-end.onrender.com vs trading212-4ojx.onrender.com)
     # — this is a cross-site request as far as the browser is concerned. With
     # samesite="lax" the browser silently drops the cookie on any XHR/fetch call
     # (only allowed on top-level navigation), so GET /auth/me never saw it and

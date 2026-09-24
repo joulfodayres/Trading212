@@ -50,7 +50,7 @@ Frontend (React) ← → Backend (FastAPI)
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | https://trading212-1.onrender.com |
+| **Frontend** | https://trading-212-automation-front-end.onrender.com |
 | **Backend API** | https://trading212-4ojx.onrender.com |
 | **API Docs** | https://trading212-4ojx.onrender.com/docs |
 

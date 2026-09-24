@@ -19,7 +19,7 @@
 ```
 ┌─────────────────────────────────────────┐
 │     BROWSER (qualquer lugar)            │
-│  https://trading212-1.onrender.com      │
+│  https://trading-212-automation-front-end.onrender.com      │
 └────────────────┬────────────────────────┘
                  │ HTTPS
                  ▼
@@ -373,7 +373,7 @@ Exemplo: Se tem params para pos=-1,0,1 mas trades_balance=3, usa params de pos=1
 ## 🚀 Deployment
 
 ### Frontend (Render)
-- URL: https://trading212-1.onrender.com
+- URL: https://trading-212-automation-front-end.onrender.com
 - Build: `npm run build`
 - Start: `npm run preview`
 - Auto-deploy on push to main

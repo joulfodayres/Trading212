@@ -149,7 +149,7 @@
 🚀 DEPLOYMENT STATUS
 ═══════════════════════════════════════════════════════════════════════════
 
-  ✅ Frontend: https://trading212-1.onrender.com (LIVE)
+  ✅ Frontend: https://trading-212-automation-front-end.onrender.com (LIVE)
   ✅ Backend: https://trading212-4ojx.onrender.com (LIVE)
   ✅ API Docs: https://trading212-4ojx.onrender.com/docs (LIVE)
   ✅ Database: Supabase Cloud (LIVE)
@@ -304,7 +304,7 @@
     - /docs/API_REFERENCE.md (Endpoint reference)
 
   Links:
-    - Frontend: https://trading212-1.onrender.com
+    - Frontend: https://trading-212-automation-front-end.onrender.com
     - Backend API: https://trading212-4ojx.onrender.com
     - API Docs: https://trading212-4ojx.onrender.com/docs
     - GitHub: https://github.com/joulfodayres/Trading212

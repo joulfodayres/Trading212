@@ -230,7 +230,7 @@ Solution:
 
 ## 📞 Quick Links
 
-- **Frontend:** https://trading212-1.onrender.com
+- **Frontend:** https://trading-212-automation-front-end.onrender.com
 - **Backend API:** https://trading212-4ojx.onrender.com
 - **API Docs (Swagger):** https://trading212-4ojx.onrender.com/docs
 - **GitHub:** https://github.com/joulfodayres/Trading212

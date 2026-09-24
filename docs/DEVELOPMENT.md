@@ -279,7 +279,7 @@ gh pr create --title "Add new feature" --body "Description"
    - Serves from: `dist/`
    - Takes ~10-15 minutes
 
-3. **Preview URL:** https://trading212-1.onrender.com
+3. **Preview URL:** https://trading-212-automation-front-end.onrender.com
 
 ### Backend Deployment (Render)
 

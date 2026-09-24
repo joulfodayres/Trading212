@@ -20,7 +20,7 @@ Sistema de trading automatizado hosted em cloud com dashboard web seguro e acess
 
 | Componente | Tecnologia | Deployment |
 |-----------|-----------|-----------|
-| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS | Render (Node) |
+| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS | Render (Static Site) |
 | **Backend** | FastAPI + Python 3.14 + Uvicorn | Render (Python) |
 | **Banco de Dados** | PostgreSQL (Supabase) | Supabase Cloud |
 | **Autenticação** | Supabase Auth (JWT) | Supabase |
@@ -33,7 +33,7 @@ Sistema de trading automatizado hosted em cloud com dashboard web seguro e acess
 ```
 ┌─────────────────────────────────────┐
 │     BROWSER (qualquer lugar)        │
-│  https://trading212-1.onrender.com  │
+│  https://trading-212-automation-front-end.onrender.com  │
 │                                     │
 │  - Login (Supabase Auth)            │
 │  - Dashboard com ISINs              │
@@ -202,14 +202,14 @@ Trading212/
 
 | Serviço | URL | Status | Tipo |
 |---------|-----|--------|------|
-| **Frontend** | https://trading212-1.onrender.com | ✅ Online | Node (React) |
+| **Frontend** | https://trading-212-automation-front-end.onrender.com | ✅ Online | Static Site (React) |
 | **Backend** | https://trading212-4ojx.onrender.com | ✅ Online | Python (FastAPI) |
 | **BD** | supabase.com | ✅ Online | PostgreSQL |
 | **GitHub** | github.com/joulfodayres/Trading212 | ✅ Online | Git |
 
 ### **Infraestrutura**
 
-- **Frontend Hosting:** Render (Node Web Service)
+- **Frontend Hosting:** Render (Static Site — free; rewrite /* → /index.html)
 - **Backend Hosting:** Render (Python Web Service)
 - **BD Hosting:** Supabase (PostgreSQL Cloud)
 - **Auth:** Supabase Auth (JWT)
@@ -584,7 +584,7 @@ APScheduler>=3.10.0
 ## 🌐 URLs em Produção
 
 ```
-Frontend: https://trading212-1.onrender.com
+Frontend: https://trading-212-automation-front-end.onrender.com
 Backend:  https://trading212-4ojx.onrender.com
 Docs:     https://trading212-4ojx.onrender.com/docs
 GitHub:   https://github.com/joulfodayres/Trading212
