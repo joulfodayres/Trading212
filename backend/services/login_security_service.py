@@ -17,7 +17,7 @@ from typing import Optional
 
 from config.settings import settings
 from db.supabase_client import get_supabase_client
-from services.email_service import send_alert
+from services.alert_service import send_alert_if_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,8 @@ def check_and_alert_threshold(ip_address: str, email: Optional[str]) -> None:
     """Envia alerta por email se o número de falhas atingir o threshold configurado."""
     failures = count_recent_failures(ip_address)
     if failures > 0 and failures % settings.LOGIN_ALERT_THRESHOLD == 0:
-        send_alert(
+        send_alert_if_enabled(
+            "login_threshold",
             subject=f"⚠️ Trading 212 Bot — {failures} tentativas de login falhadas",
             body=(
                 f"Foram detetadas {failures} tentativas de login falhadas consecutivas.\n\n"

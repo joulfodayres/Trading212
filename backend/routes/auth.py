@@ -25,6 +25,7 @@ from supabase import create_client, Client
 from config.settings import settings
 from db.supabase_client import get_supabase_client
 from services import login_security_service as security
+from services.alert_service import send_alert_if_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -454,6 +455,11 @@ async def mfa_disable(request: MfaDisableRequest, req: Request, current_user: di
     client.table("users").update({"totp_enabled": False, "totp_secret": None}).eq("id", current_user["id"]).execute()
 
     logger.warning(f"⚠️ MFA desativado: {current_user['email']}")
+    send_alert_if_enabled(
+        "security_events",
+        subject="⚠️ Trading 212 Bot — MFA desativado",
+        body=f"O MFA foi desativado na conta {current_user['email']}.\n\nSe não foste tu, muda a password e reativa o MFA imediatamente.",
+    )
     return {"message": "MFA desativado"}
 
 
@@ -481,6 +487,11 @@ async def logout_all(response: Response, current_user: dict = Depends(get_curren
     response.delete_cookie(ACCESS_COOKIE_NAME, path="/", secure=settings.COOKIE_SECURE, samesite="none")
     response.delete_cookie(DEVICE_COOKIE_NAME, path="/", secure=settings.COOKIE_SECURE, samesite="none")
     logger.warning(f"🔴 Killswitch acionado por: {current_user['email']} ({count} sessões terminadas)")
+    send_alert_if_enabled(
+        "security_events",
+        subject="🔴 Trading 212 Bot — Killswitch acionado",
+        body=f"Todas as sessões ativas foram terminadas para {current_user['email']} ({count} sessão(ões)).\n\nSe não foste tu, muda a password imediatamente.",
+    )
     return {"message": f"{count} sessão(ões) terminada(s)"}
 
 

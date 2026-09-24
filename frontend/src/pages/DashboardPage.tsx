@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import ISINTable from '../components/ISINTable'
 import StrategiesPage from './StrategiesPage'
 import ConfigPage from './ConfigPage'
 import ReportsPage from './ReportsPage'
+import { TradingConsumptionPanel } from '../components/TradingConsumptionPanel'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
+import { useGlobalAutomation } from '../hooks/useGlobalAutomation'
 
 export default function DashboardPage() {
   const [activeView, setActiveView] = useState('isins') // 'isins', 'strategies', 'config', 'history'
+  const { status, fetchStatus } = useGlobalAutomation()
+
+  useEffect(() => {
+    fetchStatus()
+  }, [fetchStatus])
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
@@ -27,6 +34,8 @@ export default function DashboardPage() {
               {activeView === 'history' && '📈 History'}
             </h1>
           </div>
+
+          <TradingConsumptionPanel disabledReason={status?.automation_disabled_reason} />
 
           {activeView === 'isins' && (
             <div>

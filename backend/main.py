@@ -21,6 +21,7 @@ from db.supabase_client import get_db
 from services.scheduler import SchedulerService
 from services.automation_engine import AutomationEngine
 from services.t212_service import T212Service
+from services.alert_service import send_alert_if_enabled
 from api.trading212 import Trading212Client
 
 # Configurar logging
@@ -55,6 +56,45 @@ async def lifespan(app: FastAPI):
         # Get Supabase DB instance
         db = get_db()
         logger.info("✅ Conexão com Supabase estabelecida")
+
+        # Item #15: se o código mudou desde o último arranque (novo deploy),
+        # desliga a automação por segurança — nunca arranca "sozinha" depois
+        # de uma alteração de código. Só corre se RENDER_GIT_COMMIT existir
+        # (Render define-a automaticamente; em dev local não existe, e sem
+        # um sinal fiável de versão não mexemos no estado da automação).
+        if settings.RENDER_GIT_COMMIT:
+            try:
+                result = db.client.table("app_parameters").select(
+                    "id, last_deployed_commit, grid_trading_enabled"
+                ).execute()
+                if result.data:
+                    row = result.data[0]
+                    stored_commit = row.get("last_deployed_commit")
+                    current_commit = settings.RENDER_GIT_COMMIT
+                    if stored_commit != current_commit:
+                        logger.warning(
+                            f"🚀 Novo deploy detetado ({stored_commit} → {current_commit}) "
+                            f"— desativando automação por segurança"
+                        )
+                        db.client.table("app_parameters").update({
+                            "grid_trading_enabled": False,
+                            "automation_disabled_reason": f"Novo deploy detetado (commit {current_commit[:8]})",
+                            "last_deployed_commit": current_commit,
+                            "updated_at": "now()",
+                        }).eq("id", row["id"]).execute()
+                        send_alert_if_enabled(
+                            "deploy_disabled",
+                            subject="🚀 Trading 212 Bot — Automação desligada após deploy",
+                            body=(
+                                f"Foi detetado um novo deploy (commit {current_commit}).\n\n"
+                                f"A automação foi desligada automaticamente por segurança. "
+                                f"Reativa manualmente quando quiseres."
+                            ),
+                        )
+                    else:
+                        logger.info(f"✅ Mesmo commit do arranque anterior ({current_commit[:8]}) — estado da automação mantido")
+            except Exception as e:
+                logger.error(f"⚠️ Erro ao verificar deploy novo: {e}", exc_info=True)
 
         # Create T212 client
         t212_client = Trading212Client(

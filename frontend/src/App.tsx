@@ -5,6 +5,7 @@ import DashboardPage from './pages/DashboardPage'
 import MfaSetupRequiredPage from './pages/MfaSetupRequiredPage'
 import { useAuthStore } from './stores/authStore'
 import { ToastProvider } from './components/ui/Toast'
+import { apiClient } from './api/client'
 
 // Nota (Item #12): sem registo público — a rota /register foi removida do
 // routing. A conta única é criada uma vez via POST /api/auth/register
@@ -13,11 +14,20 @@ import { ToastProvider } from './components/ui/Toast'
 function App() {
   const { isAuthenticated, user, checkAuth } = useAuthStore()
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isLiveEnvironment, setIsLiveEnvironment] = useState(false)
 
   useEffect(() => {
     // O token vive num cookie httpOnly (não em localStorage) — confirmamos
     // a sessão junto do backend ao arrancar a app.
     checkAuth().finally(() => setCheckingAuth(false))
+
+    // Item #15: faixa permanente de aviso quando este backend está ligado à
+    // T212 LIVE (dinheiro real) — visível mesmo antes do login, para nunca
+    // confundir os separadores DEMO/PROD abertos ao mesmo tempo.
+    apiClient
+      .get('/config/status')
+      .then((r) => setIsLiveEnvironment(r.data?.environment === 'live'))
+      .catch(() => setIsLiveEnvironment(false))
   }, [])
 
   if (checkingAuth) {
@@ -32,6 +42,12 @@ function App() {
 
   return (
     <ToastProvider>
+      {isLiveEnvironment && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center text-sm font-bold py-1.5 tracking-wide">
+          🔴 PRODUÇÃO — DINHEIRO REAL
+        </div>
+      )}
+      <div className={isLiveEnvironment ? 'pt-7' : ''}>
       <BrowserRouter>
         <Routes>
           <Route
@@ -53,6 +69,7 @@ function App() {
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
       </BrowserRouter>
+      </div>
     </ToastProvider>
   )
 }

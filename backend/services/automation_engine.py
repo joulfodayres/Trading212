@@ -10,6 +10,8 @@ import uuid
 
 from db.supabase_client import get_db
 from services.t212_service import T212Service
+from services import trading_limits_service as limits_service
+from services.alert_service import send_alert_if_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,7 @@ class AutomationEngine:
         self.cycle_count = 0
         self.last_cycle_start: Optional[datetime] = None
         self.last_cycle_duration: Optional[float] = None
+        self._consecutive_cycle_errors = 0  # Item #15: alert after 3 in a row
 
     async def run_cycle(self):
         """
@@ -84,6 +87,7 @@ class AutomationEngine:
 
             cycle_duration = (datetime.utcnow() - cycle_start).total_seconds()
             self.last_cycle_duration = cycle_duration
+            self._consecutive_cycle_errors = 0
             self.logger.info(f"✅ AutomationEngine | Ciclo #{self.cycle_count} completo com sucesso em {cycle_duration:.2f}s")
             self._log_db_action(f"✅ Ciclo #{self.cycle_count} completo com sucesso", {"duration_seconds": cycle_duration})
 
@@ -95,6 +99,35 @@ class AutomationEngine:
                 exc_info=True,
             )
             self._log_db_action(f"❌ Erro fatal no ciclo: {str(e)}", {"cycle": self.cycle_count, "error": str(e)})
+
+            # Item #15: alertas de erro. Heurística simples para distinguir
+            # "credenciais T212 inválidas" (mais urgente, alerta imediato) de
+            # erros genéricos (só alerta ao fim de vários ciclos seguidos).
+            error_str = str(e)
+            error_lower = error_str.lower()
+            if "unauthorized" in error_lower or "401" in error_str or "invalid api key" in error_lower:
+                send_alert_if_enabled(
+                    "invalid_credentials",
+                    subject="🔴 Trading 212 Bot — Credenciais T212 inválidas",
+                    body=(
+                        f"O ciclo #{self.cycle_count} falhou com um erro que sugere "
+                        f"credenciais T212 inválidas ou expiradas:\n\n{error_str}\n\n"
+                        f"Verifica T212_API_KEY / T212_API_SECRET no Render."
+                    ),
+                )
+                self._consecutive_cycle_errors = 0
+            else:
+                self._consecutive_cycle_errors += 1
+                if self._consecutive_cycle_errors >= 3:
+                    send_alert_if_enabled(
+                        "cycle_errors",
+                        subject=f"⚠️ Trading 212 Bot — {self._consecutive_cycle_errors} ciclos seguidos com erro",
+                        body=(
+                            f"Os últimos {self._consecutive_cycle_errors} ciclos falharam.\n\n"
+                            f"Último erro (ciclo #{self.cycle_count}): {error_str}"
+                        ),
+                    )
+                    self._consecutive_cycle_errors = 0  # reset após alertar, evita repetir todo ciclo
             # Continue - don't crash, next cycle will retry
 
     # =========================================================================
@@ -358,15 +391,17 @@ class AutomationEngine:
                 self.logger.info(
                     f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) não encontrada em pendentes - procurando no histórico..."
                 )
-                historical_order = await self.t212_service.get_historical_order(order_id, ticker)
+                historical_item = await self.t212_service.get_historical_order(order_id, ticker)
 
-                if not historical_order:
+                if not historical_item:
                     self.logger.info(
                         f"AutomationEngine | FASE 2 | ℹ️ Ordem {order_id} ({ticker}) também não encontrada no histórico - mantendo estado atual"
                     )
                     return
 
                 # Found in history - update our order with the historical data
+                historical_order = historical_item.get("order", {})
+                historical_fill = historical_item.get("fill") or {}
                 hist_status = historical_order.get("status", "UNKNOWN")
                 hist_filled = historical_order.get("filledQuantity", 0)
                 self.logger.info(
@@ -385,8 +420,19 @@ class AutomationEngine:
                 # If FILLED (or otherwise executed), mark automation_status as 'E'
                 if hist_status == "FILLED":
                     update_data["automation_status"] = "E"
+                    # Capture fill P&L data (Item #15: daily spend limit needs
+                    # these — netValue = full trade value, realisedProfitLoss
+                    # only meaningful for SELLs).
+                    wallet_impact = historical_fill.get("walletImpact") or {}
+                    if wallet_impact.get("netValue") is not None:
+                        update_data["fill_net_value"] = wallet_impact.get("netValue")
+                    if wallet_impact.get("realisedProfitLoss") is not None:
+                        update_data["fill_realised_pnl"] = wallet_impact.get("realisedProfitLoss")
+                    if historical_fill.get("filledAt"):
+                        update_data["filled_at"] = historical_fill.get("filledAt")
                     self.logger.info(
-                        f"AutomationEngine | FASE 2 | ✅ Ordem {order_id} ({ticker}) EXECUTADA (via histórico) - marcando como EXECUTADA"
+                        f"AutomationEngine | FASE 2 | ✅ Ordem {order_id} ({ticker}) EXECUTADA (via histórico) - marcando como EXECUTADA "
+                        f"(netValue={wallet_impact.get('netValue')}, realisedPnL={wallet_impact.get('realisedProfitLoss')})"
                     )
                     self._log_db_action(
                         f"✅ Ordem FILLED via histórico: {ticker} (Order ID: {order_id})",
@@ -999,6 +1045,18 @@ class AutomationEngine:
         try:
             db = get_db()
 
+            # Item #15: trading limits — checked BEFORE every order placement
+            # (setup pairs and rebalance pairs both go through this method,
+            # making it the single chokepoint for the whole engine).
+            order_value = quantity * limit_price
+            block_reason = limits_service.check_order_against_limits(order_type, order_value)
+            if block_reason:
+                self.logger.warning(
+                    f"AutomationEngine | 🛑 Ordem bloqueada por limite de segurança: {block_reason}"
+                )
+                limits_service.stop_automation(block_reason)
+                return None
+
             # First attempt with current precision
             self.logger.info(
                 f"AutomationEngine | Order attempt 1: {order_type} {ticker} qty={quantity} @ {limit_price} (precision={initial_precision})"
@@ -1112,6 +1170,15 @@ class AutomationEngine:
                 # Not a precision error, log and return None
                 self.logger.error(
                     f"AutomationEngine | {order_type} order failed: {ticker} - {error_str}"
+                )
+                send_alert_if_enabled(
+                    "order_rejected",
+                    subject=f"⚠️ Trading 212 Bot — Ordem rejeitada: {ticker}",
+                    body=(
+                        f"A T212 rejeitou uma ordem {order_type} para {ticker}.\n\n"
+                        f"Quantidade: {quantity}\nPreço limite: {limit_price}\n\n"
+                        f"Erro: {error_str}"
+                    ),
                 )
                 return None
 

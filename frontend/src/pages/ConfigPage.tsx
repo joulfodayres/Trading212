@@ -4,7 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { apiClient } from '../api/client'
-import { ConfigForm } from '../components/ConfigForm'
+import { T212StatusPanel } from '../components/T212StatusPanel'
+import { TradingLimitsSection } from '../components/TradingLimitsSection'
 import { SecuritySection } from '../components/SecuritySection'
 
 export default function ConfigPage() {
@@ -73,10 +74,14 @@ export default function ConfigPage() {
           <CardTitle>General</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Trading 212 Config */}
+          {/* Trading 212 Status (read-only — credentials live in Render env vars) */}
           <div>
-            <h3 className="text-lg font-semibold text-t212-primary mb-4">Trading 212</h3>
-            <ConfigForm />
+            <T212StatusPanel />
+          </div>
+
+          {/* Trading Limits + Alerts */}
+          <div className="border-t border-t212-border pt-6 mt-6">
+            <TradingLimitsSection />
           </div>
 
           {/* Scheduler Interval */}

@@ -21,8 +21,12 @@ class Settings(BaseSettings):
     # ===== TRADING 212 =====
     T212_API_KEY: str
     T212_API_SECRET: str
-    T212_ENVIRONMENT: str = "demo"  # 'demo' ou 'live'
-    T212_BASE_URL: str
+    T212_ENVIRONMENT: str = "demo"  # 'demo' ou 'live' — fonte única (Item #15)
+
+    # ===== DEPLOY TRACKING (Item #15) =====
+    # Populada automaticamente pelo Render em cada deploy (não definir manualmente).
+    # Usada para detetar um deploy novo e desligar a automação por segurança.
+    RENDER_GIT_COMMIT: Optional[str] = None
 
     # ===== FASTAPI =====
     FASTAPI_ENV: str = "development"
@@ -66,6 +70,12 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        # Ignore env vars that aren't declared as fields above. Without this,
+        # a leftover Render env var from a removed setting (e.g. T212_BASE_URL,
+        # removed in Item #15) crashes startup with a pydantic ValidationError
+        # — better to just ignore what we don't read than depend on someone
+        # remembering to delete it from Render at the exact right time.
+        extra = "ignore"
 
     # ===== VALIDATION (clamp to safe ranges — a bad env var never weakens security) =====
 

@@ -8,6 +8,9 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from services import trading_limits_service as limits_service
+from services.alert_service import DEFAULT_ALERT_SETTINGS
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/automation", tags=["automation"])
@@ -31,6 +34,25 @@ class AutomationStatusResponse(BaseModel):
     scheduler_running: bool
     cycle_count: int
     last_cycle_duration: Optional[float] = None
+    automation_disabled_reason: Optional[str] = None
+
+
+class TradingLimitsRequest(BaseModel):
+    """Request para atualizar limites de trading (Item #15). null = sem limite."""
+    max_buy_order_value: Optional[float] = Field(None, ge=0)
+    max_sell_order_value: Optional[float] = Field(None, ge=0)
+    max_daily_spend: Optional[float] = Field(None, ge=0)
+
+
+class AlertSettingsRequest(BaseModel):
+    """Request para atualizar os interruptores de alerta (Item #15)."""
+    login_threshold: Optional[bool] = None
+    security_events: Optional[bool] = None
+    limit_reached: Optional[bool] = None
+    order_rejected: Optional[bool] = None
+    invalid_credentials: Optional[bool] = None
+    cycle_errors: Optional[bool] = None
+    deploy_disabled: Optional[bool] = None
 
 
 class SchedulerIntervalRequest(BaseModel):
@@ -70,8 +92,12 @@ async def get_global_automation_status():
         db = get_db()
 
         # Buscar app_parameters
-        result = db.client.table("app_parameters").select("grid_trading_enabled").execute()
-        grid_trading_enabled = result.data[0].get("grid_trading_enabled", True) if result.data else True
+        result = db.client.table("app_parameters").select(
+            "grid_trading_enabled, automation_disabled_reason"
+        ).execute()
+        row = result.data[0] if result.data else {}
+        grid_trading_enabled = row.get("grid_trading_enabled", True)
+        automation_disabled_reason = row.get("automation_disabled_reason") if not grid_trading_enabled else None
 
         scheduler_status = scheduler_service.get_status() if scheduler_service else {}
         scheduler_running = scheduler_status.get("running", False)
@@ -82,7 +108,8 @@ async def get_global_automation_status():
             "grid_trading_enabled": grid_trading_enabled,
             "scheduler_running": scheduler_running,
             "cycle_count": cycle_count,
-            "last_cycle_duration": last_cycle_duration
+            "last_cycle_duration": last_cycle_duration,
+            "automation_disabled_reason": automation_disabled_reason,
         }
 
     except Exception as e:
@@ -109,9 +136,12 @@ async def enable_global_automation():
 
         param_id = result.data[0]["id"]
 
-        # Update with WHERE clause
+        # Update with WHERE clause — clear the disabled reason (Item #15):
+        # a manual re-enable always resets it, even if it was set by an
+        # auto-stop (limit hit / deploy detected).
         update_result = db.client.table("app_parameters").update({
             "grid_trading_enabled": True,
+            "automation_disabled_reason": None,
             "updated_at": "now()"
         }).eq("id", param_id).execute()
 
@@ -516,4 +546,139 @@ async def update_log_level(request: LogLevelRequest):
         raise
     except Exception as e:
         logger.error(f"Erro ao atualizar log_level: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== TRADING LIMITS (Item #15) =====
+
+@router.get("/config/limits")
+async def get_trading_limits():
+    """
+    GET /api/v1/automation/config/limits
+
+    Retorna os limites de trading configurados. null = sem limite.
+    """
+    try:
+        limits = limits_service.get_trading_limits()
+        return {
+            "max_buy_order_value": limits.get("max_buy_order_value"),
+            "max_sell_order_value": limits.get("max_sell_order_value"),
+            "max_daily_spend": limits.get("max_daily_spend"),
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter limites de trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/config/limits")
+async def update_trading_limits(request: TradingLimitsRequest):
+    """
+    PUT /api/v1/automation/config/limits
+
+    Atualiza os limites de trading. Campo omitido/null = sem limite nesse campo.
+    """
+    try:
+        db = _get_db()
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+        param_id = result.data[0]["id"]
+
+        update_result = db.client.table("app_parameters").update({
+            "max_buy_order_value": request.max_buy_order_value,
+            "max_sell_order_value": request.max_sell_order_value,
+            "max_daily_spend": request.max_daily_spend,
+            "updated_at": "now()",
+        }).eq("id", param_id).execute()
+
+        if not update_result.data:
+            raise Exception("Failed to update app_parameters")
+
+        logger.info(
+            f"✅ Limites de trading atualizados: buy={request.max_buy_order_value}, "
+            f"sell={request.max_sell_order_value}, daily={request.max_daily_spend}"
+        )
+        return {
+            "status": "updated",
+            "max_buy_order_value": request.max_buy_order_value,
+            "max_sell_order_value": request.max_sell_order_value,
+            "max_daily_spend": request.max_daily_spend,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao atualizar limites de trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/consumption")
+async def get_trading_consumption():
+    """
+    GET /api/v1/automation/consumption
+
+    Consumo atual face aos limites — usado pela barra de progresso no dashboard.
+    """
+    try:
+        limits = limits_service.get_trading_limits()
+        daily_spend = limits_service.get_daily_spend()
+        return {
+            "daily_spend": daily_spend,
+            "max_daily_spend": limits.get("max_daily_spend"),
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter consumo de trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== ALERT SETTINGS (Item #15) =====
+
+@router.get("/config/alerts")
+async def get_alert_settings():
+    """
+    GET /api/v1/automation/config/alerts
+
+    Retorna os interruptores de alerta configurados (chaves em falta usam o default).
+    """
+    try:
+        db = _get_db()
+        result = db.client.table("app_parameters").select("alert_settings").execute()
+        stored = (result.data[0].get("alert_settings") if result.data else None) or {}
+        return {**DEFAULT_ALERT_SETTINGS, **stored}
+    except Exception as e:
+        logger.error(f"Erro ao obter alert_settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/config/alerts")
+async def update_alert_settings(request: AlertSettingsRequest):
+    """
+    PUT /api/v1/automation/config/alerts
+
+    Atualiza os interruptores de alerta (merge parcial — só altera os campos enviados).
+    """
+    try:
+        db = _get_db()
+        result = db.client.table("app_parameters").select("id, alert_settings").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+        row = result.data[0]
+        current = {**DEFAULT_ALERT_SETTINGS, **(row.get("alert_settings") or {})}
+
+        updates = request.model_dump(exclude_none=True)
+        current.update(updates)
+
+        update_result = db.client.table("app_parameters").update({
+            "alert_settings": current,
+            "updated_at": "now()",
+        }).eq("id", row["id"]).execute()
+
+        if not update_result.data:
+            raise Exception("Failed to update app_parameters")
+
+        logger.info(f"✅ Alert settings atualizados: {updates}")
+        return current
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao atualizar alert_settings: {e}")
         raise HTTPException(status_code=500, detail=str(e))

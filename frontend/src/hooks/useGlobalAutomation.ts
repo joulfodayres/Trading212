@@ -6,6 +6,7 @@ interface GlobalAutomationStatus {
   scheduler_running: boolean
   cycle_count: number
   last_cycle_duration?: number
+  automation_disabled_reason?: string | null
 }
 
 export const useGlobalAutomation = () => {

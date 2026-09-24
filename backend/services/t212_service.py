@@ -148,14 +148,17 @@ class T212Service:
 
         Used when an order is no longer in pending orders - it may have been
         filled/executed. Calls GET /equity/history/orders?cursor=0&ticker=<ticker>
-        and searches items[].order for the matching order_id.
+        and searches items[] for the matching order_id.
 
         Args:
             order_id: T212 order ID (integer)
             ticker: Ticker symbol to filter history by (e.g., NQSEd_EQ)
 
         Returns:
-            The matching order dict (items[].order) from history, or None if not found/error
+            The matching history item — {"order": {...}, "fill": {...}} — or
+            None if not found/error. Callers need both: `order` for
+            status/filledQuantity, `fill.walletImpact` for the realised P&L
+            used by the daily spend limit (Item #15).
         """
         try:
             self.logger.debug(
@@ -172,7 +175,7 @@ class T212Service:
                     self.logger.info(
                         f"AutomationEngine | ✅ Order {order_id} found in history - Status: {order.get('status')}"
                     )
-                    return order
+                    return item
 
             self.logger.debug(
                 f"AutomationEngine | ℹ️ Order {order_id} not found in historical orders for {ticker}"
