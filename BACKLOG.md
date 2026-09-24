@@ -1098,6 +1098,39 @@ Next day at 9:00 AM:
 
 ---
 
+### Item #17: Same-Domain Architecture - Eliminate Cross-Origin Cookie Dependency (NEW)
+**Estimated:** 3-5 hours
+**Priority:** LOW (Defense-in-depth hardening, not a fix for a known exploit)
+**Context:** Discovered while fixing Item #12 (Enhanced Login Security). Frontend (`trading212-1.onrender.com`) and backend (`trading212-4ojx.onrender.com`) live on different Render subdomains, which are different origins as far as the browser is concerned.
+
+**Description:**
+The session cookie currently requires `SameSite=None` (see commit `3a8c43c`) because it's sent cross-site between the two origins — `SameSite=Lax`/`Strict` would make the browser silently drop the cookie on every `axios`/`fetch` call, breaking login entirely (this is exactly the bug that got fixed). `SameSite=None` is safe today because CORS is locked to an explicit origin allowlist (`FRONTEND_URL` only, no wildcard) and every state-changing endpoint uses JSON bodies, which forces a CORS preflight that blocks unauthorized origins before the request is even sent.
+
+That said, `SameSite=None` still removes a **browser-level** defense layer and makes the app depend entirely on **one** remaining layer (CORS config) instead of two independent layers. If serving frontend and backend under the *same* domain (e.g., `trading212.app` for the SPA, `trading212.app/api/*` proxied to the backend), the browser would once again treat every request as same-site, and `SameSite=Lax` (or even `Strict`) could be restored — giving back CSRF protection at the browser level, independent of any CORS misconfiguration.
+
+**Options to achieve same-domain:**
+1. **Reverse proxy on Render** — front both services behind a single custom domain, path-based routing (`/api/*` → backend, everything else → frontend static site)
+2. **Custom domain + path rewriting** — buy a domain, configure DNS + a proxy layer (e.g., Render's rewrite rules, or a lightweight edge proxy like Cloudflare Workers) to route `/api/*` to the backend service while serving the SPA from the same host
+3. **Merge into one service** — serve the built React static files directly from the FastAPI backend (`StaticFiles` mount), eliminating the second Render service entirely
+
+**Trade-offs:**
+- Requires a custom domain (currently using free `*.onrender.com` subdomains)
+- Option 3 (merge into one service) is the simplest but couples frontend release cadence to backend deploys
+- Options 1-2 keep services independent but add a proxy layer to maintain
+- Not urgent: current CORS-based protection is sound for this app's actual attack surface (verified no state-mutating GET endpoints exist in active routes)
+
+**Deliverables:**
+- [ ] Decide on approach (reverse proxy vs merged service vs custom domain + rewrite)
+- [ ] Acquire/configure custom domain if needed
+- [ ] Update CORS + cookie `SameSite` back to `Lax` (or `Strict`) once same-origin is confirmed
+- [ ] Update `FRONTEND_URL` / CORS origins accordingly
+- [ ] Verify login flow works end-to-end after the domain change
+- [ ] Update `CLAUDE.md` URLs section
+
+**Impact:** Restores browser-level CSRF protection as a second independent layer (defense-in-depth), removing reliance on CORS configuration alone. Not fixing a known vulnerability — current setup is sound — this is a hardening item for when a custom domain is set up anyway (e.g., alongside Item #15 PROD setup).
+
+---
+
 **Last Updated:** 2026-09-24
-**Status:** Phase 5: 60% complete (8 of 18 items) + 5 NEW items (#12, #13, #14, #15, #16)
-**Recent:** Item #2 (Upload T212 Data) ✅ DONE | Item #16 (Scheduler Time Window) ✅ ADDED
+**Status:** Phase 5: 60% complete (8 of 18 items) + 6 NEW items (#12, #13, #14, #15, #16, #17)
+**Recent:** Item #16 (Scheduler Time Window) ✅ ADDED | Item #17 (Same-Domain Cookie Hardening) ✅ ADDED
