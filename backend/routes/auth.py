@@ -202,12 +202,20 @@ def _get_user(user_id: str) -> Optional[dict]:
 
 
 def _set_cookies(response: Response, access_token: str, device_token: Optional[str] = None) -> None:
+    # samesite="none" is required because frontend and backend live on different
+    # Render subdomains (trading212-1.onrender.com vs trading212-4ojx.onrender.com)
+    # — this is a cross-site request as far as the browser is concerned. With
+    # samesite="lax" the browser silently drops the cookie on any XHR/fetch call
+    # (only allowed on top-level navigation), so GET /auth/me never saw it and
+    # the user stayed stuck on the login screen after an otherwise-successful
+    # login. samesite="none" requires secure=True, which COOKIE_SECURE already
+    # guarantees in production (HTTPS on Render).
     response.set_cookie(
         key=ACCESS_COOKIE_NAME,
         value=access_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite="none",
         max_age=settings.JWT_EXPIRATION_HOURS * 3600,
         path="/",
     )
@@ -217,7 +225,7 @@ def _set_cookies(response: Response, access_token: str, device_token: Optional[s
             value=device_token,
             httponly=True,
             secure=settings.COOKIE_SECURE,
-            samesite="lax",
+            samesite="none",
             max_age=settings.TRUSTED_DEVICE_DAYS * 86400,
             path="/",
         )
@@ -461,7 +469,7 @@ async def refresh_token(response: Response, req: Request, current_user: dict = D
 async def logout(response: Response, current_user: dict = Depends(get_current_user)):
     """Termina a sessão atual."""
     security.revoke_session(current_user["jti"])
-    response.delete_cookie(ACCESS_COOKIE_NAME, path="/")
+    response.delete_cookie(ACCESS_COOKIE_NAME, path="/", secure=settings.COOKIE_SECURE, samesite="none")
     logger.info(f"👋 Logout: {current_user['email']}")
     return {"message": "Logout realizado com sucesso"}
 
@@ -470,8 +478,8 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
 async def logout_all(response: Response, current_user: dict = Depends(get_current_user)):
     """Killswitch: termina TODAS as sessões ativas (todos os dispositivos)."""
     count = security.revoke_all_sessions(current_user["id"])
-    response.delete_cookie(ACCESS_COOKIE_NAME, path="/")
-    response.delete_cookie(DEVICE_COOKIE_NAME, path="/")
+    response.delete_cookie(ACCESS_COOKIE_NAME, path="/", secure=settings.COOKIE_SECURE, samesite="none")
+    response.delete_cookie(DEVICE_COOKIE_NAME, path="/", secure=settings.COOKIE_SECURE, samesite="none")
     logger.warning(f"🔴 Killswitch acionado por: {current_user['email']} ({count} sessões terminadas)")
     return {"message": f"{count} sessão(ões) terminada(s)"}
 
