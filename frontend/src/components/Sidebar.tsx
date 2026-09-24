@@ -11,7 +11,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
-  const { logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const { status, loading, fetchStatus, enable, disable, runOnce } = useGlobalAutomation()
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<'enable' | 'disable' | null>(null)
@@ -120,7 +120,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       <div className="p-4 border-t border-t212-border">
         <div className="mb-4 p-3 rounded-lg bg-t212-hover border border-t212-border">
           <p className="text-xs text-t212-muted mb-1">Logged in as</p>
-          <p className="text-sm text-t212-primary truncate">test@trading212.com</p>
+          <p className="text-sm text-t212-primary truncate">{user?.email}</p>
         </div>
 
         <Button
