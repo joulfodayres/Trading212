@@ -51,8 +51,8 @@ Frontend (React) ← → Backend (FastAPI)
 | Service | URL |
 |---------|-----|
 | **Frontend** | https://trading-212-automation-front-end.onrender.com |
-| **Backend API** | https://trading212-4ojx.onrender.com |
-| **API Docs** | https://trading212-4ojx.onrender.com/docs |
+| **Backend API** | https://trading212-backend.onrender.com |
+| **API Docs** | https://trading212-backend.onrender.com/docs |
 
 ## Key Concepts
 
@@ -118,7 +118,7 @@ Frontend (React) ← → Backend (FastAPI)
 - ⏱️ Scheduler interval (check every N seconds)
 
 **Logs are available at:**
-- Backend: `https://trading212-4ojx.onrender.com/logs` (coming soon)
+- Backend: `https://trading212-backend.onrender.com/logs` (coming soon)
 - Console: Browser DevTools → Console tab
 
 ## Common Tasks
@@ -167,7 +167,7 @@ Frontend (React) ← → Backend (FastAPI)
 ## Troubleshooting
 
 **Q: Dashboard shows "Connecting..." forever**
-- A: Check backend health: `curl https://trading212-4ojx.onrender.com/health`
+- A: Check backend health: `curl https://trading212-backend.onrender.com/health`
 - Render services may be starting (5-10 min boot time)
 
 **Q: Orders not executing**

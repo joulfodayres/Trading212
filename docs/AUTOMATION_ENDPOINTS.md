@@ -216,13 +216,13 @@ const loadStrategies = async () => {
 
 **Fetch enabled strategies:**
 ```bash
-curl -X GET https://trading212-4ojx.onrender.com/api/isins/strategies \
+curl -X GET https://trading212-backend.onrender.com/api/isins/strategies \
   -H "Content-Type: application/json"
 ```
 
 **Enable automation:**
 ```bash
-curl -X PUT https://trading212-4ojx.onrender.com/api/isins/IE00B4L5Y983/automation \
+curl -X PUT https://trading212-backend.onrender.com/api/isins/IE00B4L5Y983/automation \
   -H "Content-Type: application/json" \
   -d '{
     "automation_enabled": true,
@@ -232,7 +232,7 @@ curl -X PUT https://trading212-4ojx.onrender.com/api/isins/IE00B4L5Y983/automati
 
 **Disable automation:**
 ```bash
-curl -X PUT https://trading212-4ojx.onrender.com/api/isins/IE00B4L5Y983/automation \
+curl -X PUT https://trading212-backend.onrender.com/api/isins/IE00B4L5Y983/automation \
   -H "Content-Type: application/json" \
   -d '{
     "automation_enabled": false,

@@ -339,7 +339,7 @@ cat frontend/.env.local
 # Should be:
 # VITE_API_URL=http://localhost:8000  (local)
 # or
-# VITE_API_URL=https://trading212-4ojx.onrender.com  (production)
+# VITE_API_URL=https://trading212-backend.onrender.com  (production)
 
 # Rebuild frontend
 npm run build

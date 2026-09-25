@@ -25,7 +25,7 @@
                  ▼
     ┌────────────────────────────┐
     │   BACKEND API (FastAPI)    │
-    │ https://trading212-4ojx... │
+    │ https://trading212-backend │
     │      Render (Python)       │
     │                            │
     │ - Autenticação JWT         │
@@ -379,7 +379,7 @@ Exemplo: Se tem params para pos=-1,0,1 mas trades_balance=3, usa params de pos=1
 - Auto-deploy on push to main
 
 ### Backend (Render)
-- URL: https://trading212-4ojx.onrender.com
+- URL: https://trading212-backend.onrender.com
 - Build: `pip install -r requirements.txt`
 - Start: `uvicorn main:app --host 0.0.0.0`
 - Auto-deploy on push to main

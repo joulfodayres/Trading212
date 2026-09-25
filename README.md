@@ -14,8 +14,8 @@ Algorithmic trading platform with automated Grid Trading strategy. Built with Re
 ### 🌐 Access Online (Production)
 ```
 Frontend: https://trading-212-automation-front-end.onrender.com
-Backend:  https://trading212-4ojx.onrender.com
-API Docs: https://trading212-4ojx.onrender.com/docs
+Backend:  https://trading212-backend.onrender.com
+API Docs: https://trading212-backend.onrender.com/docs
 ```
 
 ### 💻 Development (Local)
@@ -145,8 +145,8 @@ See **`BACKLOG.md`** for full details and time estimates.
 ## 🔗 Useful Links
 
 - **Frontend:** https://trading-212-automation-front-end.onrender.com
-- **Backend:** https://trading212-4ojx.onrender.com
-- **API Docs:** https://trading212-4ojx.onrender.com/docs
+- **Backend:** https://trading212-backend.onrender.com
+- **API Docs:** https://trading212-backend.onrender.com/docs
 - **GitHub:** https://github.com/joulfodayres/Trading212
 - **Supabase:** https://supabase.com
 
@@ -184,12 +184,12 @@ Trading212/
 
 ### Health check
 ```bash
-curl https://trading212-4ojx.onrender.com/health
+curl https://trading212-backend.onrender.com/health
 ```
 
 ### View API docs
 ```
-https://trading212-4ojx.onrender.com/docs
+https://trading212-backend.onrender.com/docs
 ```
 
 ---

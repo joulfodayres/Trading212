@@ -1,7 +1,7 @@
 # Trading 212 Bot - API Reference
 
 ## Base URL
-- **Production:** `https://trading212-4ojx.onrender.com`
+- **Production:** `https://trading212-backend.onrender.com`
 - **Local:** `http://localhost:8000`
 
 ## Authentication
@@ -420,7 +420,7 @@ If rate limit reached, endpoint returns 429 with retry info.
 
 ```bash
 # 1. Create strategy
-curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies \
+curl -X POST https://trading212-backend.onrender.com/api/v1/strategies \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -432,7 +432,7 @@ curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies \
 # Response: {"id": "str-123", "enabled": false, "is_valid": false}
 
 # 2. Add parameters for position -1
-curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/parameters \
+curl -X POST https://trading212-backend.onrender.com/api/v1/strategies/str-123/parameters \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -442,7 +442,7 @@ curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/para
   }'
 
 # 3. Add parameters for position 0
-curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/parameters \
+curl -X POST https://trading212-backend.onrender.com/api/v1/strategies/str-123/parameters \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -452,7 +452,7 @@ curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/para
   }'
 
 # 4. Add parameters for position 1
-curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/parameters \
+curl -X POST https://trading212-backend.onrender.com/api/v1/strategies/str-123/parameters \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -462,17 +462,17 @@ curl -X POST https://trading212-4ojx.onrender.com/api/v1/strategies/str-123/para
   }'
 
 # 5. Enable strategy (now is_valid=true)
-curl -X PUT https://trading212-4ojx.onrender.com/api/v1/strategies/str-123 \
+curl -X PUT https://trading212-backend.onrender.com/api/v1/strategies/str-123 \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"enabled": true}'
 
 # 6. Sync portfolio
-curl -X POST https://trading212-4ojx.onrender.com/api/isins/sync \
+curl -X POST https://trading212-backend.onrender.com/api/isins/sync \
   -H "Authorization: Bearer TOKEN"
 
 # 7. Enable automation for ISIN
-curl -X PUT https://trading212-4ojx.onrender.com/api/isins/isin-456/automation \
+curl -X PUT https://trading212-backend.onrender.com/api/isins/isin-456/automation \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -481,7 +481,7 @@ curl -X PUT https://trading212-4ojx.onrender.com/api/isins/isin-456/automation \
   }'
 
 # 8. Enable global automation
-curl -X PUT https://trading212-4ojx.onrender.com/api/v1/automation/enable \
+curl -X PUT https://trading212-backend.onrender.com/api/v1/automation/enable \
   -H "Authorization: Bearer TOKEN"
 ```
 

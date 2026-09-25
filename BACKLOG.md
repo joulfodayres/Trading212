@@ -714,7 +714,7 @@ Environment: DEMO
 API Endpoint: https://demo.trading212.com/api/v0
 Account: Sandbox with €5,889.99 (play money)
 Frontend: https://trading-212-automation-front-end.onrender.com (single env)
-Backend: https://trading212-4ojx.onrender.com (single env)
+Backend: https://trading212-backend.onrender.com (single env)
 Database: Supabase (single instance)
 ```
 
@@ -723,7 +723,7 @@ Database: Supabase (single instance)
 DEMO Environment:
   - API: https://demo.trading212.com/api/v0 (sandbox)
   - Frontend: https://trading-212-automation-front-end.onrender.com
-  - Backend: https://trading212-4ojx.onrender.com
+  - Backend: https://trading212-backend.onrender.com
   - Database: Supabase demo instance
   - Purpose: Testing, development, user onboarding
 
@@ -1130,7 +1130,7 @@ Next day at 9:00 AM:
 ### Item #17: Same-Domain Architecture - Eliminate Cross-Origin Cookie Dependency (NEW)
 **Estimated:** 3-5 hours
 **Priority:** LOW (Defense-in-depth hardening, not a fix for a known exploit)
-**Context:** Discovered while fixing Item #12 (Enhanced Login Security). Frontend (`trading-212-automation-front-end.onrender.com`) and backend (`trading212-4ojx.onrender.com`) live on different Render subdomains, which are different origins as far as the browser is concerned.
+**Context:** Discovered while fixing Item #12 (Enhanced Login Security). Frontend (`trading-212-automation-front-end.onrender.com`) and backend (`trading212-backend.onrender.com`) live on different Render subdomains, which are different origins as far as the browser is concerned.
 
 **Description:**
 The session cookie currently requires `SameSite=None` (see commit `3a8c43c`) because it's sent cross-site between the two origins — `SameSite=Lax`/`Strict` would make the browser silently drop the cookie on every `axios`/`fetch` call, breaking login entirely (this is exactly the bug that got fixed). `SameSite=None` is safe today because CORS is locked to an explicit origin allowlist (`FRONTEND_URL` only, no wildcard) and every state-changing endpoint uses JSON bodies, which forces a CORS preflight that blocks unauthorized origins before the request is even sent.

@@ -288,7 +288,7 @@ gh pr create --title "Add new feature" --body "Description"
 3. **Runs:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
 4. **Takes ~5-10 minutes**
 
-5. **Preview URL:** https://trading212-4ojx.onrender.com
+5. **Preview URL:** https://trading212-backend.onrender.com
 
 ### Database (Supabase)
 

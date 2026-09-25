@@ -136,7 +136,7 @@ http://localhost:8000/docs/index.html
 
 **Use when:** Building frontend, testing with curl/Postman, or integrating with API.
 
-**Linked:** [Live Swagger API Docs](https://trading212-4ojx.onrender.com/docs)
+**Linked:** [Live Swagger API Docs](https://trading212-backend.onrender.com/docs)
 
 **Length:** ~400 lines
 
@@ -414,7 +414,7 @@ find docs/ -name "*.md" -type f | sort
 | **Code Examples** | Implementations | `CODE_EXAMPLES.md` |
 | **Quick Reference** | Cheat sheet | `QUICK_REFERENCE.md` |
 | **T212 API Docs** | Trading 212 API | `t212-api/API_ANALYSIS.md` |
-| **Live API Docs** | Interactive Swagger | https://trading212-4ojx.onrender.com/docs |
+| **Live API Docs** | Interactive Swagger | https://trading212-backend.onrender.com/docs |
 | **Live Frontend** | Production app | https://trading-212-automation-front-end.onrender.com |
 | **GitHub** | Source code | https://github.com/joulfodayres/Trading212 |
 

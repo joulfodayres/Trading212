@@ -150,8 +150,8 @@
 ═══════════════════════════════════════════════════════════════════════════
 
   ✅ Frontend: https://trading-212-automation-front-end.onrender.com (LIVE)
-  ✅ Backend: https://trading212-4ojx.onrender.com (LIVE)
-  ✅ API Docs: https://trading212-4ojx.onrender.com/docs (LIVE)
+  ✅ Backend: https://trading212-backend.onrender.com (LIVE)
+  ✅ API Docs: https://trading212-backend.onrender.com/docs (LIVE)
   ✅ Database: Supabase Cloud (LIVE)
   ✅ Auto-Deploy: On git push to main (CONFIGURED)
 
@@ -305,8 +305,8 @@
 
   Links:
     - Frontend: https://trading-212-automation-front-end.onrender.com
-    - Backend API: https://trading212-4ojx.onrender.com
-    - API Docs: https://trading212-4ojx.onrender.com/docs
+    - Backend API: https://trading212-backend.onrender.com
+    - API Docs: https://trading212-backend.onrender.com/docs
     - GitHub: https://github.com/joulfodayres/Trading212
 
   Files:

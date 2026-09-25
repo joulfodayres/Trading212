@@ -231,8 +231,8 @@ Solution:
 ## 📞 Quick Links
 
 - **Frontend:** https://trading-212-automation-front-end.onrender.com
-- **Backend API:** https://trading212-4ojx.onrender.com
-- **API Docs (Swagger):** https://trading212-4ojx.onrender.com/docs
+- **Backend API:** https://trading212-backend.onrender.com
+- **API Docs (Swagger):** https://trading212-backend.onrender.com/docs
 - **GitHub:** https://github.com/joulfodayres/Trading212
 - **Supabase Dashboard:** https://app.supabase.com
 

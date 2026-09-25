@@ -5,8 +5,8 @@
 | Component | URL |
 |-----------|-----|
 | Frontend | https://trading-212-automation-front-end.onrender.com |
-| Backend API | https://trading212-4ojx.onrender.com |
-| API Docs | https://trading212-4ojx.onrender.com/docs |
+| Backend API | https://trading212-backend.onrender.com |
+| API Docs | https://trading212-backend.onrender.com/docs |
 | GitHub | https://github.com/joulfodayres/Trading212 |
 | Supabase | https://app.supabase.com (login required) |
 
@@ -247,7 +247,7 @@ Before pushing to main:
 After deploy:
 - ✅ Check Render logs (should see ✅ messages)
 - ✅ Test frontend at https://trading-212-automation-front-end.onrender.com
-- ✅ Test API at https://trading212-4ojx.onrender.com/docs
+- ✅ Test API at https://trading212-backend.onrender.com/docs
 - ✅ Check database (Supabase dashboard)
 
 ## Phase 5 Backlog

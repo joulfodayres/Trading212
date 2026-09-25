@@ -8,7 +8,7 @@
 // src/api/client.ts
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_API_URL || 'https://trading212-4ojx.onrender.com'
+const baseURL = import.meta.env.VITE_API_URL || 'https://trading212-backend.onrender.com'
 
 export const apiClient = axios.create({
   baseURL,

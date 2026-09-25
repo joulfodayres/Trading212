@@ -45,7 +45,7 @@ Sistema de trading automatizado hosted em cloud com dashboard web seguro e acess
                  ▼
     ┌────────────────────────────┐
     │   BACKEND API (FastAPI)    │
-    │ https://trading212-4ojx... │
+    │ https://trading212-backend │
     │      Render (Python)       │
     │                            │
     │ - Autenticação JWT         │
@@ -203,7 +203,7 @@ Trading212/
 | Serviço | URL | Status | Tipo |
 |---------|-----|--------|------|
 | **Frontend** | https://trading-212-automation-front-end.onrender.com | ✅ Online | Static Site (React) |
-| **Backend** | https://trading212-4ojx.onrender.com | ✅ Online | Python (FastAPI) |
+| **Backend** | https://trading212-backend.onrender.com | ✅ Online | Python (FastAPI) |
 | **BD** | supabase.com | ✅ Online | PostgreSQL |
 | **GitHub** | github.com/joulfodayres/Trading212 | ✅ Online | Git |
 
@@ -585,8 +585,8 @@ APScheduler>=3.10.0
 
 ```
 Frontend: https://trading-212-automation-front-end.onrender.com
-Backend:  https://trading212-4ojx.onrender.com
-Docs:     https://trading212-4ojx.onrender.com/docs
+Backend:  https://trading212-backend.onrender.com
+Docs:     https://trading212-backend.onrender.com/docs
 GitHub:   https://github.com/joulfodayres/Trading212
 ```
 
