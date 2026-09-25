@@ -696,8 +696,33 @@ Adapts to market conditions over time
 - Automation auto-disables after a code deploy (RENDER_GIT_COMMIT check)
 - Alerts: order rejected, invalid credentials, cycle errors, auto-disabled, MFA disabled, killswitch — all toggleable in UI
 - T212 environment cleanup: removed the non-functional credentials card, single source of truth (T212_ENVIRONMENT), read-only status panel
-- **Before deploying:** run `db/trading_limits_and_alerts.sql` in Supabase first
-- **Not yet done:** SMTP not configured on Render — alerts currently only log, don't email (needed to actually test the alert flows end-to-end)
+- **Before deploying:** run `db/trading_limits_and_alerts.sql` in Supabase first — ✅ DONE (confirmed 2026-09-25)
+- **Not yet done:** SMTP not configured on Render — alerts currently only log, don't email (needed to actually test the alert flows end-to-end) — tracked as Item #21
+
+#### ⚠️ Incident during rollout (2026-09-25): backend service accidentally deleted on Render
+While cleaning up the old frontend Node service, the **backend** web service (`trading212-4ojx`) was deleted by mistake instead. Recovered by recreating it from scratch on Render:
+- New backend URL: **`https://trading212-backend.onrender.com`** (old `trading212-4ojx` subdomain cannot be reused/renamed after deletion — this incidentally completes Item #6, renaming to a sensible name)
+- Recreated with: Python Web Service, build `pip install -r backend/requirements.txt`, start `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`, health check `/health`
+- Env vars restored from local `backend/.env` + `CLAUDE.md` (T212 DEMO creds) + Supabase dashboard (had to re-fetch the **Secret key** — the local `.env` still had the old low-privilege Publishable key, which was the root cause of the RLS error fixed earlier in this same session)
+- Found and fixed along the way: `pydantic-settings` was rejecting Render's leftover `T212_BASE_URL` env var (removed from code as part of Item #15 cleanup) with a hard startup crash — added `extra = "ignore"` to `Settings.Config` (already in commit `52b11c4`) so a stale/renamed env var can never crash boot again
+- Frontend `VITE_API_URL` updated to the new backend URL (required a manual redeploy — Vite bakes this into the build, not read at runtime); briefly misconfigured with a trailing `/api` causing a `/api/api/auth/login` 404, corrected
+- Documentation fully updated to the new URL in commit `64f8033` (17 files); historical records (`docs/CHANGELOG.md`, backlog entries describing the rename decision itself) left untouched on purpose
+- **Old frontend Node service:** user confirmed intent to delete it after validating the new backend end-to-end — **not yet confirmed done**, worth double-checking it's actually gone (that's the one meant to be deleted in the first place)
+
+#### 🧪 STILL TO DO / TEST (as of 2026-09-25, before next compact)
+1. **Confirm the old frontend Node web service is actually deleted** on Render (the original intent — got sidetracked by the backend deletion incident)
+2. **Trading limits end-to-end test** (checklist from the Phase 1 test plan, not yet executed):
+   - Config → Trading Limits: set a low max buy order value (e.g. €10)
+   - Trigger/wait for automation to attempt an order above that value
+   - Confirm automation stops entirely + dashboard shows the red `automation_disabled_reason` banner
+   - Manually re-enable via the sidebar toggle → confirm the reason banner clears
+3. **Consumption bar**: confirm the daily spend progress bar renders correctly on the dashboard once at least one order has filled
+4. **Alert toggles**: confirm each of the 7 alert switches in Config saves and persists (GET after PUT)
+5. **T212 status panel**: confirm Config shows "DEMO" + "Ligado" (already verified once via curl on `/api/config/status`, but not yet visually in the UI)
+6. **Auto-disable-after-deploy**: the doc-only push (commit `64f8033`) will have triggered this on next backend restart — confirm automation shows as disabled with reason mentioning the new commit hash, then manually re-enable
+7. **SMTP still not configured** (Item #21) — until done, none of the alerts in point 4 can be verified to actually reach an inbox, only that they log
+8. **Item #20 (unauthenticated endpoints)** — not started, flagged as HIGH priority, recommended before Phase 2 (PROD) of Item #15
+9. Decide whether to proceed to Item #15 **Phase 2** (PROD infra: separate Supabase project, `prod` branch, IP-restricted T212 keys) — explicitly deferred until Phase 1 is validated
 
 **Original description:**
 - Create separate Render environment for PROD (currently on DEMO)
