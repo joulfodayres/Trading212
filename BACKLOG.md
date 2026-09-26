@@ -726,6 +726,18 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 8. ~~Item #20 (unauthenticated endpoints)~~ ✅ DONE and verified in production (2026-09-26) — see Item #20 for details
 9. Decide whether to proceed to Item #15 **Phase 2** (PROD infra: separate Supabase project, `prod` branch, IP-restricted T212 keys) — explicitly deferred until Phase 1 is validated
 
+#### 🚧 Phase 2 in progress (2026-09-27) — PROD infrastructure
+
+- ✅ Supabase PROD project created (separate free account, per user decision — avoided the $25/mo Supabase Pro upgrade that would've been needed for a 3rd project on one account; Supabase's native "branching" feature was considered and rejected, since it keeps DEMO/PROD inside the same project/account, undermining the isolation this phase is built around)
+- ✅ Consolidated SQL setup script created: `db/prod_setup_consolidated.sql` (merges all 9 migrations DEMO applied incrementally, in the correct order, skipping test-user/mock-data scripts, pre-seeding safe go-live defaults: `grid_trading_enabled=FALSE`, `max_buy_order_value=10`, `max_sell_order_value=10`, `max_daily_spend=20`). Ran successfully against the new PROD project.
+- ✅ Real PROD user created via Supabase Auth dashboard ("Create new user" + Auto Confirm — avoided "Send invitation", which is what caused email-confirmation issues in DEMO previously)
+- ✅ `prod` git branch created from `main`, pushed to origin
+- ✅ PROD Supabase credentials collected (`SUPABASE_URL`, `SUPABASE_KEY` — Secret key, `SUPABASE_JWT_SECRET`)
+- ⏸️ **T212 live API key: proceeding WITHOUT IP restriction for now.** T212's key-creation UI doesn't support pasting the full IP list (512 individual addresses needed, generated in `db/t212_prod_ip_whitelist.txt`, since T212 doesn't appear to accept CIDR notation `/24` either) — no copy/paste field large enough / no CIDR support found in the UI. **TODO before considering this hardened:** contact T212 support to ask whether CIDR ranges are supported through some other channel (support ticket, alternate UI), or manually enter the two `/24` ranges (`74.220.51.0/24`, `74.220.59.0/24`) one at a time if the UI allows adding multiple discrete entries. Tracked as an open follow-up, not blocking the rest of Phase 2.
+- ⬜ Next: create `trading212-backend-prod` (Render Web Service, branch `prod`, auto-deploy off) with all env vars
+- ⬜ Next: create `trading212-frontend-prod` (Render Static Site, branch `prod`, auto-deploy off)
+- ⬜ Next: end-to-end verification checklist (see Phase 2 plan)
+
 **Enhancement pending (user request, 2026-09-26):**
 - Banner de ambiente deve aparecer **sempre** (não só em PROD):
   - Se `T212_ENVIRONMENT=live` → banner vermelho com "🔴 PRODUÇÃO — DINHEIRO REAL"
