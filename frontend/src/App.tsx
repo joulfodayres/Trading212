@@ -14,20 +14,21 @@ import { apiClient } from './api/client'
 function App() {
   const { isAuthenticated, user, checkAuth } = useAuthStore()
   const [checkingAuth, setCheckingAuth] = useState(true)
-  const [isLiveEnvironment, setIsLiveEnvironment] = useState(false)
+  const [environment, setEnvironment] = useState<'live' | 'demo' | null>(null)
 
   useEffect(() => {
     // O token vive num cookie httpOnly (não em localStorage) — confirmamos
     // a sessão junto do backend ao arrancar a app.
     checkAuth().finally(() => setCheckingAuth(false))
 
-    // Item #15: faixa permanente de aviso quando este backend está ligado à
-    // T212 LIVE (dinheiro real) — visível mesmo antes do login, para nunca
-    // confundir os separadores DEMO/PROD abertos ao mesmo tempo.
+    // Item #15: faixa permanente de aviso com o ambiente ligado a este backend
+    // (LIVE = dinheiro real, DEMO = dinheiro fictício) — visível mesmo antes
+    // do login, para nunca confundir os separadores DEMO/PROD abertos ao
+    // mesmo tempo.
     apiClient
       .get('/config/status')
-      .then((r) => setIsLiveEnvironment(r.data?.environment === 'live'))
-      .catch(() => setIsLiveEnvironment(false))
+      .then((r) => setEnvironment(r.data?.environment === 'live' ? 'live' : 'demo'))
+      .catch(() => setEnvironment(null))
   }, [])
 
   if (checkingAuth) {
@@ -42,12 +43,17 @@ function App() {
 
   return (
     <ToastProvider>
-      {isLiveEnvironment && (
+      {environment === 'live' && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center text-sm font-bold py-1.5 tracking-wide">
           🔴 PRODUÇÃO — DINHEIRO REAL
         </div>
       )}
-      <div className={isLiveEnvironment ? 'pt-7' : ''}>
+      {environment === 'demo' && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-green-600 text-white text-center text-sm font-bold py-1.5 tracking-wide">
+          🟢 DEMO — DINHEIRO FICTÍCIO
+        </div>
+      )}
+      <div className={environment ? 'pt-7' : ''}>
       <BrowserRouter>
         <Routes>
           <Route

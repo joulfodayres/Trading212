@@ -10,16 +10,27 @@ import { useGlobalAutomation } from '../hooks/useGlobalAutomation'
 
 export default function DashboardPage() {
   const [activeView, setActiveView] = useState('isins') // 'isins', 'strategies', 'config', 'history'
-  const { status, fetchStatus } = useGlobalAutomation()
+  const { status, loading, fetchStatus, enable, disable, runOnce } = useGlobalAutomation()
 
   useEffect(() => {
     fetchStatus()
+    // Refresh status every 30 seconds so the banner clears/updates everywhere
+    const interval = setInterval(fetchStatus, 30000)
+    return () => clearInterval(interval)
   }, [fetchStatus])
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
       {/* Sidebar */}
-      <Sidebar activeView={activeView} setActiveView={setActiveView} />
+      <Sidebar
+        activeView={activeView}
+        setActiveView={setActiveView}
+        status={status}
+        loading={loading}
+        enable={enable}
+        disable={disable}
+        runOnce={runOnce}
+      />
 
       {/* Main Content */}
       <div className="main-content flex-1 overflow-auto">

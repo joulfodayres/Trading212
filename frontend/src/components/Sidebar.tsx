@@ -1,27 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { LogOut, Settings, BarChart3, History, TrendingUp, Power, Sliders, FileText, Play } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-import { useGlobalAutomation } from '../hooks/useGlobalAutomation'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
+
+interface GlobalAutomationStatus {
+  grid_trading_enabled: boolean
+  scheduler_running: boolean
+  cycle_count: number
+  last_cycle_duration?: number
+  automation_disabled_reason?: string | null
+}
 
 interface SidebarProps {
   activeView: string
   setActiveView: (view: string) => void
+  status: GlobalAutomationStatus | null
+  loading: boolean
+  enable: () => Promise<boolean>
+  disable: () => Promise<boolean>
+  runOnce: () => Promise<boolean>
 }
 
-export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
+export default function Sidebar({ activeView, setActiveView, status, loading, enable, disable, runOnce }: SidebarProps) {
   const { user, logout } = useAuthStore()
-  const { status, loading, fetchStatus, enable, disable, runOnce } = useGlobalAutomation()
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<'enable' | 'disable' | null>(null)
-
-  useEffect(() => {
-    fetchStatus()
-    // Refresh status every 30 seconds
-    const interval = setInterval(fetchStatus, 30000)
-    return () => clearInterval(interval)
-  }, [fetchStatus])
 
   const handleToggleGlobal = (checked: boolean) => {
     setPendingAction(checked ? 'enable' : 'disable')
