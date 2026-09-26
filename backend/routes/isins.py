@@ -3,13 +3,14 @@ Rotas para ISINs (Simplified - Opção 1)
 Dados vêm sempre da T212 API (source of truth)
 BD guarda apenas configurações (automation_enabled, strategy_params)
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 import logging
 from typing import Optional, Dict, Any, List
 from config.settings import settings
 from api.trading212 import Trading212Client
 from db.supabase_client import get_db
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ async def _get_isin_configs() -> Dict[str, Dict[str, Any]]:
 # ===== ENDPOINTS =====
 
 @router.get("", response_model=List[ISINResponse])
-async def list_isins():
+async def list_isins(current_user: dict = Depends(get_current_user)):
     """
     GET /api/isins - Listar ISINs do utilizador
 
@@ -189,7 +190,7 @@ async def list_isins():
 # ===== AUTOMATION ENDPOINTS =====
 
 @router.get("/strategies", response_model=List[StrategyOption])
-async def get_enabled_strategies():
+async def get_enabled_strategies(current_user: dict = Depends(get_current_user)):
     """
     GET /api/isins/strategies - Obter estratégias habilitadas
 
@@ -222,7 +223,7 @@ async def get_enabled_strategies():
 
 
 @router.post("/sync", response_model=Dict[str, Any])
-async def sync_positions():
+async def sync_positions(current_user: dict = Depends(get_current_user)):
     """
     POST /api/isins/sync - Sincronizar carteira com T212
 
@@ -427,7 +428,7 @@ async def sync_positions():
 
 
 @router.put("/{isin_id}/automation", response_model=AutomationUpdateResponse)
-async def toggle_automation(isin_id: str, data: AutomationToggleRequest):
+async def toggle_automation(isin_id: str, data: AutomationToggleRequest, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/isins/{isin_id}/automation - Alternar automação de um ISIN
 

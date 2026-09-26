@@ -4,10 +4,11 @@ Phase 5: Strategy Management
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Union
 from datetime import datetime
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ def _check_strategy_valid(db, strategy_id: str) -> bool:
 # ===== ENDPOINTS =====
 
 @router.get("", response_model=List[StrategyResponse])
-async def list_strategies():
+async def list_strategies(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/strategies - List all strategies
     """
@@ -144,7 +145,7 @@ async def list_strategies():
 
 
 @router.get("/{strategy_id}", response_model=StrategyDetailResponse)
-async def get_strategy(strategy_id: str):
+async def get_strategy(strategy_id: str, current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/strategies/{strategy_id} - Get strategy with parameters
     """
@@ -194,7 +195,7 @@ async def get_strategy(strategy_id: str):
 
 
 @router.post("", response_model=StrategyResponse)
-async def create_strategy(data: StrategyCreate):
+async def create_strategy(data: StrategyCreate, current_user: dict = Depends(get_current_user)):
     """
     POST /api/v1/strategies - Create new strategy
     """
@@ -247,7 +248,7 @@ async def create_strategy(data: StrategyCreate):
 
 
 @router.put("/{strategy_id}", response_model=StrategyResponse)
-async def update_strategy(strategy_id: str, data: StrategyUpdate):
+async def update_strategy(strategy_id: str, data: StrategyUpdate, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/strategies/{strategy_id} - Update strategy
 
@@ -316,7 +317,7 @@ async def update_strategy(strategy_id: str, data: StrategyUpdate):
 
 
 @router.post("/{strategy_id}/parameters", response_model=StrategyParameterResponse)
-async def create_strategy_parameter(strategy_id: str, data: StrategyParameterBase):
+async def create_strategy_parameter(strategy_id: str, data: StrategyParameterBase, current_user: dict = Depends(get_current_user)):
     """
     POST /api/v1/strategies/{strategy_id}/parameters - Create parameter
     """
@@ -384,7 +385,7 @@ async def create_strategy_parameter(strategy_id: str, data: StrategyParameterBas
 
 
 @router.put("/{strategy_id}/parameters/{param_id}", response_model=StrategyParameterResponse)
-async def update_strategy_parameter(strategy_id: str, param_id: str, data: StrategyParameterBase):
+async def update_strategy_parameter(strategy_id: str, param_id: str, data: StrategyParameterBase, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/strategies/{strategy_id}/parameters/{param_id} - Update parameter
     """
@@ -450,7 +451,7 @@ async def update_strategy_parameter(strategy_id: str, param_id: str, data: Strat
 
 
 @router.delete("/{strategy_id}/parameters/{param_id}")
-async def delete_strategy_parameter(strategy_id: str, param_id: str):
+async def delete_strategy_parameter(strategy_id: str, param_id: str, current_user: dict = Depends(get_current_user)):
     """
     DELETE /api/v1/strategies/{strategy_id}/parameters/{param_id} - Delete parameter
     """
@@ -478,7 +479,7 @@ async def delete_strategy_parameter(strategy_id: str, param_id: str):
 
 
 @router.delete("/{strategy_id}")
-async def delete_strategy(strategy_id: str):
+async def delete_strategy(strategy_id: str, current_user: dict = Depends(get_current_user)):
     """
     DELETE /api/v1/strategies/{strategy_id} - Delete strategy and all parameters
     """

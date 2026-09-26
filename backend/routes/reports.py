@@ -11,10 +11,11 @@ import hashlib
 import logging
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends
 
 from db.supabase_client import get_db
 from services.report_parser import parse_report
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def _insert_rows(table: str, rows: List[Dict[str, Any]]) -> int:
 
 
 @router.post("/upload")
-async def upload_reports(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
+async def upload_reports(files: List[UploadFile] = File(...), current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Upload de 1+ ficheiros PDF (Activity Statements).
     Para cada ficheiro:
@@ -176,7 +177,7 @@ async def upload_reports(files: List[UploadFile] = File(...)) -> Dict[str, Any]:
 
 
 @router.get("/files")
-async def list_files() -> List[Dict[str, Any]]:
+async def list_files(current_user: dict = Depends(get_current_user)) -> List[Dict[str, Any]]:
     """Lista de ficheiros importados, ordenados por data de upload (desc)."""
     try:
         resp = (
@@ -196,7 +197,7 @@ async def list_files() -> List[Dict[str, Any]]:
 
 
 @router.get("/summary")
-async def summary() -> Dict[str, Any]:
+async def summary(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """Contadores globais: nr de ficheiros importados."""
     try:
         resp = db.client.table("imported_files").select("id, status").execute()

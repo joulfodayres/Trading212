@@ -1,11 +1,12 @@
 """
 Rotas de configuração do Trading 212
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 import logging
 from config.settings import settings
 from api.trading212 import Trading212Client
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class ConfigResponse(BaseModel):
 # ===== ENDPOINTS =====
 
 @router.get("/status")
-async def get_t212_status():
+async def get_t212_status(current_user: dict = Depends(get_current_user)):
     """
     GET /api/config/status
 
@@ -68,7 +69,7 @@ async def get_t212_status():
 
 
 @router.get("/strategy-params", response_model=StrategyParams)
-async def get_strategy_params():
+async def get_strategy_params(current_user: dict = Depends(get_current_user)):
     """
     Obter parâmetros da estratégia Grid Trading
     (Single-user - sem filtro de user_id necessário)
@@ -96,7 +97,7 @@ async def get_strategy_params():
 
 
 @router.put("/strategy-params", response_model=ConfigResponse)
-async def save_strategy_params(params: StrategyParams):
+async def save_strategy_params(params: StrategyParams, current_user: dict = Depends(get_current_user)):
     """
     Guardar parâmetros da estratégia Grid Trading
     """

@@ -4,12 +4,13 @@ Phase 4: Grid Trading Automation
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from pydantic import BaseModel, Field
 
 from services import trading_limits_service as limits_service
 from services.alert_service import DEFAULT_ALERT_SETTINGS
+from routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def _get_db():
 # ===== ENDPOINTS =====
 
 @router.get("/global-status", response_model=AutomationStatusResponse)
-async def get_global_automation_status():
+async def get_global_automation_status(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/global-status
 
@@ -118,7 +119,7 @@ async def get_global_automation_status():
 
 
 @router.put("/enable")
-async def enable_global_automation():
+async def enable_global_automation(current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/enable
 
@@ -161,7 +162,7 @@ async def enable_global_automation():
 
 
 @router.put("/disable")
-async def disable_global_automation():
+async def disable_global_automation(current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/disable
 
@@ -201,7 +202,7 @@ async def disable_global_automation():
 
 
 @router.get("/status")
-async def get_automation_status():
+async def get_automation_status(current_user: dict = Depends(get_current_user)):
     """
     Get current automation engine status.
 
@@ -224,7 +225,7 @@ async def get_automation_status():
 
 
 @router.get("/config/interval")
-async def get_scheduler_interval():
+async def get_scheduler_interval(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/config/interval
 
@@ -256,7 +257,7 @@ async def get_scheduler_interval():
 
 
 @router.put("/config/interval")
-async def update_scheduler_interval(request: SchedulerIntervalRequest):
+async def update_scheduler_interval(request: SchedulerIntervalRequest, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/config/interval
 
@@ -325,7 +326,7 @@ async def update_scheduler_interval(request: SchedulerIntervalRequest):
 
 
 @router.get("/orders/watch")
-async def get_watch_orders(limit: int = Query(50, ge=1, le=100)):
+async def get_watch_orders(limit: int = Query(50, ge=1, le=100), current_user: dict = Depends(get_current_user)):
     """
     Get all orders with automation_status='W' (Watch).
 
@@ -364,7 +365,7 @@ async def get_watch_orders(limit: int = Query(50, ge=1, le=100)):
 
 
 @router.get("/logs")
-async def get_automation_logs(limit: int = Query(50, ge=1, le=500)):
+async def get_automation_logs(limit: int = Query(50, ge=1, le=500), current_user: dict = Depends(get_current_user)):
     """
     Get recent automation engine logs.
 
@@ -402,7 +403,7 @@ async def get_automation_logs(limit: int = Query(50, ge=1, le=500)):
 
 
 @router.get("/metrics")
-async def get_automation_metrics():
+async def get_automation_metrics(current_user: dict = Depends(get_current_user)):
     """
     Get automation engine metrics and performance data.
     """
@@ -444,7 +445,7 @@ async def get_automation_metrics():
 
 
 @router.post("/run-cycle-once")
-async def run_cycle_once():
+async def run_cycle_once(current_user: dict = Depends(get_current_user)):
     """
     POST /api/v1/automation/run-cycle-once
 
@@ -477,7 +478,7 @@ async def run_cycle_once():
 
 
 @router.get("/config/log-level")
-async def get_log_level():
+async def get_log_level(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/config/log-level
 
@@ -500,7 +501,7 @@ async def get_log_level():
 
 
 @router.put("/config/log-level")
-async def update_log_level(request: LogLevelRequest):
+async def update_log_level(request: LogLevelRequest, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/config/log-level
 
@@ -552,7 +553,7 @@ async def update_log_level(request: LogLevelRequest):
 # ===== TRADING LIMITS (Item #15) =====
 
 @router.get("/config/limits")
-async def get_trading_limits():
+async def get_trading_limits(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/config/limits
 
@@ -571,7 +572,7 @@ async def get_trading_limits():
 
 
 @router.put("/config/limits")
-async def update_trading_limits(request: TradingLimitsRequest):
+async def update_trading_limits(request: TradingLimitsRequest, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/config/limits
 
@@ -612,7 +613,7 @@ async def update_trading_limits(request: TradingLimitsRequest):
 
 
 @router.get("/consumption")
-async def get_trading_consumption():
+async def get_trading_consumption(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/consumption
 
@@ -633,7 +634,7 @@ async def get_trading_consumption():
 # ===== ALERT SETTINGS (Item #15) =====
 
 @router.get("/config/alerts")
-async def get_alert_settings():
+async def get_alert_settings(current_user: dict = Depends(get_current_user)):
     """
     GET /api/v1/automation/config/alerts
 
@@ -650,7 +651,7 @@ async def get_alert_settings():
 
 
 @router.put("/config/alerts")
-async def update_alert_settings(request: AlertSettingsRequest):
+async def update_alert_settings(request: AlertSettingsRequest, current_user: dict = Depends(get_current_user)):
     """
     PUT /api/v1/automation/config/alerts
 
