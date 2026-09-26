@@ -734,9 +734,14 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 - ✅ `prod` git branch created from `main`, pushed to origin
 - ✅ PROD Supabase credentials collected (`SUPABASE_URL`, `SUPABASE_KEY` — Secret key, `SUPABASE_JWT_SECRET`)
 - ⏸️ **T212 live API key: proceeding WITHOUT IP restriction for now.** T212's key-creation UI doesn't support pasting the full IP list (512 individual addresses needed, generated in `db/t212_prod_ip_whitelist.txt`, since T212 doesn't appear to accept CIDR notation `/24` either) — no copy/paste field large enough / no CIDR support found in the UI. **TODO before considering this hardened:** contact T212 support to ask whether CIDR ranges are supported through some other channel (support ticket, alternate UI), or manually enter the two `/24` ranges (`74.220.51.0/24`, `74.220.59.0/24`) one at a time if the UI allows adding multiple discrete entries. Tracked as an open follow-up, not blocking the rest of Phase 2.
-- ⬜ Next: create `trading212-backend-prod` (Render Web Service, branch `prod`, auto-deploy off) with all env vars
-- ⬜ Next: create `trading212-frontend-prod` (Render Static Site, branch `prod`, auto-deploy off)
-- ⬜ Next: end-to-end verification checklist (see Phase 2 plan)
+- ✅ **`trading212-backend-prod` created (Render Web Service, region Frankfurt, branch `prod`, auto-deploy off)** — all env vars configured (Supabase PROD, T212 live key, fresh unique `JWT_SECRET_KEY`/`ENCRYPTION_KEY`, same Gmail SMTP relay as DEMO). Helper file `backend/.env.prod.render` created as a copy/paste source (gitignored, not committed) — hit one snag: `JWT_SECRET_KEY`/`ENCRYPTION_KEY` were briefly blank in that local file after copying to Render, which looked like the cause of an initial 502; resolved, confirmed the actual Render env vars had the real values, and it now works.
+  - ✅ Verified live (2026-09-26): `GET /health` → 200 (`scheduler.running: true`, cycle_count incrementing — expected, since the scheduler always runs, it's `grid_trading_enabled=FALSE` from the seeded SQL that keeps it from actually placing orders)
+  - ✅ Verified Item #20 auth protection carries over: `GET /api/config/status` and `GET /api/v1/automation/global-status` → 401 without a token
+- ⬜ Next: create `trading212-frontend-prod` (Render Static Site, branch `prod`, auto-deploy off, `VITE_API_URL=https://trading212-backend-prod.onrender.com`, rewrite `/* -> /index.html`)
+- ⬜ Next: once frontend exists, go back and set `FRONTEND_URL` on `trading212-backend-prod` (CORS) to the new frontend's URL
+- ⬜ Next: end-to-end verification checklist (see Phase 2 plan) — login with the new PROD user, MFA setup flow, red banner, T212 status panel shows "LIVE"+"Ligado", trading limits show the low seeded values, SMTP alert test
+
+**Paused here (2026-09-26), resuming next session.**
 
 **Enhancement pending (user request, 2026-09-26):**
 - Banner de ambiente deve aparecer **sempre** (não só em PROD):
