@@ -723,7 +723,7 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
    - ✅ Auto-disable on deploy confirmed (banner appeared with commit hash, toggle was OFF)
    - ⚠️ **BUG FOUND:** Banner does NOT disappear when re-enabling automaton via toggle (2026-09-26) — `automation_disabled_reason` not being cleared to `null` on manual re-enable. Needs fix in `enable_global_automation()` endpoint.
 7. ~~SMTP configuration~~ ✅ DONE (2026-09-26) — Gmail SMTP configured on Render (`SMTP_HOST=smtp.gmail.com`, App Password, `ALERT_EMAIL_TO=fonseca.joao.luis@gmail.com`). Verified end-to-end via the app's normal "logout all / killswitch" action, which triggers the `security_events` alert — email received successfully, Render logs confirmed `✅ Alerta de segurança enviado por email`.
-8. **Item #20 (unauthenticated endpoints)** — not started, flagged as HIGH priority, recommended before Phase 2 (PROD) of Item #15
+8. ~~Item #20 (unauthenticated endpoints)~~ ✅ DONE and verified in production (2026-09-26) — see Item #20 for details
 9. Decide whether to proceed to Item #15 **Phase 2** (PROD infra: separate Supabase project, `prod` branch, IP-restricted T212 keys) — explicitly deferred until Phase 1 is validated
 
 **Enhancement pending (user request, 2026-09-26):**
@@ -1226,7 +1226,7 @@ That said, `SameSite=None` still removes a **browser-level** defense layer and m
 
 ---
 
-### Item #20: API Endpoints Have No Authentication (NEW)
+### Item #20: API Endpoints Have No Authentication (NEW) — ✅ DONE (2026-09-26)
 **Estimated:** 4-6 hours
 **Priority:** HIGH (Security gap — predates Item #15, found while auditing during Phase 1)
 **Context:** While reviewing routes for Item #15 Phase 1, found that `routes/isins.py`, `routes/config.py`, `routes/automation.py`, `routes/strategies.py`, and `routes/reports.py` have no auth dependency at all — unlike `routes/auth.py`, none of their endpoints use `Depends(get_current_user)`. Anyone with the backend URL can call them directly (list/edit ISINs, change strategies, enable/disable automation, read trading limits, etc.) without a session or cookie.
@@ -1240,6 +1240,17 @@ That said, `SameSite=None` still removes a **browser-level** defense layer and m
 - Test each route family after the change (ISINs CRUD, strategies CRUD, automation enable/disable/limits, config status, reports)
 
 **Impact:** Closes a real gap — right now MFA/login (Item #12) only protects the UI, not the API it talks to. Should be prioritized before Item #15 Phase 2 (PROD), since PROD is exactly where an unauthenticated endpoint calling `PUT /automation/enable` or editing trading limits actually matters.
+
+**✅ Fixed (commit `3289aa5`, 2026-09-26):** Added `Depends(get_current_user)` to all 35 sensitive endpoints across `automation.py` (17), `isins.py` (4), `strategies.py` (8), `config.py` (3), `reports.py` (3). Left public: `auth.py`'s `/register`, `/login`, `/login/verify-mfa` (pre-auth by design) and `/`, `/health`. Also deleted dead code `isins_old.py` (unregistered, unreachable, hardcoded test user). Cold-import sanity check (`python -c "import main"`) passed cleanly.
+
+**✅ Verified in production (2026-09-26):** Direct `curl` calls (no token) confirmed:
+- `GET /health` → 200 (correctly public)
+- `GET /api/v1/automation/global-status` → 401
+- `PUT /api/v1/automation/enable` → 401
+- `PUT /api/v1/automation/config/limits` (attempted to raise max buy limit to €999999) → 401
+- `GET /api/isins`, `GET /api/v1/strategies`, `GET /api/reports/files`, `GET /api/config/status` → all 401
+
+Item #20 closed. Item #15 Phase 1 checklist item 8 unblocked.
 
 ---
 
