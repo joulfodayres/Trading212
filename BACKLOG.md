@@ -707,16 +707,16 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 - Found and fixed along the way: `pydantic-settings` was rejecting Render's leftover `T212_BASE_URL` env var (removed from code as part of Item #15 cleanup) with a hard startup crash — added `extra = "ignore"` to `Settings.Config` (already in commit `52b11c4`) so a stale/renamed env var can never crash boot again
 - Frontend `VITE_API_URL` updated to the new backend URL (required a manual redeploy — Vite bakes this into the build, not read at runtime); briefly misconfigured with a trailing `/api` causing a `/api/api/auth/login` 404, corrected
 - Documentation fully updated to the new URL in commit `64f8033` (17 files); historical records (`docs/CHANGELOG.md`, backlog entries describing the rename decision itself) left untouched on purpose
-- **Old frontend Node service:** user confirmed intent to delete it after validating the new backend end-to-end — **not yet confirmed done**, worth double-checking it's actually gone (that's the one meant to be deleted in the first place)
+- **Old frontend Node service:** ✅ CONFIRMED DELETED (2026-09-26, user confirmed)
 
-#### 🧪 STILL TO DO / TEST (as of 2026-09-25, before next compact)
-1. **Confirm the old frontend Node web service is actually deleted** on Render (the original intent — got sidetracked by the backend deletion incident)
-2. **Trading limits end-to-end test** (checklist from the Phase 1 test plan, not yet executed):
+#### 🧪 STILL TO DO / TEST (as of 2026-09-26)
+1. ~~Confirm the old frontend Node web service is actually deleted on Render~~ ✅ DONE (2026-09-26)
+2. **Trading limits end-to-end test** (checklist from the Phase 1 test plan, not yet executed) — ⏸️ **BLOCKED: cannot test on weekends** (needs live market activity / an order attempt; user confirmed no negotiation on this, 2026-09-26). Resume on a weekday:
    - Config → Trading Limits: set a low max buy order value (e.g. €10)
    - Trigger/wait for automation to attempt an order above that value
    - Confirm automation stops entirely + dashboard shows the red `automation_disabled_reason` banner
    - Manually re-enable via the sidebar toggle → confirm the reason banner clears
-3. **Consumption bar**: confirm the daily spend progress bar renders correctly on the dashboard once at least one order has filled
+3. **Consumption bar**: confirm the daily spend progress bar renders correctly on the dashboard once at least one order has filled — ⏸️ **BLOCKED: cannot test on weekends**, same reason as #2 (needs a filled order). Resume on a weekday.
 4. **Alert toggles**: confirm each of the 7 alert switches in Config saves and persists (GET after PUT)
 5. **T212 status panel**: confirm Config shows "DEMO" + "Ligado" (already verified once via curl on `/api/config/status`, but not yet visually in the UI)
 6. **Auto-disable-after-deploy**: the doc-only push (commit `64f8033`) will have triggered this on next backend restart — confirm automation shows as disabled with reason mentioning the new commit hash, then manually re-enable
