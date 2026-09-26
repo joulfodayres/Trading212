@@ -718,7 +718,7 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
    - Manually re-enable via the sidebar toggle → confirm the reason banner clears
 3. **Consumption bar**: confirm the daily spend progress bar renders correctly on the dashboard once at least one order has filled — ⏸️ **BLOCKED: cannot test on weekends**, same reason as #2 (needs a filled order). Resume on a weekday.
 4. **Alert toggles**: confirm each of the 7 alert switches in Config saves and persists (GET after PUT)
-5. **T212 status panel**: confirm Config shows "DEMO" + "Ligado" (already verified once via curl on `/api/config/status`, but not yet visually in the UI)
+5. ~~T212 status panel: confirm Config shows "DEMO" + "Ligado"~~ ✅ DONE (2026-09-26, confirmed visually in browser)
 6. **Auto-disable-after-deploy**: the doc-only push (commit `64f8033`) will have triggered this on next backend restart — confirm automation shows as disabled with reason mentioning the new commit hash, then manually re-enable
 7. **SMTP still not configured** (Item #21) — until done, none of the alerts in point 4 can be verified to actually reach an inbox, only that they log
 8. **Item #20 (unauthenticated endpoints)** — not started, flagged as HIGH priority, recommended before Phase 2 (PROD) of Item #15
