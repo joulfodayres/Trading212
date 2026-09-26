@@ -724,6 +724,12 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 8. **Item #20 (unauthenticated endpoints)** — not started, flagged as HIGH priority, recommended before Phase 2 (PROD) of Item #15
 9. Decide whether to proceed to Item #15 **Phase 2** (PROD infra: separate Supabase project, `prod` branch, IP-restricted T212 keys) — explicitly deferred until Phase 1 is validated
 
+**Enhancement pending (user request, 2026-09-26):**
+- Banner de ambiente deve aparecer **sempre** (não só em PROD):
+  - Se `T212_ENVIRONMENT=live` → banner vermelho com "🔴 PRODUÇÃO — DINHEIRO REAL"
+  - Se `T212_ENVIRONMENT=demo` → banner verde com "🟢 DEMO — DINHEIRO FICTÍCIO" (ou similar)
+  - Implementar no `App.tsx` de modo a estar visível em todas as páginas
+
 **Original description:**
 - Create separate Render environment for PROD (currently on DEMO)
 - Switch from T212 DEMO API (sandbox) to REAL MONEY API
