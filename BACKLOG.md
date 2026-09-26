@@ -722,7 +722,7 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 6. **Auto-disable-after-deploy**: the doc-only push (commit `64f8033`) will have triggered this on next backend restart — confirm automation shows as disabled with reason mentioning the new commit hash, then manually re-enable
    - ✅ Auto-disable on deploy confirmed (banner appeared with commit hash, toggle was OFF)
    - ⚠️ **BUG FOUND:** Banner does NOT disappear when re-enabling automaton via toggle (2026-09-26) — `automation_disabled_reason` not being cleared to `null` on manual re-enable. Needs fix in `enable_global_automation()` endpoint.
-7. **SMTP still not configured** (Item #21) — until done, none of the alerts in point 4 can be verified to actually reach an inbox, only that they log
+7. ~~SMTP configuration~~ ✅ DONE (2026-09-26) — Gmail SMTP configured on Render (`SMTP_HOST=smtp.gmail.com`, App Password, `ALERT_EMAIL_TO=fonseca.joao.luis@gmail.com`). Verified end-to-end via the app's normal "logout all / killswitch" action, which triggers the `security_events` alert — email received successfully, Render logs confirmed `✅ Alerta de segurança enviado por email`.
 8. **Item #20 (unauthenticated endpoints)** — not started, flagged as HIGH priority, recommended before Phase 2 (PROD) of Item #15
 9. Decide whether to proceed to Item #15 **Phase 2** (PROD infra: separate Supabase project, `prod` branch, IP-restricted T212 keys) — explicitly deferred until Phase 1 is validated
 
