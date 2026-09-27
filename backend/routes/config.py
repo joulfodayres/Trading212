@@ -38,7 +38,7 @@ class ConfigResponse(BaseModel):
 # ===== ENDPOINTS =====
 
 @router.get("/status")
-async def get_t212_status(current_user: dict = Depends(get_current_user)):
+async def get_t212_status():
     """
     GET /api/config/status
 
@@ -48,6 +48,13 @@ async def get_t212_status(current_user: dict = Depends(get_current_user)):
     (T212_API_KEY, T212_API_SECRET, T212_ENVIRONMENT), nunca pela UI —
     fonte única de verdade, sem risco de a UI mostrar um ambiente que não
     corresponde ao que a automação está realmente a usar.
+
+    Intencionalmente PÚBLICO (sem Depends(get_current_user)) — o frontend
+    (App.tsx) chama isto antes do login para mostrar a faixa
+    DEMO/PRODUÇÃO logo de início, para nunca se confundir qual separador
+    do browser está aberto em qual ambiente. Só expõe {environment,
+    connected}, informação de baixo risco (não revela credenciais nem
+    dados de conta).
     """
     try:
         client = Trading212Client(
