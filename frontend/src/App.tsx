@@ -53,7 +53,7 @@ function App() {
           🟢 DEMO — DINHEIRO FICTÍCIO
         </div>
       )}
-      <div className={environment ? 'pt-7' : ''}>
+      <div className={environment ? 'pt-7 h-screen box-border' : 'h-screen'}>
       <BrowserRouter>
         <Routes>
           <Route

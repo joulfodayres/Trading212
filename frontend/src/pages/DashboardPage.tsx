@@ -20,7 +20,7 @@ export default function DashboardPage() {
   }, [fetchStatus])
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
+    <div className="flex h-full bg-gradient-to-b from-t212-bg-dark to-t212-bg-darker">
       {/* Sidebar */}
       <Sidebar
         activeView={activeView}

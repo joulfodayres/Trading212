@@ -51,7 +51,7 @@ export default function Sidebar({ activeView, setActiveView, status, loading, en
   ]
 
   return (
-    <aside className="sidebar flex flex-col h-screen">
+    <aside className="sidebar flex flex-col h-full">
       {/* Logo */}
       <div className="p-6 border-b border-t212-border">
         <div className="flex items-center gap-3">
