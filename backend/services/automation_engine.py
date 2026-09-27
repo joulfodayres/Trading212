@@ -1190,17 +1190,15 @@ class AutomationEngine:
         """
         Read current log_level from app_parameters.
         Defaults to 'OFF' if not found or on error.
+
+        NOTE: the `log_level` column was removed from app_parameters by
+        `db/migrations/remove_unused_app_parameters_columns.sql` — this
+        feature was never fully wired up and the column doesn't exist in
+        either DEMO or PROD. Short-circuiting here instead of querying
+        every cycle (which always failed anyway) to stop log spam and
+        avoid a wasted DB round-trip on every single cycle step.
         """
-        try:
-            db = get_db()
-            result = db.client.table("app_parameters").select("log_level").execute()
-            if result.data:
-                log_level = result.data[0].get("log_level", "OFF")
-                return log_level
-            return "OFF"
-        except Exception as e:
-            self.logger.warning(f"⚠️ Erro ao ler log_level: {e}")
-            return "OFF"
+        return "OFF"
 
     def _log_db_action(self, action: str, details: Optional[Dict[str, Any]] = None):
         """
