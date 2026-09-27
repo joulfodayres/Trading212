@@ -1,9 +1,7 @@
 # Trading 212 Bot - MVP
 
-**Status:** ✅ **Phase 4 Complete - Automation Engine Live** 🚀  
-**Phase 5:** ⏳ **60% Progress** (6 of 12 items)  
-**Last Update:** 2026-09-22  
-**Version:** 0.5.0-beta
+**Status:** ✅ **DEMO + PROD Live** 🚀 — Auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21) all shipped
+**Last Update:** 2026-09-27
 
 Algorithmic trading platform with automated Grid Trading strategy. Built with React + FastAPI, hosted on Render + Supabase.
 
@@ -13,10 +11,15 @@ Algorithmic trading platform with automated Grid Trading strategy. Built with Re
 
 ### 🌐 Access Online (Production)
 ```
-Frontend: https://trading-212-automation-front-end.onrender.com
-Backend:  https://trading212-backend.onrender.com
-API Docs: https://trading212-backend.onrender.com/docs
+DEMO Frontend: https://trading-212-automation-front-end.onrender.com
+DEMO Backend:  https://trading212-backend.onrender.com
+DEMO API Docs: https://trading212-backend.onrender.com/docs
+
+PROD Frontend: https://trading212-frontend-real.onrender.com
+PROD Backend:  https://trading212-backend-prod.onrender.com
+PROD API Docs: https://trading212-backend-prod.onrender.com/docs
 ```
+See `docs/KNOWLEDGE_BASE.md` for the full DEMO/PROD split (separate Supabase projects, `main` vs `prod` git branches, manual-only deploy on PROD).
 
 ### 💻 Development (Local)
 
@@ -97,10 +100,11 @@ Beautiful, interactive documentation hub with:
 ### Infrastructure
 - ✅ **FastAPI Backend** with 14+ REST endpoints
 - ✅ **React 18 Frontend** with TypeScript
-- ✅ **PostgreSQL Database** (Supabase) with 8 tables
-- ✅ **Auto-Deploy** from GitHub to Render
+- ✅ **PostgreSQL Database** (Supabase) — separate DEMO and PROD projects
+- ✅ **Auto-Deploy** from GitHub to Render (DEMO only; PROD is manual-deploy by design)
 - ✅ **HTTPS/TLS** on all endpoints
-- ✅ **JWT Authentication** + API key encryption
+- ✅ **JWT Authentication** enforced on ~35 backend endpoints + API key encryption
+- ✅ **Trading safety limits**, auto-disable-after-deploy, and SMTP email alerts
 - ✅ **Full Audit Trail** + conditional logging
 
 ---
@@ -144,9 +148,10 @@ See **`BACKLOG.md`** for full details and time estimates.
 
 ## 🔗 Useful Links
 
-- **Frontend:** https://trading-212-automation-front-end.onrender.com
-- **Backend:** https://trading212-backend.onrender.com
-- **API Docs:** https://trading212-backend.onrender.com/docs
+- **DEMO Frontend:** https://trading-212-automation-front-end.onrender.com
+- **DEMO Backend:** https://trading212-backend.onrender.com
+- **PROD Frontend:** https://trading212-frontend-real.onrender.com
+- **PROD Backend:** https://trading212-backend-prod.onrender.com
 - **GitHub:** https://github.com/joulfodayres/Trading212
 - **Supabase:** https://supabase.com
 
@@ -196,13 +201,14 @@ https://trading212-backend.onrender.com/docs
 
 ## 🔐 Security
 
-- ✅ JWT authentication (24h expiration)
+- ✅ JWT authentication enforced on ~35 endpoints (24h expiration)
 - ✅ Encrypted API keys (Fernet)
 - ✅ HTTPS/TLS automatic
 - ✅ CORS configured
 - ✅ Database RLS policies
 - ✅ Passwords hashed
-- ⏳ TODO: Rate limiting on endpoints
+- ✅ SMTP email alerts for automation events
+- ⏳ TODO: restrict T212 LIVE API key by IP (T212's UI did not support pasting the Render IP list — open follow-up)
 
 ---
 
@@ -263,7 +269,7 @@ See **`STATUS.md`** for full timeline.
 
 ---
 
-**Version:** 0.5.0-beta (MVP Phase 4 + Phase 5 in progress)  
-**Updated:** 2026-09-22  
-**Status:** ✅ Production Ready | 🚧 Phase 5: 60% Progress | 🟢 Automation Live 24/7
+**Version:** 0.6.0-beta (DEMO + PROD both live; auth, trading safety, SMTP alerts shipped)
+**Updated:** 2026-09-27
+**Status:** ✅ Production Ready | 🟢 DEMO + PROD Live | 🔐 Auth Enforced
 

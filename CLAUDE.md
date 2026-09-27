@@ -2,7 +2,7 @@
 
 **Projeto de automação de trading algorítmico integrado com a plataforma Trading 212 via API oficial.**
 
-Status: **MVP EM PRODUÇÃO - PHASE 4 COMPLETE** 🚀 (100% Phase 4 | 90% Overall)
+Status: **MVP EM PRODUÇÃO — DEMO + PROD LIVE** 🚀 (Phase 4 completa; Phase 5 em curso — auth, PROD environment, trading limits e SMTP alerts já implementados)
 
 ---
 
@@ -452,10 +452,13 @@ ID: ab1036ff-937d-46e5-8f5b-bab07f1fb100
 
 ### 🔄 **Funcionalidades TODO (Próximas Fases)**
 
-1. **Autenticação Real**
-   - [ ] Login/register com Supabase Auth
-   - [ ] JWT token validation no backend
-   - [ ] Logout real
+> ⚠️ Secção histórica do planeamento inicial. Muitos itens abaixo já foram concluídos entretanto —
+> ver Item #20 (auth JWT em ~35 endpoints), Item #15 (PROD), Item #21 (SMTP) no `BACKLOG.md` e no `docs/KNOWLEDGE_BASE.md` para o estado real e atualizado.
+
+1. **Autenticação Real** ✅ **CONCLUÍDO (Item #20)**
+   - [x] Login/register com Supabase Auth
+   - [x] JWT token validation no backend (~35 endpoints protegidos)
+   - [x] Logout real
    - [ ] Password reset
 
 2. **CRUD ISINs**
@@ -502,11 +505,11 @@ ID: ab1036ff-937d-46e5-8f5b-bab07f1fb100
 - ✅ Frontend + Backend scaffolding
 - ✅ T212 API integration
 
-### **Fase 2: Autenticação** 🔄 PRÓXIMA
-- [ ] Supabase Auth no backend
-- [ ] JWT validation
-- [ ] Frontend login real
-- [ ] Logout real
+### **Fase 2: Autenticação** ✅ COMPLETO (Item #20)
+- ✅ Supabase Auth no backend
+- ✅ JWT validation em ~35 endpoints
+- ✅ Frontend login real
+- ✅ Logout real
 
 ### **Fase 3: CRUD ISINs**
 - [ ] Endpoints implementados
@@ -583,12 +586,28 @@ APScheduler>=3.10.0
 
 ## 🌐 URLs em Produção
 
+Existem dois ambientes paralelos, DEMO e PROD (Item #15, setup completo em 2026-09-27):
+
 ```
-Frontend: https://trading-212-automation-front-end.onrender.com
-Backend:  https://trading212-backend.onrender.com
-Docs:     https://trading212-backend.onrender.com/docs
-GitHub:   https://github.com/joulfodayres/Trading212
+DEMO frontend: https://trading-212-automation-front-end.onrender.com
+DEMO backend:  https://trading212-backend.onrender.com
+DEMO docs:     https://trading212-backend.onrender.com/docs
+
+PROD frontend: https://trading212-frontend-real.onrender.com
+PROD backend:  https://trading212-backend-prod.onrender.com
+PROD docs:     https://trading212-backend-prod.onrender.com/docs
+
+GitHub: https://github.com/joulfodayres/Trading212
 ```
+
+**Nota de naming:** o serviço frontend de PROD chama-se `trading212-frontend-real` (não `-prod`) — nome escolhido intencionalmente, é assimétrico face ao backend `trading212-backend-prod` mas é o nome real em uso no Render.
+
+**Separação DEMO/PROD:**
+- Cada ambiente tem o seu próprio projeto Supabase (BD + Auth independentes) e a sua própria T212 API key (`T212_ENVIRONMENT=demo` vs `live`).
+- Branch `main` → auto-deploy dos serviços DEMO. Branch `prod` → deploy manual (auto-deploy OFF por desenho) dos serviços PROD; `prod` recebe fast-forward merge de `main` depois de cada fix validado em DEMO.
+- Banner visual no frontend indica sempre em que ambiente se está (DEMO vs PROD).
+- Autenticação (JWT/Supabase Auth) é agora obrigatória em ~35 endpoints do backend (Item #20).
+- Limites de trading, auto-disable pós-deploy, e alertas por email (SMTP) protegem a automação em ambos os ambientes (Item #15 Phase 1, Item #21).
 
 ---
 
@@ -772,6 +791,9 @@ npm run build
 - ✅ Documentação atualizada
 - ✅ Phase 4 Automation Engine Live
 - ✅ APScheduler running 24/7
+- ✅ Autenticação JWT em ~35 endpoints (Item #20)
+- ✅ Ambiente PROD separado (Supabase + backend + frontend próprios) (Item #15)
+- ✅ Trading limits, auto-disable pós-deploy, alertas SMTP (Item #15/#21)
 - ⏳ Testes automatizados (Phase 5)
 - ⏳ Monitoring avançado (Phase 6)
 - ⏳ Backup strategy (Phase 6)
@@ -780,9 +802,9 @@ npm run build
 
 ## 👨‍💻 Desenvolvimento
 
-**Última atualização:** 2026-09-20
-**Status:** Phase 4 Completo - Automation Engine Live
-**Próximo focus:** Backlog Features (Global Toggle, Parameter UI, Charts)
+**Última atualização:** 2026-09-27
+**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21) concluídos
+**Próximo focus:** Ver `docs/KNOWLEDGE_BASE.md` e `BACKLOG.md` para o estado atualizado do backlog
 
 ---
 

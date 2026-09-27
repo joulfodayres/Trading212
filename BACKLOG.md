@@ -966,13 +966,12 @@ PROD Environment (NEW):
 
 ---
 
-### Item #6: Rename Render Projects (Quick Win)
-**Estimated:** 0.5 hours
-**Description:**
-- Rename frontend service: `trading212-1` → `trading212-frontend`
-- Rename backend service: `trading212-4ojx` → `trading212-backend`
-- Update documentation links
-- Update .env URLs
+### Item #6: Rename Render Projects (Quick Win) — ✅ DONE
+**Status:** Completed incidentally during the backend-deletion recovery incident (the backend service had to be recreated from scratch, and was given the clean name `trading212-backend` in the process; the DEMO frontend and the new PROD services `trading212-backend-prod` / `trading212-frontend-real` followed the same clean naming convention).
+**Description (original plan, now moot):**
+- ~~Rename frontend service: `trading212-1` → `trading212-frontend`~~
+- ~~Rename backend service: `trading212-4ojx` → `trading212-backend`~~
+- Documentation links and .env URLs updated accordingly
 
 **Impact:** Better naming convention, easier management
 
@@ -993,7 +992,7 @@ PROD Environment (NEW):
 | (Documentation Reorganization) | ✅ DONE | `3b6e12e` |
 | 2. Upload T212 Data | ✅ DONE | - |
 | 9. Smart Missing Msg | ⏳ TODO | - |
-| 6. Rename Render | ⏳ TODO | - |
+| 6. Rename Render | ✅ DONE | - |
 | **12. Enhanced Login Security** | ⏳ TODO | - |
 | **13. Dynamic Grid Strategy** | ⏳ TODO | - |
 | **14. Dashboard Analytics** | ⏳ TODO | - |
@@ -1017,7 +1016,7 @@ PROD Environment (NEW):
 
 ### High Impact / Low Effort (Quick Wins)
 1. **Item #9:** Smart "Missing Parameters" Message (1-2h) - Quick validation fix
-2. **Item #6:** Rename Render (0.5h) - Quick win
+2. **Item #6:** Rename Render (0.5h) - Quick win ✅ DONE
 
 ### High Impact / Medium Effort (Security & User Features)
 3. **Item #12:** Enhanced Login Security (6-8h) - Prevent brute force, rate limiting, real auth

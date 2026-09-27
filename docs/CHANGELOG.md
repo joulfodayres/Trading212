@@ -1,3 +1,49 @@
+# 📝 CHANGELOG - 2026-09-27 (Item #15 Phase 2 — PROD Environment Live)
+
+**Data:** 2026-09-27
+**Duração:** Full session — PROD environment setup, rollout, and bugfixing
+**Status:** ✅ Completed — PROD fully verified end-to-end
+**Focus:** Second production environment (real-money T212 API) alongside existing DEMO
+
+---
+
+## 🎯 Changes Summary
+
+### 1. New PROD Environment 🚀
+
+- New dedicated Supabase project for PROD (separate DB + Auth from DEMO)
+- New git branch `prod` — receives fast-forward merges from `main` after DEMO validation;
+  auto-deploy is intentionally OFF on both PROD Render services (manual deploy only)
+- New T212 **live** API key configured (`T212_ENVIRONMENT=live`) — ⚠️ created without IP
+  restriction because T212's dashboard UI did not support pasting the Render outbound IP list;
+  tracked as an open follow-up
+- New Render services: `trading212-backend-prod` (backend) and `trading212-frontend-real`
+  (frontend — note the asymmetric naming, chosen intentionally by the user)
+- Environment banner added to the frontend, always visible, indicating DEMO vs PROD
+
+### 2. Bugs Found & Fixed During Rollout 🐛
+
+1. Login credential mismatch for emails containing dots
+2. `GET /config/status` had to be made public again — `App.tsx` calls it before login to render
+   the environment banner
+3. Logout button clipped off-screen when the environment banner is showing (`h-screen` → `h-full`)
+4. Scheduler was querying a phantom `app_parameters.log_level` column every cycle (column no
+   longer exists) — query removed
+
+### 3. Verification
+
+- SMTP (Item #21) confirmed working in PROD
+- All four fixes committed to `main` first, then fast-forward merged into `prod`, then manually
+  deployed on Render for both PROD services
+
+---
+
+Builds on Item #15 Phase 1 (trading limits, auto-disable-after-deploy, alerts, T212 env cleanup),
+Item #20 (auth added to ~35 endpoints), and Item #21 (SMTP configured) from earlier in this
+development track. See `docs/KNOWLEDGE_BASE.md` for the current full architecture.
+
+---
+
 # 📝 CHANGELOG - 2026-09-21 (Phase 4 Complete - Documentation Reorganization)
 
 **Data:** 2026-09-21  

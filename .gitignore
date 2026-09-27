@@ -46,6 +46,11 @@ dist/
 .vite/
 .cache/
 
+# TypeScript / Vite build artifacts
+*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
+
 # Logs
 *.log
 npm-debug.log*

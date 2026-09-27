@@ -7,6 +7,11 @@
 ║                                                                            ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
+NOTE (2026-09-27): This file is a point-in-time snapshot from the 2026-09-20 session and is
+kept as-is for historical reference. For CURRENT status (DEMO + PROD environments both live,
+auth on ~35 endpoints, trading safety limits, SMTP alerts), see docs/KNOWLEDGE_BASE.md and
+BACKLOG.md instead.
+
 
 📊 PHASE 5 PROGRESS
 ═══════════════════════════════════════════════════════════════════════════

@@ -4,46 +4,67 @@
 
 **Trading 212 Bot** é um sistema de automação de trading algorítmico integrado com a plataforma Trading 212 via API oficial.
 
-**Status:** MVP em Produção (Phase 5 em desenvolvimento)
+**Status:** MVP em Produção — **DEMO e PROD ambos live** (Item #15 Phase 2 completo, 2026-09-27)
 
 ### Stack Técnico
 - **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend:** FastAPI + Python 3.14 + Uvicorn
-- **Database:** PostgreSQL (Supabase Cloud)
-- **Auth:** Supabase Auth (JWT)
-- **Trading API:** Trading 212 Official API (HTTP Basic Auth)
-- **Deployment:** Render (frontend + backend) + Supabase (database)
+- **Database:** PostgreSQL (Supabase Cloud) — **dois projetos Supabase separados** (DEMO e PROD)
+- **Auth:** Supabase Auth (JWT), agora aplicado em ~35 endpoints do backend (Item #20)
+- **Trading API:** Trading 212 Official API (HTTP Basic Auth) — chave DEMO e chave LIVE separadas
+- **Deployment:** Render (2 frontends + 2 backends) + Supabase (2 bases de dados)
+- **Email/Alertas:** SMTP configurado para alertas de automação (Item #21)
+
+### 🌐 Ambientes: DEMO vs PROD
+
+| | DEMO | PROD |
+|---|---|---|
+| Frontend | https://trading-212-automation-front-end.onrender.com | https://trading212-frontend-real.onrender.com |
+| Backend | https://trading212-backend.onrender.com | https://trading212-backend-prod.onrender.com |
+| Supabase | Projeto DEMO | Projeto PROD (separado) |
+| T212 API | `demo.trading212.com` (API key DEMO) | `live.trading212.com` (API key LIVE, **dinheiro real**) |
+| Git branch | `main` | `prod` |
+| Auto-deploy | ✅ Ligado (push para `main`) | ❌ Desligado por desenho — deploy manual no Render após merge |
+
+**Nota de naming:** o serviço frontend de PROD chama-se `trading212-frontend-real` (não `-prod`) — escolha intencional do utilizador, assimétrica face ao nome do backend `trading212-backend-prod`, mas é o nome real em uso.
+
+**Fluxo de trabalho:** todos os fixes são commitados primeiro em `main` (deploy automático em DEMO), validados, depois `prod` recebe fast-forward merge de `main` e o deploy em PROD é feito manualmente no dashboard do Render.
+
+**Environment banner:** o frontend mostra sempre um banner indicando em que ambiente se está (DEMO/PROD), visível mesmo antes do login — por isso `GET /config/status` tem de continuar público (ver bug fixes abaixo).
+
+**T212 env var como fonte única de verdade:** `T212_ENVIRONMENT` (`demo` ou `live`) no `.env` de cada backend determina o ambiente T212 usado; não há lógica duplicada de escolha de URL espalhada pelo código.
+
+**Follow-up em aberto:** a API key LIVE de T212 foi criada **sem restrição de IP** — a UI da T212 não permitiu colar a lista de IPs de saída do Render. Fica como tarefa futura (ver `BACKLOG.md`).
 
 ### Arquitetura
 
 ```
-┌─────────────────────────────────────────┐
-│     BROWSER (qualquer lugar)            │
-│  https://trading-212-automation-front-end.onrender.com      │
-└────────────────┬────────────────────────┘
-                 │ HTTPS
-                 ▼
-    ┌────────────────────────────┐
-    │   BACKEND API (FastAPI)    │
-    │ https://trading212-backend │
-    │      Render (Python)       │
-    │                            │
-    │ - Autenticação JWT         │
-    │ - CRUD ISINs/Strategies    │
-    │ - Integração T212 API      │
-    │ - Scheduler (automação)    │
-    └────────────┬──────────────┘
-                 │ HTTP
-                 ├─────────┬──────────────┐
-                 ▼         ▼              ▼
-         ┌────────────┐  ┌──────────────────────┐
-         │  SUPABASE  │  │  TRADING 212 API     │
-         │ PostgreSQL │  │  https://demo...     │
-         │            │  │                      │
-         │ - ISINs    │  │ - Fetch positions    │
-         │ - Trades   │  │ - Execute orders     │
-         │ - Config   │  │ - Get account info   │
-         └────────────┘  └──────────────────────┘
+┌─────────────────────────────────────────┐         ┌─────────────────────────────────────────┐
+│   BROWSER — DEMO                        │         │   BROWSER — PROD                        │
+│  trading-212-automation-front-end...    │         │  trading212-frontend-real...            │
+└────────────────┬─────────────────────────┘         └────────────────┬─────────────────────────┘
+                 │ HTTPS                                              │ HTTPS
+                 ▼                                                   ▼
+    ┌────────────────────────────┐                       ┌────────────────────────────┐
+    │  BACKEND DEMO (FastAPI)    │                       │  BACKEND PROD (FastAPI)    │
+    │  trading212-backend...     │                       │  trading212-backend-prod...│
+    │                            │                       │                            │
+    │ - Autenticação JWT (~35    │                       │ - Autenticação JWT (~35    │
+    │   endpoints protegidos)    │                       │   endpoints protegidos)    │
+    │ - CRUD ISINs/Strategies    │                       │ - CRUD ISINs/Strategies    │
+    │ - Integração T212 API      │                       │ - Integração T212 API      │
+    │   (demo.trading212.com)    │                       │   (live.trading212.com)    │
+    │ - Scheduler (automação)    │                       │ - Scheduler (automação)    │
+    │ - Trading limits + alertas │                       │ - Trading limits + alertas │
+    │   SMTP                     │                       │   SMTP                     │
+    └────────────┬──────────────┘                       └────────────┬──────────────┘
+                 │ HTTP                                               │ HTTP
+                 ├─────────┬──────────────┐                           ├─────────┬──────────────┐
+                 ▼         ▼              ▼                           ▼         ▼              ▼
+         ┌────────────┐  ┌──────────────────────┐             ┌────────────┐  ┌──────────────────────┐
+         │  SUPABASE  │  │  TRADING 212 API     │             │  SUPABASE  │  │  TRADING 212 API     │
+         │  (DEMO)    │  │  demo.trading212.com │             │  (PROD)    │  │  live.trading212.com │
+         └────────────┘  └──────────────────────┘             └────────────┘  └──────────────────────┘
 ```
 
 ---
@@ -76,14 +97,44 @@
 - ✅ Portfolio sync endpoint
 - ✅ Global automation toggle
 
-### Phase 5: Strategy Management (In Progress)
+### Phase 5: Strategy Management (Completed)
 - ✅ Strategy CRUD (POST/PUT, no DELETE)
 - ✅ Strategy parameters table (all 10 params)
 - ✅ Strategy validation (requires pos -1, 0, 1)
 - ✅ Frontend strategy editor
 - ✅ Upload T212 data files (Reports — Activity Statement PDF import)
 - ⏳ Charts & statistics dashboard
-- ⏳ Knowledge Base
+
+### Item #15 Phase 1: Trading Safety (Completed)
+- ✅ Trading limits (per-cycle / per-day caps on automation)
+- ✅ Auto-disable automação após cada deploy (proteção contra estado inconsistente)
+- ✅ Sistema de alertas
+- ✅ Limpeza de variáveis de ambiente T212 (fonte única de verdade: `T212_ENVIRONMENT`)
+
+### Item #20: Autenticação Completa (Completed)
+- ✅ JWT (Supabase Auth) obrigatório em ~35 endpoints do backend
+- ✅ Rotas antes públicas agora protegidas (exceto `GET /config/status`, que tem de ficar pública porque o frontend a chama antes do login para mostrar o banner DEMO/PROD)
+
+### Item #21: SMTP / Email Alerts (Completed)
+- ✅ SMTP configurado e a funcionar em DEMO e PROD
+- ✅ Alertas de automação enviados por email
+
+### Item #15 Phase 2: Ambiente PROD (Completed — 2026-09-27)
+- ✅ Novo projeto Supabase dedicado a PROD
+- ✅ Branch git `prod` (fast-forward merge de `main`, deploy manual apenas)
+- ✅ API key T212 `live` gerada (⚠️ sem restrição de IP — UI da T212 não suportou colar a lista; follow-up em aberto)
+- ✅ Novos serviços Render: `trading212-backend-prod` e `trading212-frontend-real`
+- ✅ Environment banner no frontend (DEMO/PROD sempre visível)
+- ✅ 4 bugs encontrados e corrigidos durante o rollout:
+  1. Mismatch de credenciais de login com emails contendo pontos
+  2. `GET /config/status` teve de voltar a ser pública (App.tsx chama-a antes do login)
+  3. Botão de logout cortado (`h-screen` → `h-full`) quando o banner de ambiente está visível
+  4. Query fantasma a coluna `app_parameters.log_level` (já não existe) removida do ciclo do scheduler
+- ✅ SMTP validado em PROD
+
+### Phase 6: Charts & Statistics (Planned)
+- ⏳ Charts & statistics dashboard
+- ⏳ Knowledge Base maintenance (this document)
 
 ---
 
@@ -157,12 +208,13 @@
 ```sql
 - id (UUID, PK)
 - scheduler_interval_seconds (INTEGER, default: 15)
-- scheduler_enabled (BOOLEAN, default: TRUE)
 - grid_trading_enabled (BOOLEAN, default: TRUE)
-- max_positions_per_isin (INTEGER, default: 5)
-- log_level (VARCHAR, default: INFO)
 - created_at, updated_at (TIMESTAMP)
 ```
+Nota: `scheduler_enabled`, `max_positions_per_isin` e `log_level` foram removidas por não terem uso real no código
+(ver `db/migrations/drop_scheduler_enabled.sql` e `db/migrations/remove_unused_app_parameters_columns.sql`). O bug
+corrigido nesta sessão (Item #15 Phase 2) foi o scheduler continuar a fazer `SELECT log_level` numa coluna já inexistente
+em todos os ciclos, causando erro silencioso repetido.
 
 #### **Reports — Activity Statement import** (16 tables)
 ```sql
@@ -372,20 +424,36 @@ Exemplo: Se tem params para pos=-1,0,1 mas trades_balance=3, usa params de pos=1
 
 ## 🚀 Deployment
 
-### Frontend (Render)
+### DEMO
+
+**Frontend (Render)**
 - URL: https://trading-212-automation-front-end.onrender.com
 - Build: `npm run build`
 - Start: `npm run preview`
-- Auto-deploy on push to main
+- Auto-deploy on push to `main`
 
-### Backend (Render)
+**Backend (Render)**
 - URL: https://trading212-backend.onrender.com
 - Build: `pip install -r requirements.txt`
 - Start: `uvicorn main:app --host 0.0.0.0`
-- Auto-deploy on push to main
+- Auto-deploy on push to `main`
+
+### PROD
+
+**Frontend (Render)**
+- Service name: `trading212-frontend-real`
+- URL: https://trading212-frontend-real.onrender.com
+- Auto-deploy: **OFF** (deploy manual no dashboard do Render)
+
+**Backend (Render)**
+- Service name: `trading212-backend-prod`
+- URL: https://trading212-backend-prod.onrender.com
+- Auto-deploy: **OFF** (deploy manual no dashboard do Render)
+
+**Fluxo:** commits vão sempre para `main` primeiro (dispara auto-deploy em DEMO) → validar em DEMO → fast-forward merge `main` → `prod` → deploy manual dos dois serviços PROD no Render.
 
 ### Database (Supabase)
-- Cloud PostgreSQL
+- Dois projetos Supabase Cloud separados (DEMO e PROD), cada um com o seu próprio Auth
 - Auto-backups enabled
 - RLS policies on all tables
 
@@ -473,17 +541,24 @@ npm run dev
 
 ---
 
-## 📚 Phase 5 Backlog
+## 📚 Backlog Aberto
 
 1. ✅ Strategy Management (DONE)
 2. ✅ Upload T212 Data Files (DONE — Reports / Activity Statement PDF import)
 3. ⏳ Charts & Statistics Dashboard
 4. ✅ Global Automation Toggle (DONE)
 5. ✅ Automation Dialog (DONE)
-6. ⏳ Rename Render Projects
-7. ⏳ Knowledge Base (THIS ONE)
+6. ✅ Rename Render Projects (DONE — feito incidentalmente durante o incidente de recuperação do backend)
+7. ✅ Knowledge Base (DONE — este documento)
+8. ✅ Item #15 Phase 1: Trading Limits & Alerts (DONE)
+9. ✅ Item #20: Autenticação em ~35 endpoints (DONE)
+10. ✅ Item #21: SMTP (DONE)
+11. ✅ Item #15 Phase 2: Ambiente PROD (DONE — 2026-09-27)
+12. ⏳ Follow-up: restringir por IP a API key T212 LIVE (bloqueado pela UI da T212, ver `BACKLOG.md`)
+
+Ver `BACKLOG.md` para a lista completa e atualizada, com estimativas de esforço.
 
 ---
 
-**Last Updated:** 2026-09-21
-**Status:** Phase 5 em desenvolvimento
+**Last Updated:** 2026-09-27
+**Status:** DEMO e PROD ambos em produção; autenticação, trading safety e alertas SMTP implementados em ambos os ambientes
