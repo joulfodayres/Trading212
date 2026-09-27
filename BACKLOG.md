@@ -743,6 +743,24 @@ While cleaning up the old frontend Node service, the **backend** web service (`t
 
 **Paused here (2026-09-26), resuming next session.**
 
+#### ✅ Phase 2 continued (2026-09-27)
+
+- ✅ Frontend `trading212-frontend-real` created (Render Static Site, branch `prod`, auto-deploy off, rewrite `/* -> /index.html`, `VITE_API_URL` pointing at the PROD backend)
+- ✅ `FRONTEND_URL` set on `trading212-backend-prod` for CORS — confirmed working via curl preflight test
+- ✅ **Bug found & fixed:** login failed with generic "Invalid login credentials" — root cause was the PROD Supabase Auth user being created with email `fonsecajoaoluis@gmail.com` (no dots) while the user typed `fonseca.joao.luis@gmail.com` (with dots) — Supabase treats these as different strings even though Gmail itself ignores dots. Resolved by using the exact stored email to log in.
+- ✅ Full end-to-end PROD login verified: MFA setup flow triggered, trading limits show seeded values, automation OFF, T212 status panel shows "LIVE" + "Ligado"
+- ✅ **Bug found & fixed (commit `1bbffc9`, promoted to `prod`):** red/green environment banner never appeared — `GET /api/config/status` had been given `Depends(get_current_user)` as part of the Item #20 fix, but `App.tsx` calls this endpoint once on app load, *before* any login exists, so it always 401'd silently. Made the endpoint public again (low-sensitivity payload: just `{environment, connected}`) — this is exactly why it exists, to show the banner even on the login screen so DEMO/PROD tabs are never confused.
+- ✅ **Bug found & fixed (commit `6fadc27`, promoted to `prod`):** with the banner showing, the logout button was clipped off-screen — `Sidebar`/`DashboardPage` used `h-screen` (100vh) while the banner added a 28px bar via `pt-7` on top, overflowing past the viewport. Changed both to `h-full` so they fill the space actually left after the banner.
+- ✅ **SMTP tested in PROD, failed initially:** Gmail rejected the App Password with `535 Username and Password not accepted` — regenerated a fresh Gmail App Password specifically for PROD, updated `SMTP_PASSWORD` on `trading212-backend-prod`, retested — now works (confirmed via MFA-disable / logout-all alert, email received).
+- ✅ **Unrelated bug found & fixed (commit `26afc78`, promoted to `prod`):** `AutomationEngine._get_log_level()` was querying a `log_level` column on `app_parameters` that was dropped by an old migration, failing (and logging a WARNING) on every single `_log_db_action()` call — i.e. several times per 15s cycle, in both DEMO and PROD. Harmless (had a fallback to "OFF") but spammed logs and wasted a DB round-trip constantly. Short-circuited to always return "OFF" instead of querying.
+- **Workflow note:** every code fix above followed the agreed promotion flow — committed to `main` first (triggering DEMO auto-deploy), then `git merge main` into `prod` (fast-forward, since `prod` had no divergent commits), then a manual "Deploy latest commit" on the PROD Render services (auto-deploy is off there by design). Worked smoothly in practice across 4 promotions today.
+
+**Phase 2 status: essentially complete.** Only remaining open item from Phase 2: the T212 live API key IP restriction (see above — blocked on T212's UI not accepting the IP list/CIDR notation, tracked as a follow-up, not blocking).
+
+**Explicitly NOT done yet, by design (Phase 2 was infra-only):**
+- `grid_trading_enabled` is still `FALSE` in PROD — going live (flipping this on, adding a real ISIN) is a separate, deliberate decision for the user to make whenever ready, not part of this phase.
+- Trading limits remain at the low seeded values (€10/€10/€20) — raising them is also a later, gradual decision.
+
 **Enhancement pending (user request, 2026-09-26):**
 - Banner de ambiente deve aparecer **sempre** (não só em PROD):
   - Se `T212_ENVIRONMENT=live` → banner vermelho com "🔴 PRODUÇÃO — DINHEIRO REAL"
