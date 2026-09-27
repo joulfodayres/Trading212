@@ -11,8 +11,8 @@ Safe to delete after testing.
 SETUP (Run Once)
 ────────────────
 1. Open Command Prompt / Terminal
-2. Navigate to the project folder:
-   cd "C:\claude\401. Trading 212 Hub"
+2. Navigate to the tools folder:
+   cd "C:\claude\401. Trading 212 Hub\tools"
 
 3. Install dependencies:
    python setup_tester.py
