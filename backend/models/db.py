@@ -30,6 +30,15 @@ class AppParameters(Base):
     # Logging configuration
     log_level = Column(String, default='OFF')
 
+    # Manual Orders feature (Item #22) - validation thresholds, independent per environment
+    mo_price_max_variation_pct = Column(Float, default=10)      # hard block
+    mo_price_alert_variation_pct = Column(Float, default=1)     # soft alert
+    mo_price_max_interval_bp = Column(Float, default=100)       # soft alert
+    mo_amount_max = Column(Float, default=100)                  # soft alert (absolute ceiling)
+    mo_amount_max_interval_pct = Column(Float, default=10)      # soft alert
+    mo_quantity_max = Column(Float, default=10)                 # soft alert (absolute ceiling)
+    mo_quantity_max_interval_pct = Column(Float, default=10)    # soft alert
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

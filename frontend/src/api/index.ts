@@ -57,3 +57,25 @@ export const reportsAPI = {
 
   summary: () => api.get('/reports/summary')
 }
+
+// Item #22 — "Gerir Ordens": manual, non-automated management of T212
+// pending orders for a single ISIN. NOT subject to Item #15/#19 trading
+// limits (deliberate product decision — manual path).
+export const manualOrdersAPI = {
+  getScreen: (isin: string) => api.get(`/v1/manual-orders/${encodeURIComponent(isin)}/screen`),
+
+  executeCurrent: (isin: string, ticker: string, data: { edits: any[]; cancels: number[] }) =>
+    api.post(`/v1/manual-orders/${encodeURIComponent(isin)}/execute-current`, data, {
+      params: { ticker }
+    }),
+
+  generate: (data: any) => api.post('/v1/manual-orders/generate', data),
+
+  applyNew: (isin: string, data: any) =>
+    api.post(`/v1/manual-orders/${encodeURIComponent(isin)}/apply-new`, data),
+
+  getValidationThresholds: () => api.get('/v1/manual-orders/config/validation-thresholds'),
+
+  updateValidationThresholds: (data: any) =>
+    api.put('/v1/manual-orders/config/validation-thresholds', data)
+}

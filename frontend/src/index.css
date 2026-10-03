@@ -74,6 +74,25 @@ body {
   @apply opacity-50 cursor-not-allowed;
 }
 
+/* Item #22 (Gerir Ordens) — plain number/select fields used outside .input,
+   with spinner arrows removed (product requirement: value entry only) */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner {
+  -moz-appearance: textfield;
+}
+input[type='number'].no-spinner,
+.card select {
+  @apply bg-t212-hover border border-t212-border rounded px-2 py-1 text-sm text-t212-primary;
+}
+input[type='number'].no-spinner {
+  width: 90px;
+  text-align: right;
+}
+
 /* Badges */
 .badge {
   @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import MfaSetupRequiredPage from './pages/MfaSetupRequiredPage'
+import ManualOrdersPage from './pages/ManualOrdersPage'
 import { useAuthStore } from './stores/authStore'
 import { ToastProvider } from './components/ui/Toast'
 import { apiClient } from './api/client'
@@ -69,6 +70,18 @@ function App() {
                 <MfaSetupRequiredPage />
               ) : (
                 <DashboardPage />
+              )
+            }
+          />
+          <Route
+            path="/manual-orders/:isin"
+            element={
+              !isAuthenticated ? (
+                <Navigate to="/login" />
+              ) : mfaSetupPending ? (
+                <MfaSetupRequiredPage />
+              ) : (
+                <ManualOrdersPage />
               )
             }
           />

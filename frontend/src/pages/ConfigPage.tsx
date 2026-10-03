@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { apiClient } from '../api/client'
 import { T212StatusPanel } from '../components/T212StatusPanel'
 import { TradingLimitsSection } from '../components/TradingLimitsSection'
+import { ManualOrdersConfigSection } from '../components/ManualOrdersConfigSection'
 import { SecuritySection } from '../components/SecuritySection'
 
 export default function ConfigPage() {
@@ -82,6 +83,11 @@ export default function ConfigPage() {
           {/* Trading Limits + Alerts */}
           <div className="border-t border-t212-border pt-6 mt-6">
             <TradingLimitsSection />
+          </div>
+
+          {/* Manual Orders validation thresholds (Item #22) */}
+          <div className="border-t border-t212-border pt-6 mt-6">
+            <ManualOrdersConfigSection />
           </div>
 
           {/* Scheduler Interval */}

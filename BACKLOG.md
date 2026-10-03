@@ -667,9 +667,10 @@ Adapts to market conditions over time
 
 ---
 
-### Item #15: Production Environment Setup - Real Money API (NEW)
+### Item #15: Production Environment Setup - Real Money API — ✅ DONE (Phase 1: 2026-09-24/25, Phase 2: 2026-09-27)
 **Estimated:** 4-6 hours
 **Priority:** HIGH (Pre-production infrastructure)
+**Status:** Both phases complete. DEMO and PROD now live independently (separate Supabase projects, separate Render services, separate T212 keys, `prod` branch with manual deploy). `grid_trading_enabled` intentionally still `FALSE` in PROD — going live with real automation is a separate decision for later. T212 live key IP restriction remains an open follow-up (not blocking).
 
 #### ✅ Decisions from brainstorming (2026-09-24) — these supersede the original description below
 - **Isolation:** separate Supabase project for PROD; independent credentials (own account, password, MFA entry, JWT/encryption secrets)
@@ -979,7 +980,7 @@ PROD Environment (NEW):
 
 ## 📊 Progress Summary
 
-**Phase 5:** 60% Complete (6 of 12 items)
+**Phase 5:** ~70% Complete (12 of 17 items)
 
 | Item | Status | Commits |
 |------|--------|---------|
@@ -993,13 +994,19 @@ PROD Environment (NEW):
 | 2. Upload T212 Data | ✅ DONE | - |
 | 9. Smart Missing Msg | ⏳ TODO | - |
 | 6. Rename Render | ✅ DONE | - |
-| **12. Enhanced Login Security** | ⏳ TODO | - |
-| **13. Dynamic Grid Strategy** | ⏳ TODO | - |
-| **14. Dashboard Analytics** | ⏳ TODO | - |
-| **15. Production Environment (PROD)** | ⏳ TODO | - |
+| 12. Enhanced Login Security | ⏳ TODO | - |
+| 13. Dynamic Grid Strategy | ⏳ TODO | - |
+| 14. Dashboard Analytics | ⏳ TODO | - |
+| **15. Production Environment (PROD)** | ✅ DONE | `52b11c4` (Phase 1), Phase 2 commits 2026-09-27 |
+| **20. API Auth on All Endpoints** | ✅ DONE | `3289aa5` |
+| **21. SMTP Email Alerts** | ✅ DONE | 2026-09-26 |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
 | 11. Architecture Analysis | ⏳ TODO | - |
+| 16. Scheduler Time Window | ⏳ TODO | - |
+| 17. Same-Domain Architecture | ⏳ TODO | - |
+| 18. DB Migration Tracking | ⏳ TODO | - |
+| 19. Additional Safety Limits | ⏳ TODO | - |
 
 **Completed this session:**
 - 10 commits
@@ -1017,38 +1024,42 @@ PROD Environment (NEW):
 ### High Impact / Low Effort (Quick Wins)
 1. **Item #9:** Smart "Missing Parameters" Message (1-2h) - Quick validation fix
 2. **Item #6:** Rename Render (0.5h) - Quick win ✅ DONE
+3. **Item #16:** Scheduler Time Window (2-3h) - Parametrize operating hours
 
 ### High Impact / Medium Effort (Security & User Features)
 3. **Item #12:** Enhanced Login Security (6-8h) - Prevent brute force, rate limiting, real auth
 4. **Item #13:** Dynamic Grid Strategy (8-10h) - Variable BUY/SELL deltas by day
 5. **Item #2:** Upload T212 Data (6-8h) - Enable real data workflow ✅ DONE
+6. **Item #19:** Additional Trading Safety Limits (4-6h) - Orders/day, exposure, price deviation caps
 
 ### High Impact / High Effort (Core Features & Strategic)
-6. **Item #14:** Dashboard Analytics & Metrics (10-12h) - Orders, P&L, cycles tracking
-7. **Item #15:** Production Environment Setup - PROD (4-6h) - **NEW** - Real money API integration (CRITICAL before live trading)
-8. **Item #3:** Charts & Stats (8-10h) - Advanced performance analytics
-9. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
-10. **Item #10:** Cybersecurity Testing (8-12h) - Security audit + penetration testing
+7. **Item #14:** Dashboard Analytics & Metrics (10-12h) - Orders, P&L, cycles tracking
+8. **Item #15:** Production Environment Setup - PROD ✅ DONE (2026-09-27) - Real money API integration
+9. **Item #3:** Charts & Stats (8-10h) - Advanced performance analytics
+10. **Item #11:** Architecture Analysis (6-8h) - Understand strengths/weaknesses
+11. **Item #10:** Cybersecurity Testing (8-12h) - Security audit + penetration testing
+12. **Item #17:** Same-Domain Architecture (3-5h) - Defense-in-depth cookie hardening
+13. **Item #18:** Database Migration Tracking (2-3h) - Keep DEMO/PROD schemas in sync
 
 **Suggested workflow:**
-- Quick wins first (#9, #6) — 2-3 hours, polish
-- Then security (#12) — 6-8 hours, HIGH priority
+- Quick wins first (#9, #16) — 3-5 hours, polish
+- Then security (#12, #19) — 10-14 hours, HIGH/MEDIUM priority (especially now PROD is live with real money)
 - Then new features (#13, #14) — 18-22 hours, visible on dashboard
-- Then PRODUCTION setup (#15) — 4-6 hours, CRITICAL for live trading
-- Then strategic reviews + advanced features (#11, #10, #3)
+- Then strategic reviews + hardening (#11, #10, #3, #17, #18)
 
 ---
 
 ## 📈 Overall Project Status
 
-**MVP Status:** ✅ PRODUCTION READY
+**MVP Status:** ✅ PRODUCTION READY — DEMO + PROD both live
 - Frontend: ✅ Fully translated, all pages working
-- Backend: ✅ Automation engine running (Phase 4 complete)
-- Database: ✅ Cleaned up, optimized
+- Backend: ✅ Automation engine running (Phase 4 complete), ~35 endpoints authenticated (Item #20)
+- Database: ✅ Cleaned up, optimized, separate Supabase projects for DEMO/PROD
 - Documentation: ✅ Comprehensive knowledge base created
-- Deployment: ✅ Auto-deploy to Render on git push
+- Deployment: ✅ Auto-deploy to Render on git push (DEMO); manual deploy on `prod` branch (PROD)
+- Alerts: ✅ SMTP configured and verified end-to-end in both environments (Item #21)
 
-**Ready for:** Live demo, user testing, real data import
+**Ready for:** Live demo, user testing, real data import. PROD infra is live with automation intentionally OFF and low trading limits (€10/€10/€20) — flipping automation on is a deliberate future decision, not a blocker.
 
 ---
 
@@ -1303,6 +1314,6 @@ Item #20 closed. Item #15 Phase 1 checklist item 8 unblocked.
 
 ---
 
-**Last Updated:** 2026-09-24
-**Status:** Phase 5: 60% complete (8 of 18 items) + 10 NEW items (#12-#21)
-**Recent:** Item #18 (Migration Tracking) ✅ ADDED | Item #19 (Extra Safety Limits) ✅ ADDED
+**Last Updated:** 2026-10-03
+**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open
+**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE — all confirmed complete via CLAUDE.md and KNOWLEDGE_BASE.md as of 2026-09-27

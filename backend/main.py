@@ -17,6 +17,7 @@ from routes.config import router as config_router
 from routes.automation import router as automation_router
 from routes.strategies import router as strategies_router
 from routes.reports import router as reports_router
+from routes.manual_orders import router as manual_orders_router
 from db.supabase_client import get_db
 from services.scheduler import SchedulerService
 from services.automation_engine import AutomationEngine
@@ -215,6 +216,7 @@ app.include_router(config_router)
 app.include_router(automation_router)  # NEW: Automation routes
 app.include_router(strategies_router)  # NEW: Strategies routes
 app.include_router(reports_router)     # NEW: Reports (PDF import) routes
+app.include_router(manual_orders_router)  # Item #22: Manual Orders ("Gerir Ordens")
 # from routes import positions, orders
 
 

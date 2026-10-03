@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, Edit2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { RefreshCw, TrendingUp, TrendingDown, Edit2, ListOrdered } from 'lucide-react'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
 import { AutomationBottomSheet } from './AutomationBottomSheet'
@@ -21,6 +22,7 @@ interface ISIN {
 }
 
 export default function ISINTable() {
+  const navigate = useNavigate()
   const [isins, setIsins] = useState<ISIN[]>([])
   const [loadingSync, setLoadingSync] = useState(false)
   const [loadingList, setLoadingList] = useState(true)
@@ -245,15 +247,24 @@ export default function ISINTable() {
                     )}
                   </td>
                   <td>
-                    {isin.automation_enabled && (
+                    <div className="flex items-center gap-2">
+                      {isin.automation_enabled && (
+                        <button
+                          onClick={() => handleEditAutomation(isin)}
+                          className="text-t212-secondary hover:text-t212-primary transition-colors"
+                          title="Edit automation"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleEditAutomation(isin)}
+                        onClick={() => navigate(`/manual-orders/${encodeURIComponent(isin.isin)}`)}
                         className="text-t212-secondary hover:text-t212-primary transition-colors"
-                        title="Edit automation"
+                        title="Gerir Ordens"
                       >
-                        <Edit2 size={16} />
+                        <ListOrdered size={16} />
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
