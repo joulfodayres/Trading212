@@ -26,7 +26,7 @@ Side = Literal["BUY", "SELL"]
 
 # ===== Series generation (Zone 1/2/3 math) =====
 
-def build_series(seed: float, interval: float, acc: str, n: int, direction: int, unit_divisor: float) -> List[float]:
+def build_series(seed: float, interval: float, acc: str, n: int, direction: int, unit_divisor: float, index_offset: int = 0) -> List[float]:
     """
     Builds a progression of n values from a seed, an interval, and an
     accumulation mode.
@@ -38,19 +38,28 @@ def build_series(seed: float, interval: float, acc: str, n: int, direction: int,
       percentage (amount/quantity interval).
     - acc == "Y": compounds on the previous value (geometric-like growth).
     - acc == "N": always applies i * interval against the original seed.
+    - index_offset: shifts the starting point of the progression by this
+      many steps. Used for price (index_offset=1) so the FIRST generated
+      order already has one interval applied from the Initial Price,
+      instead of starting exactly at Initial Price. Amount/Quantity always
+      use the default index_offset=0 (first order = exactly the Initial
+      Amount/Quantity, unaffected by this).
 
     Example (seed=100, interval=50bp, direction=+1, unit_divisor=10000):
-      Acc=Y -> [100, 100.5, 101.0025, ...]   (100.5 * 1.005 = 101.0025)
-      Acc=N -> [100, 100.5, 101.0,    ...]   (100 * (1 + 2*50/10000) = 101.0)
+      index_offset=0, Acc=Y -> [100, 100.5, 101.0025, ...]
+      index_offset=0, Acc=N -> [100, 100.5, 101.0,    ...]
+      index_offset=1, Acc=Y -> [100.5, 101.0025, 101.507..., ...]
+      index_offset=1, Acc=N -> [100.5, 101.0,    101.5,      ...]
     """
     if n <= 0:
         return []
-    values = [seed]
-    for i in range(1, n):
-        if acc == "Y":
-            values.append(values[i - 1] * (1 + direction * interval / unit_divisor))
-        else:
-            values.append(seed * (1 + direction * i * interval / unit_divisor))
+    factor = 1 + direction * interval / unit_divisor
+    if acc == "Y":
+        # values[k] = seed * factor^(index_offset + k)
+        values = [seed * (factor ** (index_offset + k)) for k in range(n)]
+    else:
+        # values[k] = seed * (1 + direction*(index_offset + k)*interval/unit_divisor)
+        values = [seed * (1 + direction * (index_offset + k) * interval / unit_divisor) for k in range(n)]
     return values
 
 
@@ -69,9 +78,16 @@ def generate_side_orders(
     number_of_orders: int,
     quantity_precision: int,
 ) -> List[Dict[str, Any]]:
-    """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL)."""
+    """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL).
+
+    The price series starts already shifted by one interval from
+    Initial Price (index_offset=1) — the first generated order is never
+    exactly at Initial Price, it's Initial Price + 1 interval. Amount and
+    Quantity series are NOT shifted: the first order's amount/quantity is
+    exactly Initial Amount/Initial Quantity.
+    """
     price_direction = 1 if side == "SELL" else -1
-    prices = build_series(initial_price, price_interval_bp, acc_price, number_of_orders, price_direction, 10000)
+    prices = build_series(initial_price, price_interval_bp, acc_price, number_of_orders, price_direction, 10000, index_offset=1)
 
     orders = []
     if use_amount:

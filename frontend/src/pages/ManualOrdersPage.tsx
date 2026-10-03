@@ -329,6 +329,8 @@ export default function ManualOrdersPage() {
 
   const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
   const pctClass = (v: number) => (v >= 0 ? 'text-t212-success' : 'text-t212-error')
+  const computeVariationPct = (price: number, referencePrice: number) =>
+    referencePrice ? ((price - referencePrice) / referencePrice) * 100 : 0
 
   if (loading) {
     return (
@@ -475,7 +477,9 @@ export default function ManualOrdersPage() {
                           s.mode === 'edited' ? s.newQuantity : o.quantity
                         )}
                       </td>
-                      <td className={pctClass(o.variation_pct)}>{fmtPct(o.variation_pct)}</td>
+                      <td className={pctClass(s.mode === 'editing' || s.mode === 'edited' ? computeVariationPct(s.newPrice, screen.current_price) : o.variation_pct)}>
+                        {fmtPct(s.mode === 'editing' || s.mode === 'edited' ? computeVariationPct(s.newPrice, screen.current_price) : o.variation_pct)}
+                      </td>
                       <td className="text-right whitespace-nowrap">
                         {s.mode === 'editing' ? (
                           <>
