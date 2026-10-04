@@ -34,6 +34,7 @@ interface ScreenData {
   pnl_percent: number
   current_orders: CurrentOrder[]
   quantity_precision: number
+  price_precision: number
   validation_thresholds: Record<string, number>
 }
 
@@ -122,8 +123,8 @@ export default function ManualOrdersPage() {
         initial[o.t212_order_id] = { mode: 'idle', newPrice: o.price, newQuantity: o.quantity }
       })
       setCoState(initial)
-      setSellParams(defaultSideParams(data.current_price.toFixed(2)))
-      setBuyParams(defaultSideParams(data.current_price.toFixed(2)))
+      setSellParams(defaultSideParams(data.current_price.toFixed(data.price_precision)))
+      setBuyParams(defaultSideParams(data.current_price.toFixed(data.price_precision)))
     } catch (err: any) {
       console.error('[ManualOrdersPage] Error loading screen:', err)
       setLoadError(err?.response?.data?.detail || 'Erro ao carregar dados do ecrã.')
@@ -238,6 +239,7 @@ export default function ManualOrdersPage() {
         isin: screen.isin,
         current_price: screen.current_price,
         quantity_precision: screen.quantity_precision,
+        price_precision: screen.price_precision,
         sell: buildSideParamsPayload(sellParams),
         buy: buildSideParamsPayload(buyParams),
         confirmed_soft_alerts: confirmedSoftAlerts
@@ -296,6 +298,7 @@ export default function ManualOrdersPage() {
         ticker: screen.ticker,
         new_orders: newOrders,
         quantity_precision: screen.quantity_precision,
+        price_precision: screen.price_precision,
         confirmed_empty_list: confirmedEmpty
       })
       const { requires_empty_confirmation, created, deleted, unchanged, errors } = res.data
@@ -376,7 +379,7 @@ export default function ManualOrdersPage() {
             </div>
             <div>
               <div className="text-xs uppercase text-t212-muted mb-1">Preço atual</div>
-              <div className="font-semibold">€{screen.current_price.toFixed(2)}</div>
+              <div className="font-semibold">€{screen.current_price.toFixed(screen.price_precision)}</div>
             </div>
             <div>
               <div className="text-xs uppercase text-t212-muted mb-1">Qtd. em carteira</div>
@@ -452,15 +455,15 @@ export default function ManualOrdersPage() {
                         {s.mode === 'editing' ? (
                           <input
                             type="number"
-                            step="0.01"
+                            step={Math.pow(10, -screen.price_precision)}
                             className="w-20 bg-t212-bg-darker border border-t212-primary rounded px-1 py-0.5 text-sm no-spinner"
                             value={s.newPrice}
                             onChange={(e) => updateCoState(o.t212_order_id, { newPrice: parseFloat(e.target.value) || 0 })}
                           />
                         ) : s.mode === 'deleted' ? (
-                          <span className="line-through text-t212-muted">{o.price.toFixed(2)}</span>
+                          <span className="line-through text-t212-muted">{o.price.toFixed(screen.price_precision)}</span>
                         ) : (
-                          (s.mode === 'edited' ? s.newPrice : o.price).toFixed(2)
+                          (s.mode === 'edited' ? s.newPrice : o.price).toFixed(screen.price_precision)
                         )}
                       </td>
                       <td>
@@ -566,8 +569,8 @@ export default function ManualOrdersPage() {
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 gap-6">
-            <SideParamsForm label="SELL" colorClass="text-t212-error" params={sellParams} setParams={setSellParams} />
-            <SideParamsForm label="BUY" colorClass="text-t212-success" params={buyParams} setParams={setBuyParams} />
+            <SideParamsForm label="SELL" colorClass="text-t212-error" params={sellParams} setParams={setSellParams} pricePrecision={screen.price_precision} />
+            <SideParamsForm label="BUY" colorClass="text-t212-success" params={buyParams} setParams={setBuyParams} pricePrecision={screen.price_precision} />
           </div>
           <div className="flex justify-center mt-4">
             <Button variant="primary" isLoading={generating} onClick={() => doGenerate(false)}>
@@ -604,7 +607,7 @@ export default function ManualOrdersPage() {
                           {o.side}
                         </span>
                       </td>
-                      <td>{o.price.toFixed(2)}</td>
+                      <td>{o.price.toFixed(screen.price_precision)}</td>
                       <td>{o.quantity.toFixed(screen.quantity_precision)}</td>
                       <td className={pctClass(variation)}>{fmtPct(variation)}</td>
                     </tr>
@@ -663,12 +666,14 @@ function SideParamsForm({
   label,
   colorClass,
   params,
-  setParams
+  setParams,
+  pricePrecision
 }: {
   label: string
   colorClass: string
   params: SideParamsState
   setParams: (p: SideParamsState) => void
+  pricePrecision: number
 }) {
   const update = (patch: Partial<SideParamsState>) => setParams({ ...params, ...patch })
 
@@ -679,7 +684,13 @@ function SideParamsForm({
       <div className="mb-3 pb-3 border-b border-dashed border-t212-border">
         <div className="text-[10px] uppercase text-t212-muted mb-2">Zona 1 — Preço</div>
         <FieldRow label="Initial Price">
-          <input type="number" className="no-spinner" value={params.initialPrice} onChange={(e) => update({ initialPrice: e.target.value })} />
+          <input
+            type="number"
+            step={Math.pow(10, -pricePrecision)}
+            className="no-spinner"
+            value={params.initialPrice}
+            onChange={(e) => update({ initialPrice: e.target.value })}
+          />
         </FieldRow>
         <FieldRow label="Price Interval (bp)">
           <input type="number" className="no-spinner" value={params.priceIntervalBp} onChange={(e) => update({ priceIntervalBp: e.target.value })} />

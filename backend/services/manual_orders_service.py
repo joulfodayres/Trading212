@@ -77,6 +77,7 @@ def generate_side_orders(
     acc_quantity: Optional[str],
     number_of_orders: int,
     quantity_precision: int,
+    price_precision: int = 2,
 ) -> List[Dict[str, Any]]:
     """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL).
 
@@ -85,6 +86,11 @@ def generate_side_orders(
     exactly at Initial Price, it's Initial Price + 1 interval. Amount and
     Quantity series are NOT shifted: the first order's amount/quantity is
     exactly Initial Amount/Initial Quantity.
+
+    Prices are rounded to `price_precision` decimal places — inferred
+    per-ISIN from T212's raw currentPrice (see utils/price_precision.py),
+    NOT a hardcoded 2dp. Falls back to 2 if the caller doesn't pass one
+    (backward-compatible default).
     """
     price_direction = 1 if side == "SELL" else -1
     prices = build_series(initial_price, price_interval_bp, acc_price, number_of_orders, price_direction, 10000, index_offset=1)
@@ -94,12 +100,12 @@ def generate_side_orders(
         amounts = build_series(initial_amount, amount_interval_pct, acc_amount, number_of_orders, 1, 100)
         for i in range(number_of_orders):
             qty = round(amounts[i] / prices[i], quantity_precision)
-            orders.append({"side": side, "price": round(prices[i], 2), "quantity": qty})
+            orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
     else:
         quantities = build_series(initial_quantity, quantity_interval_pct, acc_quantity, number_of_orders, 1, 100)
         for i in range(number_of_orders):
             qty = round(quantities[i], quantity_precision)
-            orders.append({"side": side, "price": round(prices[i], 2), "quantity": qty})
+            orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
     return orders
 
 
@@ -177,6 +183,7 @@ def match_new_orders_against_current(
     new_orders: List[Dict[str, Any]],
     current_orders: List[Dict[str, Any]],
     quantity_precision: int,
+    price_precision: int = 2,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
     Matches generated New Orders against the CURRENT real T212 state
@@ -184,9 +191,10 @@ def match_new_orders_against_current(
     Current Orders list — those are a separate, independent action).
 
     A current order "survives" (is left alone) if there's an unmatched new
-    order with the same side + price (2dp) + quantity (ISIN precision).
-    Everything else in current_orders is cancelled; every unmatched
-    new_order is created.
+    order with the same side + price (rounded to `price_precision`, the
+    per-ISIN inferred decimal count — NOT hardcoded 2dp, since some ISINs
+    use more/fewer decimals) + quantity (ISIN precision). Everything else
+    in current_orders is cancelled; every unmatched new_order is created.
 
     Returns {"to_create": [...], "to_cancel": [...], "unchanged": [...]}.
     """
@@ -195,7 +203,7 @@ def match_new_orders_against_current(
     matched_current_ids = set()
 
     def _key(side: str, price: float, qty: float) -> tuple:
-        return (side, round(price, 2), round(qty, quantity_precision))
+        return (side, round(price, price_precision), round(qty, quantity_precision))
 
     current_by_key: Dict[tuple, List[Dict[str, Any]]] = {}
     for co in current_orders:

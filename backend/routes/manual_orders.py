@@ -85,6 +85,7 @@ class ScreenInitResponse(BaseModel):
     pnl_percent: float
     current_orders: List[CurrentOrderOut]
     quantity_precision: int
+    price_precision: int = 2
     validation_thresholds: dict
 
 
@@ -134,6 +135,7 @@ class GenerateOrdersRequest(BaseModel):
     isin: str
     current_price: float
     quantity_precision: int
+    price_precision: int = 2
     sell: SideParams
     buy: SideParams
     confirmed_soft_alerts: bool = False  # true once user confirmed the soft-alert modal
@@ -157,6 +159,7 @@ class ApplyNewOrdersRequest(BaseModel):
     ticker: str
     new_orders: List[GeneratedOrder]
     quantity_precision: int
+    price_precision: int = 2
     confirmed_empty_list: bool = False  # true once user confirmed wiping all current orders
 
 
@@ -248,6 +251,7 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
         quantity = position.get("quantity", 0)
         avg_paid = position.get("averagePricePaid", 0)
         pnl_percent = ((current_price - avg_paid) / avg_paid * 100) if avg_paid else 0
+        price_precision = position.get("_price_precision", 2)
 
         db = _get_db()
         isin_row = db.client.table("isins").select("quantity_precision").eq("isin", isin).execute()
@@ -284,6 +288,7 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
             pnl_percent=pnl_percent,
             current_orders=current_orders,
             quantity_precision=quantity_precision,
+            price_precision=price_precision,
             validation_thresholds=_get_validation_thresholds(),
         )
     except HTTPException:
@@ -391,13 +396,13 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
         "SELL", request.sell.initial_price, request.sell.price_interval_bp, request.sell.acc_price,
         request.sell.use_amount, request.sell.initial_amount, request.sell.amount_interval_pct, request.sell.acc_amount,
         request.sell.initial_quantity, request.sell.quantity_interval_pct, request.sell.acc_quantity,
-        request.sell.number_of_orders, request.quantity_precision,
+        request.sell.number_of_orders, request.quantity_precision, request.price_precision,
     )
     buy_orders = mo_service.generate_side_orders(
         "BUY", request.buy.initial_price, request.buy.price_interval_bp, request.buy.acc_price,
         request.buy.use_amount, request.buy.initial_amount, request.buy.amount_interval_pct, request.buy.acc_amount,
         request.buy.initial_quantity, request.buy.quantity_interval_pct, request.buy.acc_quantity,
-        request.buy.number_of_orders, request.quantity_precision,
+        request.buy.number_of_orders, request.quantity_precision, request.price_precision,
     )
 
     all_orders = sell_orders + buy_orders
@@ -438,7 +443,7 @@ async def apply_new_orders(isin: str, request: ApplyNewOrdersRequest, current_us
         current_orders.append({"t212_order_id": o.get("id"), "side": side, "price": price, "quantity": abs(o.get("quantity", 0))})
 
     match = mo_service.match_new_orders_against_current(
-        [o.dict() for o in request.new_orders], current_orders, request.quantity_precision
+        [o.dict() for o in request.new_orders], current_orders, request.quantity_precision, request.price_precision
     )
 
     results: List[ExecuteResultItem] = []

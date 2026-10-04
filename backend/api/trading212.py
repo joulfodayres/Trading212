@@ -72,6 +72,14 @@ class Trading212Client:
 
         Args:
             ticker: Filtrar por ticker específico (ex: AAPL_US_EQ). Opcional.
+
+        Each returned position dict gets an extra, non-T212 key
+        "_price_precision": int — the number of decimal places T212's
+        currentPrice literally had in the raw JSON response for that
+        position (inferred from raw text, since the API never states this
+        explicitly and a parsed float can't distinguish 166.80 from 166.8).
+        Existing callers that only read T212's own fields are unaffected;
+        this is purely additive. See utils/price_precision.py.
         """
         url = f"{self.base_url}/equity/positions"
         params = {}
@@ -83,10 +91,21 @@ class Trading212Client:
         self._handle_rate_limit(response)
 
         if response.status_code == 200:
-            return response.json()
+            positions = response.json()
+            self._attach_price_precision(positions, response.text)
+            return positions
         else:
             logger.error(f"Erro ao obter posições: {response.status_code} - {response.text}")
             raise Exception(f"Erro T212 API: {response.status_code}")
+
+    @staticmethod
+    def _attach_price_precision(positions: List[Dict[str, Any]], raw_text: str) -> None:
+        """Mutates each position dict in place, adding "_price_precision"."""
+        from utils.price_precision import infer_price_precisions_from_raw_json, get_price_precision_at
+        precisions = infer_price_precisions_from_raw_json(raw_text)
+        for i, pos in enumerate(positions):
+            if isinstance(pos, dict):
+                pos["_price_precision"] = get_price_precision_at(precisions, i)
 
     def get_pending_orders(self) -> List[Dict[str, Any]]:
         """GET /equity/orders — Retorna ordens pendentes"""

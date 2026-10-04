@@ -49,33 +49,67 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own data" ON users
   FOR SELECT USING (auth.uid()::text = id::text);
 
+-- Schema reconciled 2026-10-04 to match actual DEMO/PROD state after
+-- discovering drift (missing strategy_id, instrument_json,
+-- position_created_at caused sync failures in PROD). See BACKLOG.md
+-- Item #18 for the broader fix (migration tracking).
+--
+-- NOTE: user_id is intentionally NOT created here (unlike the version of
+-- this block that shipped originally). This script's own later
+-- single-user-simplification section (search "REMOVE user_id COLUMN"
+-- below) already drops user_id from isins to match live DEMO/PROD, which
+-- has never had this column since simplify_to_singleuser.sql (2026-09-17)
+-- ran. Creating it here only to drop it a few hundred lines later was
+-- redundant and the user_id-scoped RLS policies below never meaningfully
+-- applied in this single-user app — removed both the column and those
+-- policies for clarity instead of leaving dead code that contradicts the
+-- live schema.
 CREATE TABLE isins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  isin VARCHAR NOT NULL,
+  isin VARCHAR NOT NULL UNIQUE,
   ticker VARCHAR,
   name VARCHAR,
   currency VARCHAR DEFAULT 'EUR',
   automation_enabled BOOLEAN DEFAULT FALSE,
+  strategy_id UUID, -- FK added below via ALTER, after the strategies table exists (strategies is created later in this script)
   fields_json JSONB,
+
+  -- Synced from T212 GET /equity/positions (backend/routes/isins.py
+  -- sync_positions + toggle endpoint, backend/services/automation_engine.py)
+  average_price_paid DECIMAL,
+  current_price DECIMAL,
+  quantity DECIMAL DEFAULT 0,
+  quantity_available_for_trading DECIMAL,
+  quantity_in_pies DECIMAL,
+
+  -- Wallet impact (walletImpact object from T212 API)
+  wi_currency VARCHAR DEFAULT 'EUR',
+  wi_current_value DECIMAL,
+  wi_fx_impact DECIMAL,
+  wi_total_cost DECIMAL,
+  wi_unrealized_profit_loss DECIMAL,
+
+  -- Timestamps from T212 API (separate from local created_at/updated_at)
+  api_created_at TIMESTAMP WITH TIME ZONE,
+  position_created_at TIMESTAMP WITH TIME ZONE,
+
+  -- Full instrument JSON backup from T212 API
+  instrument_json JSONB,
+
+  -- T212 API precision (adaptive per ISIN) + grid trading bookkeeping
+  quantity_precision INTEGER DEFAULT 3,
+  initial_trade BOOLEAN DEFAULT FALSE,
+  trades_balance INTEGER DEFAULT 0,
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, isin)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_isins_user_id ON isins(user_id);
 CREATE INDEX idx_isins_isin ON isins(isin);
 
-ALTER TABLE isins ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own ISINs" ON isins
-  FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Users can insert their own ISINs" ON isins
-  FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY "Users can update their own ISINs" ON isins
-  FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "Users can delete their own ISINs" ON isins
-  FOR DELETE USING (user_id = auth.uid());
+-- RLS intentionally left disabled (single-user app, see
+-- simplify_to_singleuser.sql below) — there is no per-user ownership
+-- column left on this table to scope row-level policies on.
 
 CREATE TABLE config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,27 +132,34 @@ CREATE POLICY "Users can insert their own config" ON config
 CREATE POLICY "Users can update their own config" ON config
   FOR UPDATE USING (user_id = auth.uid());
 
+-- NOTE: user_id is intentionally NOT created here, same reasoning as the
+-- isins table reconciliation above: this script's later single-user-
+-- simplification section already drops user_id from strategies (DROP
+-- POLICY / DISABLE ROW LEVEL SECURITY / DROP COLUMN user_id / DROP INDEX
+-- idx_strategies_user_id, search "REMOVE user_id COLUMN" below) to match
+-- live DEMO/PROD, which has never had this column since
+-- simplify_to_singleuser.sql (2026-09-17) ran. Creating it here only to
+-- drop it a few hundred lines later was redundant and the user_id-scoped
+-- RLS policies below never meaningfully applied in this single-user app —
+-- removed both the column and those policies for clarity instead of
+-- leaving dead code that contradicts the live schema.
 CREATE TABLE strategies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name VARCHAR NOT NULL,
   type VARCHAR DEFAULT 'grid_trading',
   params JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_strategies_user_id ON strategies(user_id);
+-- RLS intentionally left disabled (single-user app, see
+-- simplify_to_singleuser.sql below) — there is no per-user ownership
+-- column left on this table to scope row-level policies on.
 
-ALTER TABLE strategies ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own strategies" ON strategies
-  FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Users can manage their own strategies" ON strategies
-  FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY "Users can update their own strategies" ON strategies
-  FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "Users can delete their own strategies" ON strategies
-  FOR DELETE USING (user_id = auth.uid());
+-- Deferred FK: isins.strategy_id -> strategies.id (isins is created earlier
+-- in this script, before strategies exists, so the constraint is added here
+-- instead of inline in CREATE TABLE isins).
+ALTER TABLE isins ADD CONSTRAINT isins_strategy_id_fkey
+  FOREIGN KEY (strategy_id) REFERENCES strategies(id) ON DELETE SET NULL;
 
 CREATE TABLE trades (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

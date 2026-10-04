@@ -15,6 +15,7 @@ interface ISIN {
   quantity: number
   currentPrice: number
   averagePricePaid: number
+  price_precision?: number
   automation_enabled: boolean
   strategy_name?: string
   pnl: number
@@ -199,12 +200,12 @@ export default function ISINTable() {
                   </td>
                   <td>
                     <span className="text-t212-primary">
-                      €{isin.currentPrice.toFixed(2)}
+                      €{isin.currentPrice.toFixed(isin.price_precision ?? 2)}
                     </span>
                   </td>
                   <td>
                     <span className="text-t212-primary">
-                      €{isin.averagePricePaid.toFixed(2)}
+                      €{isin.averagePricePaid.toFixed(isin.price_precision ?? 2)}
                     </span>
                   </td>
                   <td>

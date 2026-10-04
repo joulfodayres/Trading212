@@ -50,6 +50,7 @@ class ISINResponse(BaseModel):
     quantity: float
     currentPrice: float
     averagePricePaid: float
+    price_precision: int = 2
     automation_enabled: bool
     strategy_name: Optional[str] = None
     pnl: float = 0.0
@@ -102,6 +103,7 @@ def _format_t212_position(position: Dict[str, Any], config: Optional[Dict[str, A
         "quantity": quantity,
         "currentPrice": current_price,
         "averagePricePaid": avg_paid,
+        "price_precision": position.get("_price_precision", 2),
         "automation_enabled": config.get("automation_enabled", False) if config else False,
         "strategy_name": config.get("strategy_name") if config else None,
         "pnl": pnl,
