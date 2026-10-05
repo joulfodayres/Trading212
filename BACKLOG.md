@@ -1000,6 +1000,7 @@ PROD Environment (NEW):
 | **15. Production Environment (PROD)** | ✅ DONE | `52b11c4` (Phase 1), Phase 2 commits 2026-09-27 |
 | **20. API Auth on All Endpoints** | ✅ DONE | `3289aa5` |
 | **21. SMTP Email Alerts** | ✅ DONE | 2026-09-26 |
+| **22. Manual Orders ("Gerir Ordens")** | ✅ DONE | `afc8863`→`a8a2cbd` (6 commits, 2026-10-05) |
 | 3. Charts & Stats | ⏳ TODO | - |
 | 10. Cybersecurity Testing | ⏳ TODO | - |
 | 11. Architecture Analysis | ⏳ TODO | - |
@@ -1314,6 +1315,31 @@ Item #20 closed. Item #15 Phase 1 checklist item 8 unblocked.
 
 ---
 
-**Last Updated:** 2026-10-03
-**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open
-**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE — all confirmed complete via CLAUDE.md and KNOWLEDGE_BASE.md as of 2026-09-27
+### Item #22: Manual Orders — "Gerir Ordens" screen for T212 pending order management — ✅ DONE (2026-10-05)
+**Priority:** Shipped feature (not pre-planned in this backlog — designed and built in a dedicated session)
+**Context:** A manual, non-automated screen to manage T212 pending orders for a single ISIN — reached via a new icon on the ISIN list (`ISINTable.tsx`). Deliberately **not** subject to the Item #15/#19 automation trading limits (`max_buy_order_value`, `max_sell_order_value`, `max_daily_spend`) — explicit product decision, since this is a manual/deliberate action path, not automation.
+
+**Shipped across six commits:**
+1. `afc8863` — initial screen: header info (ISIN/preço/carteira), "Current Orders" list (edit = cancel+recreate, since T212 has no edit-order endpoint; cancel = single DELETE), "Parâmetros" (Sell/Buy price/amount/quantity ladder generation) + "New Orders" list with Apply-via-matching against live T212 state
+2. `5d99b59` — bugfixes: live variation % recalculation while editing, first generated order shifted by 1 Price Interval from Initial Price
+3. `ea849c9` — per-ISIN price decimal precision (inferred from T212's raw JSON, since the API never states it explicitly) applied to the ISIN list and this screen; **side-fix:** reconciled `db/prod_setup_consolidated.sql`'s schema drift (dangling `user_id` on `isins`/`strategies` from before the single-user simplification, several missing columns on `isins`)
+4. `0ff1c32` — Zone 4 "Multiplier": every Step-th order (1-indexed) has its Amount/Quantity (never Price) multiplied by Multiplier, non-compounding; existing Number-of-Orders zone relabeled Zone 5
+5. `2868fed` — remembers the last-used full Sell+Buy param set per ISIN (`isins.last_manual_order_params`, JSONB), pre-fills the form on next visit — except Initial Price, always defaulted to current market price
+6. `a8a2cbd` — UI defaults tuned (Acc flags → N, Quantity mode default, intervals → 0, screen opens in "Criar novas ordens" mode) + Current Orders card moved to the bottom of the screen
+
+**Validation:** 7 new `mo_*` thresholds in `app_parameters` (`db/manual_orders_validation_params.sql`), independent per environment (DEMO/PROD), configurable in ConfigPage (`ManualOrdersConfigSection.tsx`). Only `mo_price_max_variation_pct` is a hard block; the other 6 are soft confirm-to-proceed alerts.
+
+**Key files:** `backend/routes/manual_orders.py`, `backend/services/manual_orders_service.py`, `backend/utils/price_precision.py`, `frontend/src/pages/ManualOrdersPage.tsx`, `frontend/src/components/ManualOrdersConfigSection.tsx`.
+
+**Migrations (file-only, run manually per this project's convention):**
+- `db/manual_orders_validation_params.sql` — ✅ confirmed run in DEMO and PROD by the user
+- `db/manual_orders_last_params.sql` (`isins.last_manual_order_params`) — run manually by the user; not independently re-verified here, confirm before relying on it in a given environment
+- `db/prod_setup_consolidated.sql` — reconciled for future from-scratch environment rebuilds only, not itself a migration to run against a live DB
+
+**Impact:** Gives a safe, deliberate manual lever for managing/reshaping pending orders per ISIN outside the automation engine, with its own independent guardrails (not the automation trading limits) and quality-of-life touches (remembered params, per-ISIN price precision, live variation recalculation).
+
+---
+
+**Last Updated:** 2026-10-05
+**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open; Item #22 (Manual Orders) shipped outside the original Phase 5 plan
+**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE | Item #22 (Manual Orders / "Gerir Ordens") ✅ DONE (2026-10-05)

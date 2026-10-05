@@ -1,3 +1,88 @@
+# 📝 CHANGELOG - 2026-10-05 (Item #22 — Manual Orders / "Gerir Ordens")
+
+**Data:** 2026-10-05
+**Duração:** Multi-session feature build (design discussion + 6 implementation commits)
+**Status:** ✅ Completed — shipped to DEMO (auto-deploy) and PROD (manual deploy)
+**Focus:** New manual, non-automated screen for managing T212 pending orders per ISIN
+
+---
+
+## 🎯 Changes Summary
+
+### 1. New "Gerir Ordens" screen 🛠️
+
+- Reached via a new icon on the ISIN list (`ISINTable.tsx`)
+- **Deliberately NOT subject to the Item #15/#19 automation trading limits** — manual/deliberate
+  action path, not automation; has its own independent validation instead (see below)
+- Two mutually-exclusive modes (radio toggle):
+  - **"Editar ordens existentes"** — edit (price/quantity) or cancel a pending order. T212 has no
+    "edit order" endpoint, so an edit is executed as cancel-then-create (accepted risk: if the
+    cancel succeeds but the recreate fails, the order is simply gone — surfaced via a
+    created/cancelled/error count, no silent failure)
+  - **"Criar novas ordens via parâmetros"** (default mode) — generates a Sell/Buy order ladder:
+    - Zone 1: Initial Price + Price Interval (bp) + Acc Y/N (compounding or not)
+    - Zone 2/3: Amount or Quantity (mutually exclusive toggle)
+    - Zone 4: Step + Multiplier — every Step-th order (1-indexed) has its Amount/Quantity
+      (never Price) multiplied by Multiplier, non-compounding across occurrences
+    - Zone 5: Number of Orders
+    - "APLICAR" matches the generated list against T212's live state (not against any locally
+      pending edits from the other mode): identical orders (side+price+quantity) are left alone,
+      the rest are cancelled/created as needed
+
+### 2. Per-ISIN price decimal precision 🔢
+
+- T212 never states how many decimals an instrument's price uses, and a parsed float can't
+  distinguish `166.80` from `166.8` — inferred instead from the raw JSON text of
+  `GET /equity/positions` (new `backend/utils/price_precision.py`)
+- Applied to the main ISIN list (Current Price / Average Price) and throughout the Manual
+  Orders screen — separate concept from the pre-existing `isins.quantity_precision`
+
+### 3. Remembers last-used generation params 💾
+
+- Full Sell+Buy param set persisted per ISIN (`isins.last_manual_order_params`, JSONB) on every
+  successful "GERAR", pre-fills the form on next visit — except Initial Price, which always
+  defaults to the current market price (the saved value may no longer make sense if the market
+  has moved since)
+
+### 4. Own validation, independent of automation limits ⚠️
+
+- 7 new `mo_*` thresholds in `app_parameters` (`db/manual_orders_validation_params.sql`),
+  independent per environment (DEMO/PROD), configurable in ConfigPage
+  (`ManualOrdersConfigSection.tsx`)
+- Only `mo_price_max_variation_pct` is a hard block; the other 6 are soft, confirm-to-proceed
+  alerts
+
+### 5. Side-fix: `db/prod_setup_consolidated.sql` schema drift 🧹
+
+- While building this feature, discovered the PROD from-scratch schema script was out of date
+  vs. the real running schema — `isins`/`strategies` still had a dangling `user_id` column from
+  before the single-user simplification, and `isins` was missing several columns
+  (`strategy_id`, `instrument_json`, `position_created_at`, wallet-impact fields, etc.)
+- Reconciled the script (file-only change — does not affect already-running databases)
+
+### 6. UI defaults tuned after initial rollout
+
+- Acc Price/Amount/Quantity flags default to "N" (was "Y")
+- Quantity mode is now the default (was Amount)
+- Amount/Quantity Interval defaults to 0 (was 10)
+- Screen now opens in "Criar novas ordens via parâmetros" mode by default
+- "Current Orders" card moved to the bottom of the screen (was at the top)
+
+---
+
+## 📌 Migrations — run manually, not all independently re-verified
+
+- `db/manual_orders_validation_params.sql` — confirmed run in DEMO and PROD by the user
+- `db/manual_orders_last_params.sql` (`isins.last_manual_order_params`) — run manually by the
+  user; confirm before relying on this column in a given environment
+- `db/prod_setup_consolidated.sql` — reconciled for future from-scratch environment rebuilds
+  only, not itself something to run against a live database
+
+See `CLAUDE.md` and `docs/KNOWLEDGE_BASE.md` for full technical detail, and `BACKLOG.md` Item #22
+for the complete commit-by-commit history.
+
+---
+
 # 📝 CHANGELOG - 2026-09-27 (Item #15 Phase 2 — PROD Environment Live)
 
 **Data:** 2026-09-27

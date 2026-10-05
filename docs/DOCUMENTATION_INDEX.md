@@ -91,5 +91,5 @@
 
 ---
 
-**Última Atualização:** 2026-09-27
-**Status:** Caminhos corrigidos; índice alinhado com `docs/t212-api/`
+**Última Atualização:** 2026-10-05
+**Status:** Caminhos corrigidos; índice alinhado com `docs/t212-api/`; ver `docs/KNOWLEDGE_BASE.md` para o Item #22 (Manual Orders / "Gerir Ordens")

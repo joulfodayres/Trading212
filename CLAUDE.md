@@ -778,6 +778,76 @@ npm run build
 
 ---
 
+## 🛠️ Item #22: Manual Orders — "Gerir Ordens" (Completed — 2026-10-05)
+
+Ecrã **manual, não automatizado** para gerir as ordens pendentes da T212 de um único ISIN.
+Acede-se por um ícone na lista de ISINs (`ISINTable.tsx`).
+
+⚠️ **Deliberadamente NÃO está sujeito aos limites de trading do Item #15/#19**
+(`max_buy_order_value`, `max_sell_order_value`, `max_daily_spend`) — decisão de produto
+explícita, por ser um caminho manual e deliberado, não automação. Tem a sua própria validação
+independente (ver mais abaixo).
+
+**Ficheiros principais:**
+- `backend/routes/manual_orders.py` — endpoints
+- `backend/services/manual_orders_service.py` — lógica de geração de séries + validação + matching
+- `backend/utils/price_precision.py` — inferência de casas decimais do preço (ver abaixo)
+- `frontend/src/pages/ManualOrdersPage.tsx` — ecrã
+- `frontend/src/components/ManualOrdersConfigSection.tsx` — thresholds de validação na ConfigPage
+
+**Dois modos (radio button, mutuamente exclusivos):**
+1. **"Editar ordens existentes"** — lista "Current Orders": editar (preço/quantidade) ou cancelar
+   uma ordem pendente. A T212 não tem endpoint de "editar ordem" — uma edição é sempre
+   `DELETE` da ordem antiga + `POST` de uma nova (risco aceite: se o `DELETE` tiver sucesso e o
+   `POST` falhar, fica-se sem a ordem).
+2. **"Criar novas ordens via parâmetros"** (modo por omissão) — gera uma escada de ordens
+   Sell/Buy a partir de parâmetros:
+   - **Zona 1** — Initial Price + Price Interval (bp) + Acc (Y/N, composto ou não)
+   - **Zona 2** — Amount (toggle Amount/Quantity)
+   - **Zona 3** — Quantity (mutuamente exclusivo com a Zona 2)
+   - **Zona 4** — Step + Multiplier: de `step` em `step` ordens (1-indexado), multiplica o
+     Amount/Quantity dessa ordem (nunca o Preço) pelo `multiplier`, sem acumular entre ocorrências.
+     `step=0` ou `multiplier=1` desativa (defaults)
+   - **Zona 5** — Number of Orders
+   - Botão **"APLICAR"** faz matching contra o estado real da T212 (não contra edições locais
+     pendentes do modo 1): ordem igual (tipo+preço+quantidade) fica inalterada; o resto é
+     cancelado/criado conforme necessário
+
+**Validação (própria, independente dos limites de automação):** 7 parâmetros `mo_*` em
+`app_parameters` (ver `db/manual_orders_validation_params.sql`), configuráveis na ConfigPage,
+independentes por ambiente (DEMO/PROD). Só `mo_price_max_variation_pct` bloqueia (hard block);
+as restantes 6 mostram um alerta único pedindo confirmação.
+
+**Precisão de casas decimais do preço** — por ISIN, inferida a partir do texto bruto do JSON
+devolvido pela T212 (`currentPrice`), porque a API nunca indica explicitamente quantas casas usa
+e um `float` não distingue `166.80` de `166.8`. Conceito **separado** de `isins.quantity_precision`
+(que é sobre a quantidade, não o preço) — não confundir os dois. Aplica-se também à lista
+principal de ISINs (Current Price / Average Price).
+
+**Últimos parâmetros usados** — gravados por ISIN (`isins.last_manual_order_params`, JSONB) a
+cada "GERAR" com sucesso, e usados para pré-preencher o formulário na próxima visita —
+**exceto** o Initial Price, que é sempre o preço de mercado atual no momento de abrir o ecrã
+(nunca o valor gravado), para evitar disparar logo o hard block de variação de preço.
+
+**Defaults atuais do formulário** (após ajustes finais): ecrã abre em "Criar novas ordens via
+parâmetros"; Acc Price/Amount/Quantity = "N"; modo Quantity (não Amount); Amount/Quantity
+Interval = 0; Step/Multiplier = 0/1 (desativado/sem efeito); Number of Orders = 3.
+
+**Migrations (ficheiro apenas, correr manualmente no Supabase SQL Editor):**
+- `db/manual_orders_validation_params.sql` — os 7 `mo_*` — confirmado corrido em DEMO e PROD
+- `db/manual_orders_last_params.sql` (`isins.last_manual_order_params`) — **corrida manualmente
+  pelo utilizador; confirmar antes de assumir que já está aplicada num ambiente específico**
+
+**Efeito colateral — correção de schema drift:** ao construir esta feature descobriu-se que
+`db/prod_setup_consolidated.sql` (script usado para recriar o schema de PROD do zero) estava
+desatualizado face ao schema real em uso — faltavam várias colunas em `isins`
+(`strategy_id`, `instrument_json`, `position_created_at`, campos `wi_*`, `quantity_precision`,
+etc.) e tanto `isins` como `strategies` tinham uma coluna `user_id` pendente de antes da
+simplificação para single-user. Reconciliado o ficheiro para refletir o schema real — relevante
+para quem precisar de recriar um ambiente (DEMO/PROD) do zero no futuro.
+
+---
+
 ## ✅ Checklist de Produção
 
 - ✅ Código em GitHub
@@ -794,6 +864,7 @@ npm run build
 - ✅ Autenticação JWT em ~35 endpoints (Item #20)
 - ✅ Ambiente PROD separado (Supabase + backend + frontend próprios) (Item #15)
 - ✅ Trading limits, auto-disable pós-deploy, alertas SMTP (Item #15/#21)
+- ✅ Gestão manual de ordens pendentes por ISIN (Item #22 — fora dos limites de automação, por desenho)
 - ⏳ Testes automatizados (Phase 5)
 - ⏳ Monitoring avançado (Phase 6)
 - ⏳ Backup strategy (Phase 6)
@@ -802,8 +873,8 @@ npm run build
 
 ## 👨‍💻 Desenvolvimento
 
-**Última atualização:** 2026-09-27
-**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21) concluídos
+**Última atualização:** 2026-10-05
+**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos
 **Próximo focus:** Ver `docs/KNOWLEDGE_BASE.md` e `BACKLOG.md` para o estado atualizado do backlog
 
 ---

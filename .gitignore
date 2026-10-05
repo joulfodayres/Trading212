@@ -39,6 +39,9 @@ env/
 *~
 .DS_Store
 
+# Microsoft Office lock/temp files (e.g. "~$ Prompts.docx" while a .docx is open)
+~$*
+
 # Node
 node_modules/
 package-lock.json

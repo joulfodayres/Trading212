@@ -216,6 +216,10 @@ Solution:
 
 ## 📋 Phase 5 Status
 
+> ⚠️ Esta tabela ficou desatualizada em várias sessões passadas (ver `BACKLOG.md` para o estado
+> real e atualizado — inclui também o Item #22, Manual Orders / "Gerir Ordens", concluído em
+> 2026-10-05, que não está refletido abaixo).
+
 | Item | Status | Documentation |
 |------|--------|----------------|
 | 1. Strategy Management | ✅ DONE | CODE_EXAMPLES.md, API_REFERENCE.md |

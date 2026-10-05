@@ -132,6 +132,16 @@
   4. Query fantasma a coluna `app_parameters.log_level` (já não existe) removida do ciclo do scheduler
 - ✅ SMTP validado em PROD
 
+### Item #22: Manual Orders — "Gerir Ordens" (Completed — 2026-10-05)
+- ✅ Ecrã manual para gerir ordens pendentes T212 de um ISIN — ícone na lista de ISINs
+- ✅ **Fora dos limites de automação (Item #15/#19) por desenho** — caminho manual/deliberado
+- ✅ Modo "Editar ordens existentes": editar (= cancel + recreate, T212 não tem endpoint de editar) ou cancelar uma ordem pendente
+- ✅ Modo "Criar novas ordens via parâmetros" (default): gera escada Sell/Buy (Zona 1 preço, Zona 2 amount, Zona 3 quantity, Zona 4 step/multiplier, Zona 5 número de ordens); "APLICAR" faz matching contra o estado real da T212 (inalterado/criar/cancelar)
+- ✅ Validação própria (7 thresholds `mo_*` em `app_parameters`, independentes por ambiente) — só `mo_price_max_variation_pct` bloqueia, as restantes são alertas soft
+- ✅ Precisão de casas decimais do preço inferida por ISIN a partir do JSON bruto da T212 (conceito separado de `isins.quantity_precision`)
+- ✅ Últimos parâmetros usados gravados por ISIN (`isins.last_manual_order_params`), pré-preenchem o formulário — exceto Initial Price, sempre o preço de mercado atual
+- ✅ **Side-fix:** `db/prod_setup_consolidated.sql` reconciliado (schema drift — `user_id` pendente em `isins`/`strategies`, várias colunas em falta)
+
 ### Phase 6: Charts & Statistics (Planned)
 - ⏳ Charts & statistics dashboard
 - ⏳ Knowledge Base maintenance (this document)
@@ -162,6 +172,8 @@
 - trades_balance (INTEGER, default: 0) - Grid level tracker
 - strategy_id (UUID, FK → strategies)
 - wi_currency, wi_current_value, wi_fx_impact, wi_total_cost, wi_unrealized_profit_loss (wallet impact)
+- quantity_precision (INTEGER, default: 3) - Decimal places T212 accepts for this ISIN's QUANTITY (unrelated to price precision, which is inferred on the fly, not stored — see Item #22)
+- last_manual_order_params (JSONB) - Last-used Sell+Buy param set from the "Gerir Ordens" screen (Item #22), pre-fills the form next visit (except Initial Price)
 - created_at, updated_at (TIMESTAMP)
 ```
 
@@ -215,6 +227,13 @@ Nota: `scheduler_enabled`, `max_positions_per_isin` e `log_level` foram removida
 (ver `db/migrations/drop_scheduler_enabled.sql` e `db/migrations/remove_unused_app_parameters_columns.sql`). O bug
 corrigido nesta sessão (Item #15 Phase 2) foi o scheduler continuar a fazer `SELECT log_level` numa coluna já inexistente
 em todos os ciclos, causando erro silencioso repetido.
+
+Nota (Item #22): esta tabela também tem os limites de trading da automação (`max_buy_order_value`,
+`max_sell_order_value`, `max_daily_spend` — ver `db/trading_limits_and_alerts.sql`) e os 7 thresholds
+`mo_price_max_variation_pct`, `mo_price_alert_variation_pct`, `mo_price_max_interval_bp`, `mo_amount_max`,
+`mo_amount_max_interval_pct`, `mo_quantity_max`, `mo_quantity_max_interval_pct` do Manual Orders
+(ver `db/manual_orders_validation_params.sql`) — estes últimos são **independentes** dos limites de
+automação acima (não se aplicam ao caminho manual "Gerir Ordens", por desenho).
 
 #### **Reports — Activity Statement import** (16 tables)
 ```sql
@@ -530,6 +549,9 @@ npm run dev
 - `routes/strategies.py` - Strategy CRUD
 - `routes/isins.py` - ISIN management
 - `routes/automation.py` - Automation control
+- `routes/manual_orders.py` - Manual Orders ("Gerir Ordens", Item #22)
+- `services/manual_orders_service.py` - Series generation + validation + matching logic
+- `utils/price_precision.py` - Per-ISIN price decimal precision inference
 
 **Frontend:**
 - `pages/DashboardPage.tsx` - Main layout
@@ -538,6 +560,8 @@ npm run dev
 - `components/Sidebar.tsx` - Navigation + global toggle
 - `hooks/useGlobalAutomation.ts` - Automation control
 - `hooks/useAutomation.ts` - ISIN automation toggle
+- `pages/ManualOrdersPage.tsx` - Manual Orders screen ("Gerir Ordens", Item #22)
+- `components/ManualOrdersConfigSection.tsx` - Manual Orders validation thresholds on ConfigPage
 
 ---
 
@@ -555,10 +579,11 @@ npm run dev
 10. ✅ Item #21: SMTP (DONE)
 11. ✅ Item #15 Phase 2: Ambiente PROD (DONE — 2026-09-27)
 12. ⏳ Follow-up: restringir por IP a API key T212 LIVE (bloqueado pela UI da T212, ver `BACKLOG.md`)
+13. ✅ Item #22: Manual Orders / "Gerir Ordens" (DONE — 2026-10-05)
 
 Ver `BACKLOG.md` para a lista completa e atualizada, com estimativas de esforço.
 
 ---
 
-**Last Updated:** 2026-09-27
-**Status:** DEMO e PROD ambos em produção; autenticação, trading safety e alertas SMTP implementados em ambos os ambientes
+**Last Updated:** 2026-10-05
+**Status:** DEMO e PROD ambos em produção; autenticação, trading safety, alertas SMTP e gestão manual de ordens (Item #22) implementados em ambos os ambientes
