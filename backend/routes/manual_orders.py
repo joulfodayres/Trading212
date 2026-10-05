@@ -87,6 +87,7 @@ class ScreenInitResponse(BaseModel):
     quantity_precision: int
     price_precision: int = 2
     validation_thresholds: dict
+    last_params: Optional[dict] = None
 
 
 class OrderEditItem(BaseModel):
@@ -186,6 +187,21 @@ class ValidationThresholdsRequest(BaseModel):
     mo_quantity_max_interval_pct: float = Field(..., ge=0)
 
 
+def _save_last_manual_order_params(isin: str, sell: "SideParams", buy: "SideParams") -> None:
+    """Persists the full Sell+Buy param set used for a successful "GERAR",
+    overwriting whatever was saved before (Item #22/#24 — no history kept).
+    Best-effort: a failure here must never break the generate response,
+    since the generation itself already succeeded and that's what matters
+    most to the caller."""
+    try:
+        db = _get_db()
+        db.client.table("isins").update({
+            "last_manual_order_params": {"sell": sell.dict(), "buy": buy.dict()},
+        }).eq("isin", isin).execute()
+    except Exception as e:
+        logger.warning(f"Failed to save last manual order params for {isin}: {e}")
+
+
 # ===== Endpoints =====
 
 @router.get("/config/validation-thresholds")
@@ -256,8 +272,9 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
         price_precision = position.get("_price_precision", 2)
 
         db = _get_db()
-        isin_row = db.client.table("isins").select("quantity_precision").eq("isin", isin).execute()
+        isin_row = db.client.table("isins").select("quantity_precision, last_manual_order_params").eq("isin", isin).execute()
         quantity_precision = (isin_row.data[0]["quantity_precision"] if isin_row.data else 3)
+        last_params = (isin_row.data[0].get("last_manual_order_params") if isin_row.data else None)
 
         ticker = instrument.get("ticker", "")
         all_orders = client.get_pending_orders()
@@ -292,6 +309,7 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
             quantity_precision=quantity_precision,
             price_precision=price_precision,
             validation_thresholds=_get_validation_thresholds(),
+            last_params=last_params,
         )
     except HTTPException:
         raise
@@ -411,6 +429,8 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
 
     all_orders = sell_orders + buy_orders
     all_orders.sort(key=lambda o: (0 if o["side"] == "SELL" else 1, -o["price"]))
+
+    _save_last_manual_order_params(request.isin, request.sell, request.buy)
 
     return GenerateOrdersResponse(
         hard_errors=[], soft_alerts=[], requires_confirmation=False,

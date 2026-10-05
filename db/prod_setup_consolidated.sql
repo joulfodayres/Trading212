@@ -101,6 +101,12 @@ CREATE TABLE isins (
   initial_trade BOOLEAN DEFAULT FALSE,
   trades_balance INTEGER DEFAULT 0,
 
+  -- Item #22/#24: last-used Manual Orders generation params (Zone 1-5
+  -- Sell/Buy), for pre-filling the "Gerir Ordens" form on next visit.
+  -- initial_price is deliberately excluded/never restored from this —
+  -- see backend/routes/manual_orders.py for why.
+  last_manual_order_params JSONB,
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

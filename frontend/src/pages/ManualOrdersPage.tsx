@@ -36,6 +36,7 @@ interface ScreenData {
   quantity_precision: number
   price_precision: number
   validation_thresholds: Record<string, number>
+  last_params?: { sell: Record<string, any>; buy: Record<string, any> } | null
 }
 
 interface SideParamsState {
@@ -75,6 +76,32 @@ const defaultSideParams = (initialPrice: string): SideParamsState => ({
   multiplier: '1',
   numberOfOrders: '3'
 })
+
+// Builds a SideParamsState from a saved (snake_case, backend) params object,
+// for pre-filling the form with the last-used generation params for this
+// ISIN. `initialPrice` is ALWAYS the current market price, never restored
+// from `saved` — see db/manual_orders_last_params.sql for why. Any field
+// that's null in `saved` (e.g. the inactive Amount/Quantity zone) falls
+// back to the hardcoded default for that specific field, so the inactive
+// zone still has a sensible placeholder if the user later toggles to it.
+const sideParamsFromSaved = (saved: Record<string, any>, initialPrice: string): SideParamsState => {
+  const d = defaultSideParams(initialPrice)
+  return {
+    initialPrice,
+    priceIntervalBp: saved.price_interval_bp != null ? String(saved.price_interval_bp) : d.priceIntervalBp,
+    accPrice: saved.acc_price ?? d.accPrice,
+    useAmount: saved.use_amount ?? d.useAmount,
+    initialAmount: saved.initial_amount != null ? String(saved.initial_amount) : d.initialAmount,
+    amountIntervalPct: saved.amount_interval_pct != null ? String(saved.amount_interval_pct) : d.amountIntervalPct,
+    accAmount: saved.acc_amount ?? d.accAmount,
+    initialQuantity: saved.initial_quantity != null ? String(saved.initial_quantity) : d.initialQuantity,
+    quantityIntervalPct: saved.quantity_interval_pct != null ? String(saved.quantity_interval_pct) : d.quantityIntervalPct,
+    accQuantity: saved.acc_quantity ?? d.accQuantity,
+    step: saved.step != null ? String(saved.step) : d.step,
+    multiplier: saved.multiplier != null ? String(saved.multiplier) : d.multiplier,
+    numberOfOrders: saved.number_of_orders != null ? String(saved.number_of_orders) : d.numberOfOrders
+  }
+}
 
 // ===== Component =====
 
@@ -127,8 +154,13 @@ export default function ManualOrdersPage() {
         initial[o.t212_order_id] = { mode: 'idle', newPrice: o.price, newQuantity: o.quantity }
       })
       setCoState(initial)
-      setSellParams(defaultSideParams(data.current_price.toFixed(data.price_precision)))
-      setBuyParams(defaultSideParams(data.current_price.toFixed(data.price_precision)))
+      const currentPriceStr = data.current_price.toFixed(data.price_precision)
+      setSellParams(
+        data.last_params?.sell ? sideParamsFromSaved(data.last_params.sell, currentPriceStr) : defaultSideParams(currentPriceStr)
+      )
+      setBuyParams(
+        data.last_params?.buy ? sideParamsFromSaved(data.last_params.buy, currentPriceStr) : defaultSideParams(currentPriceStr)
+      )
     } catch (err: any) {
       console.error('[ManualOrdersPage] Error loading screen:', err)
       setLoadError(err?.response?.data?.detail || 'Erro ao carregar dados do ecrã.')

@@ -86,6 +86,13 @@ class ISIN(Base):
     wi_total_cost = Column(Float)
     wi_unrealized_profit_loss = Column(Float)
 
+    # Manual Orders (Item #22/#24) - last-used Sell/Buy generation params,
+    # for pre-filling the "Gerir Ordens" form on next visit. Overwritten on
+    # every successful "GERAR". initial_price is deliberately excluded when
+    # restoring on the frontend (always defaults to current market price) -
+    # see backend/routes/manual_orders.py.
+    last_manual_order_params = Column(JSON)
+
     # Timestamps locais
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
