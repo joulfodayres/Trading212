@@ -120,6 +120,7 @@ class ExecuteCurrentOrdersResponse(BaseModel):
 
 class SideParams(BaseModel):
     initial_price: float
+    initial_gap_bp: float = Field(..., ge=0)
     price_interval_bp: float = Field(..., ge=0)
     acc_price: Literal["Y", "N"]
     use_amount: bool  # True = use amount zone, False = use quantity zone
@@ -417,14 +418,14 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
         request.sell.use_amount, request.sell.initial_amount, request.sell.amount_interval_pct, request.sell.acc_amount,
         request.sell.initial_quantity, request.sell.quantity_interval_pct, request.sell.acc_quantity,
         request.sell.number_of_orders, request.quantity_precision, request.price_precision,
-        request.sell.step, request.sell.multiplier,
+        request.sell.step, request.sell.multiplier, request.sell.initial_gap_bp,
     )
     buy_orders = mo_service.generate_side_orders(
         "BUY", request.buy.initial_price, request.buy.price_interval_bp, request.buy.acc_price,
         request.buy.use_amount, request.buy.initial_amount, request.buy.amount_interval_pct, request.buy.acc_amount,
         request.buy.initial_quantity, request.buy.quantity_interval_pct, request.buy.acc_quantity,
         request.buy.number_of_orders, request.quantity_precision, request.price_precision,
-        request.buy.step, request.buy.multiplier,
+        request.buy.step, request.buy.multiplier, request.buy.initial_gap_bp,
     )
 
     all_orders = sell_orders + buy_orders

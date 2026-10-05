@@ -63,6 +63,41 @@ def build_series(seed: float, interval: float, acc: str, n: int, direction: int,
     return values
 
 
+def build_price_series(
+    seed: float, initial_gap_bp: float, interval_bp: float, acc: str, n: int, direction: int
+) -> List[float]:
+    """
+    Builds the price progression for one side, where the FIRST order's gap
+    from Initial Price is `initial_gap_bp` (independent field) and every
+    subsequent order advances by `interval_bp` ("Price Interval") from
+    there.
+
+    - acc == "Y": compounds — order0 = seed*(1+direction*gap0/10000);
+      order_k = order_(k-1) * (1+direction*interval/10000) for k>=1.
+    - acc == "N": non-compounding — order_k's total basis-point offset from
+      seed is initial_gap_bp + k*interval_bp (k 0-indexed), applied once
+      against the original seed.
+
+    When initial_gap_bp == interval_bp (the default — new ISINs/forms
+    prefill Initial Gap to the same value as Price Interval), this is
+    numerically identical to the previous (pre-Initial-Gap) behaviour of
+    always shifting the first order by exactly one Price Interval.
+    """
+    if n <= 0:
+        return []
+    if acc == "Y":
+        values = []
+        prev = seed * (1 + direction * initial_gap_bp / 10000)
+        values.append(prev)
+        factor = 1 + direction * interval_bp / 10000
+        for _ in range(1, n):
+            prev = prev * factor
+            values.append(prev)
+        return values
+    else:
+        return [seed * (1 + direction * (initial_gap_bp + k * interval_bp) / 10000) for k in range(n)]
+
+
 def generate_side_orders(
     side: Side,
     initial_price: float,
@@ -80,12 +115,14 @@ def generate_side_orders(
     price_precision: int = 2,
     step: int = 0,
     multiplier: float = 1.0,
+    initial_gap_bp: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL).
 
-    The price series starts already shifted by one interval from
-    Initial Price (index_offset=1) — the first generated order is never
-    exactly at Initial Price, it's Initial Price + 1 interval. Amount and
+    The price series's first order is shifted from Initial Price by
+    `initial_gap_bp` (defaults to `price_interval_bp` if not given, which
+    reproduces the previous always-shift-by-one-interval behaviour); every
+    following order advances by `price_interval_bp` from there. Amount and
     Quantity series are NOT shifted: the first order's amount/quantity is
     exactly Initial Amount/Initial Quantity.
 
@@ -105,7 +142,8 @@ def generate_side_orders(
     backward compatible with callers that don't pass these.
     """
     price_direction = 1 if side == "SELL" else -1
-    prices = build_series(initial_price, price_interval_bp, acc_price, number_of_orders, price_direction, 10000, index_offset=1)
+    gap_bp = initial_gap_bp if initial_gap_bp is not None else price_interval_bp
+    prices = build_price_series(initial_price, gap_bp, price_interval_bp, acc_price, number_of_orders, price_direction)
 
     orders = []
     if use_amount:

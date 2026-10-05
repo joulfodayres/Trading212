@@ -41,6 +41,7 @@ interface ScreenData {
 
 interface SideParamsState {
   initialPrice: string
+  initialGapBp: string
   priceIntervalBp: string
   accPrice: 'Y' | 'N'
   useAmount: boolean
@@ -63,6 +64,7 @@ interface GeneratedOrder {
 
 const defaultSideParams = (initialPrice: string): SideParamsState => ({
   initialPrice,
+  initialGapBp: '50',
   priceIntervalBp: '50',
   accPrice: 'N',
   useAmount: false,
@@ -88,6 +90,7 @@ const sideParamsFromSaved = (saved: Record<string, any>, initialPrice: string): 
   const d = defaultSideParams(initialPrice)
   return {
     initialPrice,
+    initialGapBp: saved.initial_gap_bp != null ? String(saved.initial_gap_bp) : d.initialGapBp,
     priceIntervalBp: saved.price_interval_bp != null ? String(saved.price_interval_bp) : d.priceIntervalBp,
     accPrice: saved.acc_price ?? d.accPrice,
     useAmount: saved.use_amount ?? d.useAmount,
@@ -255,6 +258,7 @@ export default function ManualOrdersPage() {
 
   const buildSideParamsPayload = (p: SideParamsState) => ({
     initial_price: parseFloat(p.initialPrice) || 0,
+    initial_gap_bp: parseFloat(p.initialGapBp) || 0,
     price_interval_bp: parseFloat(p.priceIntervalBp) || 0,
     acc_price: p.accPrice,
     use_amount: p.useAmount,
@@ -395,6 +399,15 @@ export default function ManualOrdersPage() {
   const sortedCurrentOrders = sortOrders(screen.current_orders)
   const sortedNewOrders = sortOrders(newOrders)
 
+  const sellOrders = screen.current_orders.filter((o) => o.side === 'SELL')
+  const buyOrders = screen.current_orders.filter((o) => o.side === 'BUY')
+  const cheapestSell = sellOrders.length > 0 ? Math.min(...sellOrders.map((o) => o.price)) : null
+  const priciestBuy = buyOrders.length > 0 ? Math.max(...buyOrders.map((o) => o.price)) : null
+  const sellBuyGapPct =
+    cheapestSell != null && priciestBuy != null && priciestBuy !== 0
+      ? ((cheapestSell - priciestBuy) / priciestBuy) * 100
+      : null
+
   return (
     <div className="page-container">
       <Button variant="secondary" onClick={() => navigate('/dashboard')} icon={<ArrowLeft size={16} />} className="mb-4">
@@ -453,6 +466,28 @@ export default function ManualOrdersPage() {
               <input type="radio" name="mode" checked={mode === 'new'} onChange={() => requestModeChange('new')} />
               Criar novas ordens via parâmetros
             </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sell/Buy summary stats */}
+      <Card className="mb-6">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="text-xs uppercase text-t212-muted mb-1">Número de Sells</div>
+              <div className="font-semibold">{sellOrders.length}</div>
+            </div>
+            <div>
+              <div className="text-xs uppercase text-t212-muted mb-1">Número de Buys</div>
+              <div className="font-semibold">{buyOrders.length}</div>
+            </div>
+            <div>
+              <div className="text-xs uppercase text-t212-muted mb-1">Distância Sell mais barato → Buy mais caro</div>
+              <div className={`font-semibold ${sellBuyGapPct != null ? pctClass(sellBuyGapPct) : ''}`}>
+                {sellBuyGapPct != null ? fmtPct(sellBuyGapPct) : '-'}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -732,6 +767,9 @@ function SideParamsForm({
         </FieldRow>
         <FieldRow label="Price Interval (bp)">
           <input type="number" className="no-spinner" value={params.priceIntervalBp} onChange={(e) => update({ priceIntervalBp: e.target.value })} />
+        </FieldRow>
+        <FieldRow label="Initial Gap (bp)">
+          <input type="number" className="no-spinner" value={params.initialGapBp} onChange={(e) => update({ initialGapBp: e.target.value })} />
         </FieldRow>
         <FieldRow label="Acc. Price (Y/N)">
           <select value={params.accPrice} onChange={(e) => update({ accPrice: e.target.value as 'Y' | 'N' })}>
