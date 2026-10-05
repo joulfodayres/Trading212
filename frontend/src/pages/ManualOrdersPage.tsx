@@ -478,7 +478,7 @@ export default function ManualOrdersPage() {
       {/* 2.4 New Orders */}
       <Card className={`mb-10 ${mode !== 'new' ? 'opacity-40 pointer-events-none' : ''}`}>
         <CardHeader>
-          <CardTitle>New Orders</CardTitle>
+          <CardTitle>New Orders ({sortedNewOrders.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -528,7 +528,7 @@ export default function ManualOrdersPage() {
       {/* 2.2 Current Orders (moved to the end, per layout change) */}
       <Card className={`mb-10 ${mode !== 'existing' ? 'opacity-40 pointer-events-none' : ''}`}>
         <CardHeader>
-          <CardTitle>Current Orders</CardTitle>
+          <CardTitle>Current Orders ({sortedCurrentOrders.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

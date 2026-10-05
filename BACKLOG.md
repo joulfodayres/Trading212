@@ -1340,6 +1340,31 @@ Item #20 closed. Item #15 Phase 1 checklist item 8 unblocked.
 
 ---
 
+### Item #23: Manual Orders — Show order count above "New Orders" and "Current Orders" lists (NEW)
+**Priority:** Low (quick UI polish)
+**Effort:** ~0.5h
+**Context:** On the "Gerir Ordens" screen (Item #22), the user wants the total number of orders displayed at the top of each list — "Current Orders" and "New Orders" — in `frontend/src/pages/ManualOrdersPage.tsx`. Likely a small label/badge next to each card's title (e.g. "Current Orders (4)" / "New Orders (6)"), similar to counts already shown elsewhere in the app.
+**Status:** 📝 Not started — requested 2026-10-05, added to backlog only (no implementation yet).
+
+---
+
+### Item #24: Make T212 rate-limit waiting non-blocking for the Uvicorn worker (NEW)
+**Priority:** Medium (production stability / incident follow-up)
+**Effort:** ~2-3h
+**Context:** Diagnosed on 2026-10-05 from a real PROD incident: Render logged `Instance failed: HTTP health check failed (timed out after 5 seconds) while running your code` at 08:37, recovering at 08:38 — coinciding with the user clicking "Aplicar" on the Manual Orders screen (Item #22) for an ISIN. Root cause: `Trading212Client` (`backend/api/trading212.py`) uses the synchronous `requests` library, and `_handle_rate_limit()` calls a blocking `time.sleep(wait_seconds + 1)` when T212's rate-limit headers indicate the limit is about to be hit. Routes that call this client are `async def` (FastAPI/Uvicorn), but call the client's sync methods directly without `await`/`asyncio.to_thread` — so a sequence of several DELETE/POST calls during "Aplicar" (cancel+recreate orders) can block the **single Uvicorn worker** process for long enough that Render's own `/health` check (5s timeout) also can't be served, causing a false "unhealthy" instance report and likely a brief restart. The screen's own auto-refresh (`GET /{isin}/screen`, called right after a successful "Aplicar") then lands in that restart/recovery window with no process listening — browser reports a CORS error (misleading: no response ever reached the app, so no CORS headers either), and nothing is logged by the app itself (the request never reached application code).
+
+**Chosen approach (lowest-risk option identified, not yet implemented):** change `_handle_rate_limit()` to **return** the required wait time (seconds) instead of sleeping itself (keeps the sync `Trading212Client` class free of event-loop assumptions). In the `async def` routes that call it sequentially (`backend/routes/manual_orders.py` — `apply_new_orders`, `execute_current_order_changes`, possibly `get_screen_data`), await `asyncio.sleep(wait_seconds)` between calls when a wait is indicated — a real `await` yields control back to the event loop, so the Uvicorn worker keeps answering other requests (including Render's health check) during the wait, unlike a blocking `time.sleep()`. Crucially, this preserves waiting the *exact* time T212 indicates (no loss of rate-limit protection, unlike simply shortening/removing the sleep). Callers outside the request/response cycle — `AutomationEngine` via `services/scheduler.py`'s `BackgroundScheduler` thread — are NOT part of the main asyncio event loop and should keep using `time.sleep()` unchanged; no risk there.
+
+**Alternatives considered and rejected:**
+- Shortening/removing the sleep outright — trades the problem for more frequent real 429 errors from T212, without guaranteeing against the same blocking issue.
+- Multiple Uvicorn workers (`--workers 2+`) — rejected: `SchedulerService`/`BackgroundScheduler` is a per-process in-memory global (`main.py`'s `scheduler_service`); multiple workers would each run their own independent automation cycle in parallel, risking duplicate real-money orders in PROD. Would need an architectural rework (distributed lock, or separate worker service) before being safe.
+- Render health-check timeout/threshold tuning — likely gated behind a paid plan tier (not confirmed available on the Free plan this project uses); doesn't fix the root cause anyway, just gives more tolerance.
+- Wrapping the whole `Trading212Client` in `asyncio.to_thread(...)` everywhere — broader blast radius (touches automation + ISINs + Manual Orders call sites); the chosen approach is more surgical.
+
+**Status:** 📝 Not started — diagnosed and discussed 2026-10-05, added to backlog only (no implementation yet).
+
+---
+
 **Last Updated:** 2026-10-05
-**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open; Item #22 (Manual Orders) shipped outside the original Phase 5 plan
-**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE | Item #22 (Manual Orders / "Gerir Ordens") ✅ DONE (2026-10-05)
+**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open; Item #22 (Manual Orders) shipped outside the original Phase 5 plan; Items #23-#24 queued
+**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE | Item #22 (Manual Orders / "Gerir Ordens") ✅ DONE (2026-10-05) | Item #23 (order counts in Manual Orders lists) added to backlog | Item #24 (non-blocking T212 rate-limit wait — PROD health-check incident) added to backlog

@@ -79,10 +79,15 @@ class SchedulerService:
                 f"✅ Scheduler iniciado com sucesso. Intervalo: {interval}s"
             )
 
-            # [NEW] Run first cycle immediately on startup
+            # [NEW] Run first cycle immediately on startup.
+            # NOTE: start() already runs inside the main asyncio event loop (FastAPI
+            # lifespan), so we must `await` the coroutine directly here — calling
+            # run_cycle_wrapper() (which creates+runs its OWN event loop, safe only
+            # from APScheduler's background thread) would raise
+            # "Cannot run the event loop while another loop is running".
             self.logger.info("🚀 Executando primeira ciclo imediatamente no arranque")
             try:
-                run_cycle_wrapper()
+                await self.automation_engine.run_cycle()
             except Exception as e:
                 self.logger.error(f"❌ Erro ao executar primeira ciclo: {e}", exc_info=True)
                 # Don't fail startup if first cycle fails, just log error
