@@ -1,3 +1,30 @@
+# 📝 CHANGELOG - 2026-10-05 (continuação) — Fix scheduler PROD + Item #23/#24
+
+**Status:** ✅ Fix de scheduler + Item #23 shipped (DEMO+PROD) | Item #24 diagnosticado, por implementar
+
+## Fix: crash no arranque do scheduler em PROD
+
+`services/scheduler.py` — o primeiro ciclo de automação disparado no arranque reutilizava o
+wrapper síncrono pensado para a thread de background do APScheduler (cria o seu próprio event
+loop), mas `start()` já corre dentro do loop principal do FastAPI — causava
+`RuntimeError: Cannot run the event loop while another loop is running` logo no arranque em
+PROD. Corrigido para `await self.automation_engine.run_cycle()` diretamente no primeiro ciclo.
+
+## Item #23 — Contagem de ordens no ecrã "Gerir Ordens"
+
+`ManualOrdersPage.tsx` — títulos das secções "New Orders"/"Current Orders" agora mostram o total
+de itens, ex: `New Orders (6)`.
+
+## Item #24 — Diagnosticado, não implementado
+
+Incidente em PROD (08:37-08:38): health check do Render falhou por timeout durante um "Aplicar"
+no ecrã de Gestão de Ordens, por `Trading212Client` bloquear o único worker Uvicorn com
+`time.sleep()` síncrono no tratamento de rate-limit da T212. Solução identificada (fazer
+`_handle_rate_limit()` devolver o tempo de espera e as rotas `async` fazerem
+`await asyncio.sleep(...)`) documentada no `BACKLOG.md`, ainda por implementar.
+
+---
+
 # 📝 CHANGELOG - 2026-10-05 (Item #22 — Manual Orders / "Gerir Ordens")
 
 **Data:** 2026-10-05

@@ -848,6 +848,41 @@ para quem precisar de recriar um ambiente (DEMO/PROD) do zero no futuro.
 
 ---
 
+## 🐛 Fix: Primeiro ciclo de automação no arranque (2026-10-05)
+
+`services/scheduler.py` — `SchedulerService.start()` disparava o primeiro ciclo imediato no
+arranque (`run_cycle_wrapper()`), que cria o seu **próprio event loop** com
+`asyncio.new_event_loop()` + `run_until_complete()`. Isso só é seguro a correr na thread de
+background do APScheduler (onde não há loop a correr). Mas `start()` já corre **dentro** do loop
+principal do FastAPI (lifespan), por isso ao chamar `run_cycle_wrapper()` diretamente dava
+`RuntimeError: Cannot run the event loop while another loop is running` em PROD logo no arranque.
+**Fix:** `start()` passou a fazer `await self.automation_engine.run_cycle()` diretamente para o
+primeiro ciclo (já está em contexto `async`), mantendo `run_cycle_wrapper()` inalterado para os
+ciclos periódicos seguintes (esses sim correm na thread do APScheduler, onde o wrapper continua
+correto).
+
+**Item #23 (Manual Orders):** as listas "New Orders" e "Current Orders" no ecrã de Gestão de
+Ordens passaram a mostrar o total de itens no título (ex: `New Orders (6)`).
+
+**Item #24 (diagnosticado, não implementado):** incidente em PROD (2026-10-05, 08:37-08:38) —
+health check do Render falhou por timeout (5s) "a correr o teu código" durante um "Aplicar" no
+ecrã de Gestão de Ordens. Causa: `Trading212Client` (`backend/api/trading212.py`) usa `requests`
+síncrono, e `_handle_rate_limit()` faz `time.sleep()` bloqueante quando a T212 sinaliza rate
+limit — como as rotas (`manual_orders.py`) são `async def` mas chamam o cliente síncrono
+diretamente (sem `await`/`asyncio.to_thread`), uma sequência de vários DELETE/POST no "Aplicar"
+pode bloquear o **único worker Uvicorn** tempo suficiente para o health check do Render também
+falhar — o Render marca a instância unhealthy e reinicia; o refresh automático do ecrã
+(`GET /{isin}/screen`, chamado logo a seguir ao "Aplicar" ter respondido com sucesso) cai nessa
+janela de reinício, sem resposta (nem cabeçalhos CORS, daí o erro de CORS "fantasma" no browser),
+e sem nada nos logs da app (o pedido nunca chegou a ser processado). Solução escolhida (ver
+`BACKLOG.md` Item #24 para alternativas consideradas e rejeitadas): `_handle_rate_limit()` passa
+a **devolver** o tempo de espera em vez de dormir; as rotas `async` fazem
+`await asyncio.sleep(wait_seconds)` entre chamadas sequenciais — espera o tempo exato indicado
+pela T212 sem bloquear o event loop. O `AutomationEngine`/scheduler (thread separada do
+APScheduler) mantém `time.sleep()` sem alterações, sem risco adicional aí.
+
+---
+
 ## ✅ Checklist de Produção
 
 - ✅ Código em GitHub
@@ -865,6 +900,8 @@ para quem precisar de recriar um ambiente (DEMO/PROD) do zero no futuro.
 - ✅ Ambiente PROD separado (Supabase + backend + frontend próprios) (Item #15)
 - ✅ Trading limits, auto-disable pós-deploy, alertas SMTP (Item #15/#21)
 - ✅ Gestão manual de ordens pendentes por ISIN (Item #22 — fora dos limites de automação, por desenho)
+- ✅ Fix: primeiro ciclo de automação no arranque já não crasha PROD (2026-10-05)
+- ⏳ Item #24: espera de rate-limit T212 não-bloqueante (diagnosticado, não implementado)
 - ⏳ Testes automatizados (Phase 5)
 - ⏳ Monitoring avançado (Phase 6)
 - ⏳ Backup strategy (Phase 6)
@@ -874,7 +911,7 @@ para quem precisar de recriar um ambiente (DEMO/PROD) do zero no futuro.
 ## 👨‍💻 Desenvolvimento
 
 **Última atualização:** 2026-10-05
-**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos
+**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos; fix de arranque do scheduler em PROD + Item #23 (contagem de ordens) concluídos; Item #24 (rate-limit não-bloqueante) diagnosticado e documentado, por implementar
 **Próximo focus:** Ver `docs/KNOWLEDGE_BASE.md` e `BACKLOG.md` para o estado atualizado do backlog
 
 ---
