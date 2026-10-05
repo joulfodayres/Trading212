@@ -78,6 +78,8 @@ def generate_side_orders(
     number_of_orders: int,
     quantity_precision: int,
     price_precision: int = 2,
+    step: int = 0,
+    multiplier: float = 1.0,
 ) -> List[Dict[str, Any]]:
     """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL).
 
@@ -91,6 +93,16 @@ def generate_side_orders(
     per-ISIN from T212's raw currentPrice (see utils/price_precision.py),
     NOT a hardcoded 2dp. Falls back to 2 if the caller doesn't pass one
     (backward-compatible default).
+
+    Zone 4 (Multiplier): orders are 1-indexed (order i, 0-indexed in this
+    loop, is the (i+1)-th generated order). Every order whose 1-indexed
+    position is an exact multiple of `step` has its base Amount or
+    Quantity value (whichever is active, per `use_amount`) multiplied by
+    `multiplier` BEFORE rounding — applied independently to the normal
+    series value at that index (NOT compounding/accumulating across
+    successive step occurrences). Price is never affected. step=0 (or any
+    non-positive value) or multiplier=1.0 is a no-op, so this is fully
+    backward compatible with callers that don't pass these.
     """
     price_direction = 1 if side == "SELL" else -1
     prices = build_series(initial_price, price_interval_bp, acc_price, number_of_orders, price_direction, 10000, index_offset=1)
@@ -99,12 +111,18 @@ def generate_side_orders(
     if use_amount:
         amounts = build_series(initial_amount, amount_interval_pct, acc_amount, number_of_orders, 1, 100)
         for i in range(number_of_orders):
-            qty = round(amounts[i] / prices[i], quantity_precision)
+            amount = amounts[i]
+            if step > 0 and (i + 1) % step == 0:
+                amount *= multiplier
+            qty = round(amount / prices[i], quantity_precision)
             orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
     else:
         quantities = build_series(initial_quantity, quantity_interval_pct, acc_quantity, number_of_orders, 1, 100)
         for i in range(number_of_orders):
-            qty = round(quantities[i], quantity_precision)
+            quantity = quantities[i]
+            if step > 0 and (i + 1) % step == 0:
+                quantity *= multiplier
+            qty = round(quantity, quantity_precision)
             orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
     return orders
 

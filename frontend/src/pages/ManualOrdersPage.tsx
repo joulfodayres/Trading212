@@ -49,6 +49,8 @@ interface SideParamsState {
   initialQuantity: string
   quantityIntervalPct: string
   accQuantity: 'Y' | 'N'
+  step: string
+  multiplier: string
   numberOfOrders: string
 }
 
@@ -69,6 +71,8 @@ const defaultSideParams = (initialPrice: string): SideParamsState => ({
   initialQuantity: '1',
   quantityIntervalPct: '10',
   accQuantity: 'Y',
+  step: '0',
+  multiplier: '1',
   numberOfOrders: '3'
 })
 
@@ -228,6 +232,8 @@ export default function ManualOrdersPage() {
     initial_quantity: !p.useAmount ? parseFloat(p.initialQuantity) || 0 : null,
     quantity_interval_pct: !p.useAmount ? parseFloat(p.quantityIntervalPct) || 0 : null,
     acc_quantity: !p.useAmount ? p.accQuantity : null,
+    step: parseInt(p.step) || 0,
+    multiplier: parseFloat(p.multiplier) || 1,
     number_of_orders: parseInt(p.numberOfOrders) || 1
   })
 
@@ -754,8 +760,24 @@ function SideParamsForm({
         </FieldRow>
       </div>
 
+      <div className="mb-3 pb-3 border-b border-dashed border-t212-border">
+        <div className="text-[10px] uppercase text-t212-muted mb-2">Zona 4 — Multiplier</div>
+        <FieldRow label="Step">
+          <input type="number" className="no-spinner" value={params.step} onChange={(e) => update({ step: e.target.value })} />
+        </FieldRow>
+        <FieldRow label="Multiplier">
+          <input
+            type="number"
+            step="0.01"
+            className="no-spinner"
+            value={params.multiplier}
+            onChange={(e) => update({ multiplier: e.target.value })}
+          />
+        </FieldRow>
+      </div>
+
       <div>
-        <div className="text-[10px] uppercase text-t212-muted mb-2">Zona 4</div>
+        <div className="text-[10px] uppercase text-t212-muted mb-2">Zona 5</div>
         <FieldRow label="Number of Orders">
           <input
             type="number"
