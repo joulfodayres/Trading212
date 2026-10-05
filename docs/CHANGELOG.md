@@ -1,3 +1,24 @@
+# 📝 CHANGELOG - 2026-10-05 (continuação 2) — Item #25: Sell/Buy stats + Initial Gap (bp)
+
+**Status:** ✅ Shipped (DEMO+PROD)
+
+## Item #25 — Ecrã "Gerir Ordens": resumo Sell/Buy + novo parâmetro Initial Gap (bp)
+
+`ManualOrdersPage.tsx` / `manual_orders.py` / `manual_orders_service.py`:
+
+1. **Resumo Sell/Buy** — novo cartão, antes das listas "New Orders"/"Current Orders", com:
+   Número de Sells, Número de Buys, e a distância % entre o Sell mais barato e o Buy mais caro
+   (calculado a partir das Current Orders reais da T212, carregadas no load do ecrã).
+2. **Novo parâmetro "Initial Gap (bp)"** (Sell e Buy, logo a seguir a "Price Interval (bp)") —
+   define o gap de preço aplicado só à primeira ordem gerada; as restantes seguem o "Price
+   Interval" normalmente a partir daí. Backend: `build_price_series()` substitui o antigo
+   `index_offset=1` fixo de `build_series()` (que assumia sempre "1º order = +1 interval");
+   `initial_gap_bp` é opcional na request e, se omitido, assume o valor de `price_interval_bp`
+   — reproduz exatamente o comportamento antigo, 100% backward-compatible com chamadas
+   existentes. Default do formulário: `50bp` (igual ao default de Price Interval).
+
+---
+
 # 📝 CHANGELOG - 2026-10-05 (continuação) — Fix scheduler PROD + Item #23/#24
 
 **Status:** ✅ Fix de scheduler + Item #23 shipped (DEMO+PROD) | Item #24 diagnosticado, por implementar

@@ -881,6 +881,16 @@ a **devolver** o tempo de espera em vez de dormir; as rotas `async` fazem
 pela T212 sem bloquear o event loop. O `AutomationEngine`/scheduler (thread separada do
 APScheduler) mantém `time.sleep()` sem alterações, sem risco adicional aí.
 
+**Item #25 (Manual Orders — Sell/Buy stats + Initial Gap, 2026-10-05):** no ecrã "Gerir Ordens",
+novo cartão de resumo antes das listas "New Orders"/"Current Orders" com Número de Sells, Número
+de Buys e a distância % entre o Sell mais barato e o Buy mais caro (a partir das Current Orders
+reais da T212). Novo parâmetro **"Initial Gap (bp)"** em Sell e Buy, logo a seguir a "Price
+Interval (bp)": define o gap de preço só da primeira ordem gerada; as restantes seguem o Price
+Interval normalmente a partir daí. `manual_orders_service.py` ganhou `build_price_series()`
+(substitui o `index_offset=1` fixo do antigo `build_series()` para preço); `initial_gap_bp` é
+opcional na request — se omitido assume `price_interval_bp`, reproduzindo exatamente o
+comportamento anterior (backward-compatible). Default do formulário: `50bp`.
+
 ---
 
 ## ✅ Checklist de Produção
@@ -901,6 +911,7 @@ APScheduler) mantém `time.sleep()` sem alterações, sem risco adicional aí.
 - ✅ Trading limits, auto-disable pós-deploy, alertas SMTP (Item #15/#21)
 - ✅ Gestão manual de ordens pendentes por ISIN (Item #22 — fora dos limites de automação, por desenho)
 - ✅ Fix: primeiro ciclo de automação no arranque já não crasha PROD (2026-10-05)
+- ✅ Gerir Ordens: resumo Sell/Buy + parâmetro Initial Gap (bp) (Item #25)
 - ⏳ Item #24: espera de rate-limit T212 não-bloqueante (diagnosticado, não implementado)
 - ⏳ Testes automatizados (Phase 5)
 - ⏳ Monitoring avançado (Phase 6)
@@ -911,7 +922,7 @@ APScheduler) mantém `time.sleep()` sem alterações, sem risco adicional aí.
 ## 👨‍💻 Desenvolvimento
 
 **Última atualização:** 2026-10-05
-**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos; fix de arranque do scheduler em PROD + Item #23 (contagem de ordens) concluídos; Item #24 (rate-limit não-bloqueante) diagnosticado e documentado, por implementar
+**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos; fix de arranque do scheduler em PROD + Item #23 (contagem de ordens) + Item #25 (resumo Sell/Buy + Initial Gap) concluídos; Item #24 (rate-limit não-bloqueante) diagnosticado e documentado, por implementar
 **Próximo focus:** Ver `docs/KNOWLEDGE_BASE.md` e `BACKLOG.md` para o estado atualizado do backlog
 
 ---
