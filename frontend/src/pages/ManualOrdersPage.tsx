@@ -64,14 +64,14 @@ interface GeneratedOrder {
 const defaultSideParams = (initialPrice: string): SideParamsState => ({
   initialPrice,
   priceIntervalBp: '50',
-  accPrice: 'Y',
-  useAmount: true,
+  accPrice: 'N',
+  useAmount: false,
   initialAmount: '50',
-  amountIntervalPct: '10',
-  accAmount: 'Y',
+  amountIntervalPct: '0',
+  accAmount: 'N',
   initialQuantity: '1',
-  quantityIntervalPct: '10',
-  accQuantity: 'Y',
+  quantityIntervalPct: '0',
+  accQuantity: 'N',
   step: '0',
   multiplier: '1',
   numberOfOrders: '3'
@@ -113,7 +113,7 @@ export default function ManualOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [mode, setMode] = useState<'existing' | 'new'>('existing')
+  const [mode, setMode] = useState<'existing' | 'new'>('new')
 
   // Current Orders state
   const [coState, setCoState] = useState<Record<number, CurrentOrderUiState>>({})
@@ -457,8 +457,76 @@ export default function ManualOrdersPage() {
         </CardContent>
       </Card>
 
-      {/* 2.2 Current Orders */}
-      <Card className={`mb-6 ${mode !== 'existing' ? 'opacity-40 pointer-events-none' : ''}`}>
+      {/* 2.3 Parameters */}
+      <Card className={`mb-6 ${mode !== 'new' ? 'opacity-40 pointer-events-none' : ''}`}>
+        <CardHeader>
+          <CardTitle>Parâmetros — gerar novas ordens</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-6">
+            <SideParamsForm label="SELL" colorClass="text-t212-error" params={sellParams} setParams={setSellParams} pricePrecision={screen.price_precision} />
+            <SideParamsForm label="BUY" colorClass="text-t212-success" params={buyParams} setParams={setBuyParams} pricePrecision={screen.price_precision} />
+          </div>
+          <div className="flex justify-center mt-4">
+            <Button variant="primary" isLoading={generating} onClick={() => doGenerate(false)}>
+              GERAR novas ordens
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2.4 New Orders */}
+      <Card className={`mb-10 ${mode !== 'new' ? 'opacity-40 pointer-events-none' : ''}`}>
+        <CardHeader>
+          <CardTitle>New Orders</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="table w-full">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Preço</th>
+                  <th>Quantidade</th>
+                  <th>Var. % vs Initial Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedNewOrders.map((o, idx) => {
+                  const refPrice = o.side === 'SELL' ? parseFloat(sellParams.initialPrice) || 0 : parseFloat(buyParams.initialPrice) || 0
+                  const variation = refPrice ? ((o.price - refPrice) / refPrice) * 100 : 0
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <span className={o.side === 'SELL' ? 'text-t212-error font-bold text-xs' : 'text-t212-success font-bold text-xs'}>
+                          {o.side}
+                        </span>
+                      </td>
+                      <td>{o.price.toFixed(screen.price_precision)}</td>
+                      <td>{o.quantity.toFixed(screen.quantity_precision)}</td>
+                      <td className={pctClass(variation)}>{fmtPct(variation)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {sortedNewOrders.length === 0 && (
+              <p className="text-center text-t212-muted py-4 text-sm">
+                Ainda sem ordens geradas. Define os parâmetros acima e clica "GERAR".
+              </p>
+            )}
+          </div>
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-xs text-t212-muted">{applyResultMsg}</span>
+            <Button variant="primary" isLoading={applying} onClick={() => handleApplyNew(false)}>
+              APLICAR (matching com T212)
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2.2 Current Orders (moved to the end, per layout change) */}
+      <Card className={`mb-10 ${mode !== 'existing' ? 'opacity-40 pointer-events-none' : ''}`}>
         <CardHeader>
           <CardTitle>Current Orders</CardTitle>
         </CardHeader>
@@ -596,74 +664,6 @@ export default function ManualOrdersPage() {
                 EXECUTAR ({pendingCoCount()})
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 2.3 Parameters */}
-      <Card className={`mb-6 ${mode !== 'new' ? 'opacity-40 pointer-events-none' : ''}`}>
-        <CardHeader>
-          <CardTitle>Parâmetros — gerar novas ordens</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <SideParamsForm label="SELL" colorClass="text-t212-error" params={sellParams} setParams={setSellParams} pricePrecision={screen.price_precision} />
-            <SideParamsForm label="BUY" colorClass="text-t212-success" params={buyParams} setParams={setBuyParams} pricePrecision={screen.price_precision} />
-          </div>
-          <div className="flex justify-center mt-4">
-            <Button variant="primary" isLoading={generating} onClick={() => doGenerate(false)}>
-              GERAR novas ordens
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 2.4 New Orders */}
-      <Card className={`mb-10 ${mode !== 'new' ? 'opacity-40 pointer-events-none' : ''}`}>
-        <CardHeader>
-          <CardTitle>New Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="table w-full">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Preço</th>
-                  <th>Quantidade</th>
-                  <th>Var. % vs Initial Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedNewOrders.map((o, idx) => {
-                  const refPrice = o.side === 'SELL' ? parseFloat(sellParams.initialPrice) || 0 : parseFloat(buyParams.initialPrice) || 0
-                  const variation = refPrice ? ((o.price - refPrice) / refPrice) * 100 : 0
-                  return (
-                    <tr key={idx}>
-                      <td>
-                        <span className={o.side === 'SELL' ? 'text-t212-error font-bold text-xs' : 'text-t212-success font-bold text-xs'}>
-                          {o.side}
-                        </span>
-                      </td>
-                      <td>{o.price.toFixed(screen.price_precision)}</td>
-                      <td>{o.quantity.toFixed(screen.quantity_precision)}</td>
-                      <td className={pctClass(variation)}>{fmtPct(variation)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {sortedNewOrders.length === 0 && (
-              <p className="text-center text-t212-muted py-4 text-sm">
-                Ainda sem ordens geradas. Define os parâmetros acima e clica "GERAR".
-              </p>
-            )}
-          </div>
-          <div className="flex justify-between items-center mt-3">
-            <span className="text-xs text-t212-muted">{applyResultMsg}</span>
-            <Button variant="primary" isLoading={applying} onClick={() => handleApplyNew(false)}>
-              APLICAR (matching com T212)
-            </Button>
           </div>
         </CardContent>
       </Card>
