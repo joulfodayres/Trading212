@@ -24,6 +24,12 @@ interface CurrentOrderUiState {
   mode: 'idle' | 'editing' | 'edited' | 'deleted'
   newPrice: number
   newQuantity: number
+  // Snapshot of mode/newPrice/newQuantity taken right before entering 'editing',
+  // so Esc/✗ can restore exactly that (not necessarily the original T212 values —
+  // e.g. editing an already-'edited' row and pressing Esc must keep the previous edit).
+  preEditMode?: 'idle' | 'edited'
+  preEditPrice?: number
+  preEditQuantity?: number
 }
 
 interface ScreenData {
@@ -209,7 +215,24 @@ export default function ManualOrdersPage() {
   }
 
   const cancelEdit = (o: CurrentOrder) => {
-    updateCoState(o.t212_order_id, { mode: 'idle', newPrice: o.price, newQuantity: o.quantity })
+    const s = coState[o.t212_order_id]
+    const restoreMode = s?.preEditMode ?? 'idle'
+    const restorePrice = s?.preEditPrice ?? o.price
+    const restoreQuantity = s?.preEditQuantity ?? o.quantity
+    updateCoState(o.t212_order_id, { mode: restoreMode, newPrice: restorePrice, newQuantity: restoreQuantity })
+  }
+
+  // Item #31 fix: entering edit mode snapshots the row's current state (mode/price/qty) so
+  // Esc/✗ can restore exactly that — not the original T212 values — when editing a row that
+  // was already marked 'edited'.
+  const startEditing = (o: CurrentOrder) => {
+    const s = coState[o.t212_order_id]
+    updateCoState(o.t212_order_id, {
+      mode: 'editing',
+      preEditMode: s?.mode === 'edited' ? 'edited' : 'idle',
+      preEditPrice: s?.mode === 'edited' ? s.newPrice : o.price,
+      preEditQuantity: s?.mode === 'edited' ? s.newQuantity : o.quantity
+    })
   }
 
   const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, o: CurrentOrder) => {
@@ -435,8 +458,8 @@ export default function ManualOrdersPage() {
   const sortedCurrentOrders = sortOrders(screen.current_orders)
   const sortedNewOrders = sortOrders(newOrders)
 
-  const sellOrders = screen.current_orders.filter((o) => o.side === 'SELL')
-  const buyOrders = screen.current_orders.filter((o) => o.side === 'BUY')
+  const sellOrders = screen.current_orders.filter((o) => o.side === 'SELL' && !o.is_protected)
+  const buyOrders = screen.current_orders.filter((o) => o.side === 'BUY' && !o.is_protected)
   const cheapestSell = sellOrders.length > 0 ? Math.min(...sellOrders.map((o) => o.price)) : null
   const priciestBuy = buyOrders.length > 0 ? Math.max(...buyOrders.map((o) => o.price)) : null
   const sellBuyGapPct =
@@ -731,7 +754,7 @@ export default function ManualOrdersPage() {
                             )}
                             <button
                               className="border border-t212-border rounded px-2 py-0.5 text-xs ml-1"
-                              onClick={() => updateCoState(o.t212_order_id, { mode: 'editing' })}
+                              onClick={() => startEditing(o)}
                             >
                               ✏️
                             </button>
