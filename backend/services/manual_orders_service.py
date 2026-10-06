@@ -116,6 +116,7 @@ def generate_side_orders(
     step: int = 0,
     multiplier: float = 1.0,
     initial_gap_bp: Optional[float] = None,
+    initial_step: int = 1,
 ) -> List[Dict[str, Any]]:
     """Generates `number_of_orders` {side, price, quantity} dicts for one side (BUY or SELL).
 
@@ -133,24 +134,32 @@ def generate_side_orders(
 
     Zone 4 (Multiplier): orders are 1-indexed (order i, 0-indexed in this
     loop, is the (i+1)-th generated order). Every order whose 1-indexed
-    position is an exact multiple of `step` has its base Amount or
-    Quantity value (whichever is active, per `use_amount`) multiplied by
-    `multiplier` BEFORE rounding — applied independently to the normal
-    series value at that index (NOT compounding/accumulating across
-    successive step occurrences). Price is never affected. step=0 (or any
-    non-positive value) or multiplier=1.0 is a no-op, so this is fully
-    backward compatible with callers that don't pass these.
+    position is an exact multiple of `step` AND is >= `initial_step` has its
+    base Amount or Quantity value (whichever is active, per `use_amount`)
+    multiplied by `multiplier` BEFORE rounding — applied independently to
+    the normal series value at that index (NOT compounding/accumulating
+    across successive step occurrences). Price is never affected. step=0
+    (or any non-positive value) or multiplier=1.0 is a no-op, so this is
+    fully backward compatible with callers that don't pass these.
+    `initial_step` (Item #29, default 1) delays when the multiplier pattern
+    starts being applied — e.g. step=3, initial_step=4 affects orders
+    4, 7, 10, ... instead of 1, 4, 7, .... initial_step<=1 reproduces the
+    previous anchored-at-order-1 behaviour exactly.
     """
     price_direction = 1 if side == "SELL" else -1
     gap_bp = initial_gap_bp if initial_gap_bp is not None else price_interval_bp
     prices = build_price_series(initial_price, gap_bp, price_interval_bp, acc_price, number_of_orders, price_direction)
+    eff_initial_step = initial_step if initial_step and initial_step > 1 else 1
+
+    def _hits_step(position_1indexed: int) -> bool:
+        return step > 0 and position_1indexed >= eff_initial_step and (position_1indexed - eff_initial_step) % step == 0
 
     orders = []
     if use_amount:
         amounts = build_series(initial_amount, amount_interval_pct, acc_amount, number_of_orders, 1, 100)
         for i in range(number_of_orders):
             amount = amounts[i]
-            if step > 0 and (i + 1) % step == 0:
+            if _hits_step(i + 1):
                 amount *= multiplier
             qty = round(amount / prices[i], quantity_precision)
             orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
@@ -158,7 +167,7 @@ def generate_side_orders(
         quantities = build_series(initial_quantity, quantity_interval_pct, acc_quantity, number_of_orders, 1, 100)
         for i in range(number_of_orders):
             quantity = quantities[i]
-            if step > 0 and (i + 1) % step == 0:
+            if _hits_step(i + 1):
                 quantity *= multiplier
             qty = round(quantity, quantity_precision)
             orders.append({"side": side, "price": round(prices[i], price_precision), "quantity": qty})
@@ -235,11 +244,15 @@ def validate_side_params(
 
 # ===== Matching (New Orders vs T212 live state) =====
 
+NON_MANAGED_ORDER_TYPES = {"STOP", "STOP_LIMIT"}
+
+
 def match_new_orders_against_current(
     new_orders: List[Dict[str, Any]],
     current_orders: List[Dict[str, Any]],
     quantity_precision: int,
     price_precision: int = 2,
+    active_sides: Optional[List[Side]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
     Matches generated New Orders against the CURRENT real T212 state
@@ -252,7 +265,24 @@ def match_new_orders_against_current(
     use more/fewer decimals) + quantity (ISIN precision). Everything else
     in current_orders is cancelled; every unmatched new_order is created.
 
-    Returns {"to_create": [...], "to_cancel": [...], "unchanged": [...]}.
+    `active_sides` (Item #28): when provided, restricts this entire
+    operation to the given sides. Current orders whose side is NOT in
+    active_sides are left completely alone (never candidates for
+    cancellation) — used when the user disabled the Sell or Buy arm in the
+    parameters form, so an "APLICAR" with only Buy active must not touch
+    any existing Sell orders at all, and vice-versa. When None (default),
+    both sides are in scope (backward-compatible).
+
+    Current orders whose `order_type` is STOP or STOP_LIMIT (Item #34) are
+    NEVER touched — T212 has no concept of these in the ladder-management
+    flow here, and cancelling a manually-placed protective stop order would
+    be a dangerous side effect. These are excluded from both the matching
+    pool and the to_cancel set; they are returned separately so the caller
+    can still display them (read-only) if needed.
+
+    Returns {"to_create": [...], "to_cancel": [...], "unchanged": [...],
+    "protected": [...]} — "protected" holds STOP/STOP_LIMIT orders that
+    were excluded entirely from matching.
     """
     to_create: List[Dict[str, Any]] = []
     unchanged: List[Dict[str, Any]] = []
@@ -261,8 +291,20 @@ def match_new_orders_against_current(
     def _key(side: str, price: float, qty: float) -> tuple:
         return (side, round(price, price_precision), round(qty, quantity_precision))
 
+    protected = [co for co in current_orders if co.get("order_type") in NON_MANAGED_ORDER_TYPES]
+    protected_ids = {co["t212_order_id"] for co in protected}
+
+    manageable_current = [co for co in current_orders if co["t212_order_id"] not in protected_ids]
+    if active_sides is not None:
+        in_scope_current = [co for co in manageable_current if co["side"] in active_sides]
+        out_of_scope_current = [co for co in manageable_current if co["side"] not in active_sides]
+        new_orders = [no for no in new_orders if no["side"] in active_sides]
+    else:
+        in_scope_current = manageable_current
+        out_of_scope_current = []
+
     current_by_key: Dict[tuple, List[Dict[str, Any]]] = {}
-    for co in current_orders:
+    for co in in_scope_current:
         k = _key(co["side"], co["price"], co["quantity"])
         current_by_key.setdefault(k, []).append(co)
 
@@ -276,6 +318,7 @@ def match_new_orders_against_current(
         else:
             to_create.append(no)
 
-    to_cancel = [co for co in current_orders if co["t212_order_id"] not in matched_current_ids]
+    to_cancel = [co for co in in_scope_current if co["t212_order_id"] not in matched_current_ids]
 
-    return {"to_create": to_create, "to_cancel": to_cancel, "unchanged": unchanged}
+    # out_of_scope_current (disabled side) is intentionally excluded from to_cancel/unchanged.
+    return {"to_create": to_create, "to_cancel": to_cancel, "unchanged": unchanged, "protected": protected}

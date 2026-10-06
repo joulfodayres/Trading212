@@ -1365,6 +1365,132 @@ Item #20 closed. Item #15 Phase 1 checklist item 8 unblocked.
 
 ---
 
-**Last Updated:** 2026-10-05
-**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open; Item #22 (Manual Orders) shipped outside the original Phase 5 plan; Items #23-#24 queued
-**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE | Item #22 (Manual Orders / "Gerir Ordens") ✅ DONE (2026-10-05) | Item #23 (order counts in Manual Orders lists) added to backlog | Item #24 (non-blocking T212 rate-limit wait — PROD health-check incident) added to backlog
+### Item #26: Manual Orders — Default "Initial Gap (bp)" should be 0 — ✅ DONE (2026-10-06)
+**Priority:** Low (quick UI tweak)
+**Effort:** ~0.5h
+**Context:** Item #25 introduced "Initial Gap (bp)" for Sell and Buy on the "Gerir Ordens" screen, defaulting to `50bp` (falls back to `price_interval_bp` when omitted, matching the pre-#25 behavior). User now wants the form default changed to `0` for both arms.
+**Scope:** Change the default value of the Initial Gap input in `ManualOrdersPage.tsx` (and/or wherever the form's initial state / "last used params" fallback is set) from `50` to `0` for both Sell and Buy. Confirm this doesn't conflict with the existing "omitted falls back to Price Interval" backend behavior in `manual_orders_service.py` — an explicit `0` should mean an actual zero gap, not "use Price Interval instead".
+**✅ Done:** `defaultSideParams()` in `ManualOrdersPage.tsx` now defaults `initialGapBp: '0'` for both Sell and Buy. Backend fallback behavior (omitted → `price_interval_bp`) untouched — an explicit `0` sent by the form is a real zero gap, not treated as "omitted".
+
+---
+
+### Item #27: Remember login password on this device + configurable max days (NEW)
+**Priority:** Medium (UX convenience, ties into Item #12 login/MFA security work)
+**Effort:** ~3-4h
+**Context:** User wants the option to have this specific device/browser remember the login password, so they don't need to retype it every time, similar in spirit to the "Trusted Devices" concept already designed (not yet implemented) in Item #12.
+**Scope:**
+- Add a "Remember password on this device" checkbox on the login screen
+- Store credential remembering client-side in a way that's reasonably safe for a single-user personal app (e.g., encrypted at rest in browser storage, or leverage browser-native password manager autofill rather than reinventing storage — needs a decision)
+- New configurable parameter: maximum number of days the password is remembered before it must be re-entered (similar pattern to `TRUSTED_DEVICE_DAYS` from Item #12) — expose in ConfigPage, independent per environment (DEMO/PROD)
+- After the max-days window expires, force full re-entry of the password (and MFA, if Item #12's MFA is live by then)
+**Dependencies:**
+- [ ] Decide storage approach (browser password manager vs custom encrypted local storage)
+- [ ] New `app_parameters` column (e.g. `remember_password_max_days`), editable in ConfigPage
+- [ ] Frontend: checkbox + expiry logic
+- [ ] Coordinate with Item #12's "Trusted Devices" design so the two don't end up as overlapping/conflicting mechanisms
+**Status:** 📝 Not started — requested 2026-10-06, added to backlog only.
+
+---
+
+### Item #28: Manual Orders — Allow creating only Buys or only Sells (per-arm toggle) — ✅ DONE (2026-10-06)
+**Priority:** Medium (Manual Orders feature enhancement)
+**Effort:** ~2-3h
+**Context:** On the "Gerir Ordens" screen's "Criar novas ordens via parâmetros" mode (Item #22), both a Sell ladder and a Buy ladder are always generated together. User wants a toggle on each arm (Sell / Buy) to disable generating that arm entirely.
+**Scope:**
+- Add an enable/disable toggle to the Sell parameter block and to the Buy parameter block independently
+- When an arm is disabled, its "New Orders" are not generated at all
+- **Matching logic change:** when only one arm is active, the Apply/matching step (`manual_orders_service.py`) must only reconcile against the real T212 orders on that same side (e.g., existing Sell orders) — it must NOT touch/cancel the other side's (Buy's) existing current orders, since the user explicitly chose not to manage that arm this time
+- Validate the degenerate case: both arms disabled → "APLICAR" should no-op or be disabled, not error
+**✅ Done:**
+- `SideParamsState.active` (default `true`) + an "Ativo" checkbox per side in `SideParamsForm` (`ManualOrdersPage.tsx`), dimming that side's fields when off
+- `SideParams.active` added to the backend request schema (`routes/manual_orders.py`); `generate_new_orders` skips validation + generation entirely for an inactive side
+- `apply_new_orders` now sends `active_sides` (derived from which side checkboxes are checked) to `match_new_orders_against_current`, which (Item #28 param `active_sides`, `manual_orders_service.py`) excludes any current order whose side isn't in scope from BOTH the matching pool and the to-cancel set — it's left completely untouched
+- Degenerate case (both inactive): backend simply returns empty `new_orders`; existing "empty list wipes everything" confirmation flow from Item #22 still gates that, which combined with `active_sides=[]` means nothing on either side is touched — safe no-op, not an error
+
+---
+
+### Item #29: Manual Orders — "Initial Step" for the Multiplier zone — ✅ DONE (2026-10-06)
+**Priority:** Low-Medium (Manual Orders feature enhancement)
+**Effort:** ~1-2h
+**Context:** Item #22's Zone 4 ("Multiplier") applies the Multiplier to every Step-th order (1-indexed), starting from order 1. User wants an additional "Initial Step" parameter so the multiplier pattern only starts applying from a configurable starting order, instead of always from order 1.
+**Example:** Step=3, Multiplier=2, Initial Step=4 → orders 1-3 unaffected, multiplier starts applying at order 4, then every 3rd order after that (4, 7, 10, ...) instead of the current (1, 4, 7, ...) pattern anchored at order 1.
+**✅ Done:** `generate_side_orders()` in `manual_orders_service.py` gained `initial_step` (default 1, backward-compatible — anchors exactly at order 1 like before). The step-hit check is now `position >= initial_step and (position - initial_step) % step == 0`. Added "Initial Step" input in Zone 4 of `ManualOrdersPage.tsx`'s `SideParamsForm`, independent per side (Sell/Buy), persisted as part of the existing per-ISIN "last used params" (`isins.last_manual_order_params`) alongside Step/Multiplier — no new migration needed since that column is already JSONB.
+
+---
+
+### Item #30: Mobile-friendly version of the app (NEW)
+**Priority:** Medium (broad UX item, cuts across all pages)
+**Effort:** ~10-15h (large — likely needs its own breakdown per page when scoped)
+**Context:** The frontend (React + Tailwind) was built desktop-first; user wants a phone-friendly ("mobile friendly") version so the dashboard, ISIN list, Manual Orders screen, Config, etc. are usable on a phone browser.
+**Scope (to be refined when picked up):**
+- Audit all pages (`DashboardPage`, `ISINTable`, `ManualOrdersPage`, `ConfigPage`, `StrategiesPage`, etc.) for responsive layout issues — tables in particular (ISIN table, Current/New Orders lists) tend to break on narrow screens
+- Likely needs: responsive breakpoints (Tailwind `sm:`/`md:` already available, just not used consistently), collapsing wide tables into stacked cards on small screens, touch-friendly tap targets, avoiding hover-only interactions
+- Consider whether this is "responsive web" (same app, adapts) vs a dedicated mobile layout/PWA — simplest path is responsive web given no separate mobile app exists
+**Dependencies:**
+- [ ] Page-by-page audit of what breaks on a ~375-430px wide viewport
+- [ ] Decide priority order (Dashboard + Manual Orders likely highest-value, since those are used most operationally)
+**Status:** 📝 Not started — requested 2026-10-06, added to backlog only; needs scoping session before estimate is reliable.
+
+---
+
+### Item #31: Keyboard shortcut (Ctrl+Enter) to confirm order edit in Manual Orders list — ✅ DONE (2026-10-06)
+**Priority:** Low (quick UX polish)
+**Effort:** ~0.5-1h
+**Context:** On the "Gerir Ordens" screen's "Current Orders" list (Item #22, edit mode = cancel+recreate), confirming an in-place edit currently requires clicking a save/confirm button. User wants a keyboard shortcut (Ctrl+Enter style) to confirm the edit without reaching for the mouse.
+**✅ Done:** Added `handleEditKeyDown` in `ManualOrdersPage.tsx`, wired to the price/quantity `onKeyDown` while a row is in `editing` mode: Ctrl+Enter (or Cmd+Enter on Mac) confirms via the same `confirmEdit()` used by the ✓ button; Esc cancels via the same `cancelEdit()` used by the ✗ button (expanded scope, per user confirmation — Esc-to-cancel included alongside the requested Ctrl+Enter).
+
+---
+
+### Item #32: Manual Orders — Visual Sell/Buy gap display ("SELL +x% / BUY -y%") — ✅ DONE (2026-10-06)
+**Priority:** Low-Medium (Manual Orders UX polish, builds on Item #25)
+**Effort:** ~1-2h
+**Context:** Item #25 added a summary card showing the % distance between the cheapest Sell and the most expensive Buy in Current Orders. User wants this reframed/displayed more visually and explicitly as two separate figures: how far the Sell side is above the reference price (`SELL +x%`) and how far the Buy side is below it (`BUY -y%`), rather than (or in addition to) a single combined gap %.
+**✅ Done:** Summary card in `ManualOrdersPage.tsx` now shows two extra tiles — "SELL vs. Mercado" (`SELL +x%`, cheapest Sell vs `screen.current_price`) and "BUY vs. Mercado" (`BUY -y%`, priciest Buy vs `screen.current_price`) — alongside the existing combined Sell→Buy gap from Item #25, which was kept rather than replaced. No graphical element in this iteration (per user decision — confirmed nice-to-have only, text-first delivery).
+
+---
+
+### Item #33: Password change functionality (NEW)
+**Priority:** Medium (basic account hygiene, ties into Item #12's auth work)
+**Effort:** ~2-3h
+**Context:** There is currently no in-app way to change the login password (account is created manually once, per Item #12's "no public registo" design). User wants a "change password" feature.
+**Scope:**
+- New screen/section (likely in a settings/account area, or ConfigPage) with current-password + new-password + confirm fields
+- Backend endpoint using Supabase Auth's password-update capability, requiring the current session to be valid (and ideally re-confirming the current password or MFA code before allowing the change, consistent with Item #12/#19's "reinforced confirmation for sensitive changes" pattern)
+- Apply independently in DEMO and PROD (separate Supabase Auth users per Item #12/#15 design)
+- Log the change + consider a security alert email on password change (consistent with other security-sensitive actions already alerting via SMTP, Item #21)
+**Status:** 📝 Not started — requested 2026-10-06, added to backlog only.
+
+---
+
+### Item #34: Never modify Stop/Stop-Limit orders in Manual Orders matching — ✅ DONE (2026-10-06)
+**Priority:** Medium-High (correctness/safety — could otherwise cancel protective orders unintentionally)
+**Effort:** ~1-2h
+**Context:** The "Gerir Ordens" screen (Item #22) currently manages pending orders via Limit orders only on the automation side (per Item #15's "only LIMIT orders" decision for the automated engine), but the **manual** screen reads/matches against whatever pending orders exist on T212 for the ISIN, which could in principle include Buy Stop, Sell Stop, or Stop-Limit orders placed manually by the user outside this app. If such orders exist, the current "Current Orders" / matching logic in `manual_orders_service.py` may treat them like any other pending order — editing (cancel+recreate) or cancelling them during an "Aplicar" pass.
+**✅ Done:** Confirmed via T212's `/equity/orders` response shape (`docs/t212-api/api.yaml`, `API_ANALYSIS.md`) that pending orders carry a `type` field (`MARKET`/`LIMIT`/`STOP`/`STOP_LIMIT`).
+- `manual_orders_service.py`: new `NON_MANAGED_ORDER_TYPES = {"STOP", "STOP_LIMIT"}`; `match_new_orders_against_current()` now excludes any current order whose `order_type` is in that set from matching, from the to-cancel set, and from "unchanged" — returned separately under a new `protected` key
+- `routes/manual_orders.py`: `CurrentOrderOut` gained `order_type` + `is_protected`, populated from T212's `type` field in `get_screen_data`; `apply_new_orders` now reads `type` into each current-order dict passed to the matcher
+- `ManualOrdersPage.tsx`: protected orders render as a distinct read-only row in "Current Orders" (dimmed, no ✏️/🗑️ buttons) with a `STOP` / `STOP-LIMIT · não gerido aqui` badge, so the user understands why it can't be touched from this screen — per the "show read-only with badge" decision
+
+---
+
+### Item #35: Per-ISIN automation timer — configurable next-execution timestamp (NEW)
+**Priority:** Medium (operational flexibility, relates to Item #16's time-window idea but per-ISIN rather than global)
+**Effort:** ~4-6h
+**Context:** Today the AutomationEngine runs the same 15s-interval cycle (Item #15 Phase 1 design, `services/scheduler.py`) uniformly across all ISINs with automation enabled. User wants a per-ISIN timer so each ISIN can have its own cadence — e.g., some ISINs checked every cycle, others only every few minutes/hours — rather than one global interval for everything.
+**Scope:**
+- Add a `next_execution_at` (TIMESTAMP) column to the `isins` table
+- `AutomationEngine`'s per-cycle loop: before processing a given ISIN, check `next_execution_at` — skip it if still in the future; otherwise process it and set its next `next_execution_at` based on a new per-ISIN interval setting
+- Need a per-ISIN "interval" input somewhere in the UI (ISIN detail/edit, or `ISINTable.tsx`) to configure how far in the future to push `next_execution_at` after each run — distinct from the existing **global** scheduler tick (Item #16's time-window concept operates on the whole engine, not per-ISIN; this is a complementary, more granular mechanism)
+- Decide interaction with Item #16 if that ships first: the global time window would gate the scheduler tick overall, while this per-ISIN timer further gates whether an individual ISIN is actually processed within an active tick
+**Dependencies:**
+- [ ] DB migration: `isins.next_execution_at` (+ a per-ISIN interval column, e.g. `automation_interval_seconds`)
+- [ ] `backend/services/automation_engine.py` — skip logic per ISIN + update timestamp after processing
+- [ ] Frontend: per-ISIN interval configuration UI
+- [ ] Migration file only, run manually per this project's DB convention (see Item #18 context)
+**Status:** 📝 Not started — requested 2026-10-06, added to backlog only.
+
+---
+
+**Last Updated:** 2026-10-06
+**Status:** Phase 5: ~70% complete (12 of 17 items) + items #12-#14, #16-#19 remain open; Item #22 (Manual Orders) shipped outside the original Phase 5 plan; Items #23-#24 queued; Items #27, #30, #33, #35 remain open (remember-password, mobile-friendly UI, password change, per-ISIN automation timer)
+**Recent:** Item #15 Phase 2 (PROD live) ✅ DONE | Item #20 (API auth) ✅ DONE | Item #21 (SMTP) ✅ DONE | Item #22 (Manual Orders / "Gerir Ordens") ✅ DONE (2026-10-05) | Item #23 (order counts in Manual Orders lists) added to backlog | Item #24 (non-blocking T212 rate-limit wait — PROD health-check incident) added to backlog | Items #26, #28, #29, #31, #32, #34 (Manual Orders enhancements: Initial Gap default, per-arm Buy/Sell toggle, Initial Step, Ctrl+Enter/Esc shortcuts, Sell/Buy vs. market display, Stop/Stop-Limit protection) ✅ DONE (2026-10-06)

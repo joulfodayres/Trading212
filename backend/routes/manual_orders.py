@@ -73,6 +73,8 @@ class CurrentOrderOut(BaseModel):
     price: float
     quantity: float
     variation_pct: float  # vs current_price snapshotted at screen load
+    order_type: str = "LIMIT"  # Item #34: MARKET/LIMIT/STOP/STOP_LIMIT — only STOP/STOP_LIMIT are protected
+    is_protected: bool = False  # Item #34: true for STOP/STOP_LIMIT — read-only in the UI
 
 
 class ScreenInitResponse(BaseModel):
@@ -119,6 +121,7 @@ class ExecuteCurrentOrdersResponse(BaseModel):
 
 
 class SideParams(BaseModel):
+    active: bool = True  # Item #28: when False, this side generates no orders and is excluded from matching entirely
     initial_price: float
     initial_gap_bp: float = Field(..., ge=0)
     price_interval_bp: float = Field(..., ge=0)
@@ -133,6 +136,7 @@ class SideParams(BaseModel):
     number_of_orders: int = Field(..., ge=1, le=50)
     step: int = Field(0, ge=0)  # Zone 4: 0 = disabled (no-op)
     multiplier: float = Field(1.0, gt=0)  # Zone 4: 1.0 = no-op
+    initial_step: int = Field(1, ge=1)  # Zone 4 (Item #29): multiplier pattern starts at this 1-indexed order
 
 
 class GenerateOrdersRequest(BaseModel):
@@ -165,6 +169,7 @@ class ApplyNewOrdersRequest(BaseModel):
     quantity_precision: int
     price_precision: int = 2
     confirmed_empty_list: bool = False  # true once user confirmed wiping all current orders
+    active_sides: Optional[List[Side]] = None  # Item #28: None = both sides in scope (backward-compatible)
 
 
 class ApplyNewOrdersResponse(BaseModel):
@@ -285,6 +290,7 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
         for o in isin_orders:
             side = o.get("side", "BUY")
             price = o.get("limitPrice") or 0
+            order_type = o.get("type", "LIMIT")
             variation_pct = ((price - current_price) / current_price * 100) if current_price else 0
             current_orders.append(CurrentOrderOut(
                 t212_order_id=o.get("id"),
@@ -293,6 +299,8 @@ async def get_screen_data(isin: str, current_user: dict = Depends(get_current_us
                 price=price,
                 quantity=abs(o.get("quantity", 0)),
                 variation_pct=variation_pct,
+                order_type=order_type,
+                is_protected=order_type in mo_service.NON_MANAGED_ORDER_TYPES,
             ))
 
         # Sort: SELL first, then price descending within each group
@@ -390,6 +398,10 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
     validation rules (Item #22): only price_max_variation is a hard block;
     all other violations are returned as soft_alerts requiring the caller to
     resubmit with confirmed_soft_alerts=true to actually get `orders` back.
+
+    Item #28: a side with `active=False` generates no orders at all and is
+    skipped from validation entirely (no point validating parameters for an
+    arm the user isn't using this time).
     """
     thresholds = _get_validation_thresholds()
 
@@ -397,12 +409,12 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
         "SELL", request.current_price, request.sell.initial_price, request.sell.price_interval_bp,
         request.sell.use_amount, request.sell.initial_amount, request.sell.amount_interval_pct,
         request.sell.initial_quantity, request.sell.quantity_interval_pct, thresholds,
-    )
+    ) if request.sell.active else {"hard_errors": [], "soft_alerts": []}
     buy_v = mo_service.validate_side_params(
         "BUY", request.current_price, request.buy.initial_price, request.buy.price_interval_bp,
         request.buy.use_amount, request.buy.initial_amount, request.buy.amount_interval_pct,
         request.buy.initial_quantity, request.buy.quantity_interval_pct, thresholds,
-    )
+    ) if request.buy.active else {"hard_errors": [], "soft_alerts": []}
 
     hard_errors = sell_v["hard_errors"] + buy_v["hard_errors"]
     soft_alerts = sell_v["soft_alerts"] + buy_v["soft_alerts"]
@@ -418,15 +430,15 @@ async def generate_new_orders(request: GenerateOrdersRequest, current_user: dict
         request.sell.use_amount, request.sell.initial_amount, request.sell.amount_interval_pct, request.sell.acc_amount,
         request.sell.initial_quantity, request.sell.quantity_interval_pct, request.sell.acc_quantity,
         request.sell.number_of_orders, request.quantity_precision, request.price_precision,
-        request.sell.step, request.sell.multiplier, request.sell.initial_gap_bp,
-    )
+        request.sell.step, request.sell.multiplier, request.sell.initial_gap_bp, request.sell.initial_step,
+    ) if request.sell.active else []
     buy_orders = mo_service.generate_side_orders(
         "BUY", request.buy.initial_price, request.buy.price_interval_bp, request.buy.acc_price,
         request.buy.use_amount, request.buy.initial_amount, request.buy.amount_interval_pct, request.buy.acc_amount,
         request.buy.initial_quantity, request.buy.quantity_interval_pct, request.buy.acc_quantity,
         request.buy.number_of_orders, request.quantity_precision, request.price_precision,
-        request.buy.step, request.buy.multiplier, request.buy.initial_gap_bp,
-    )
+        request.buy.step, request.buy.multiplier, request.buy.initial_gap_bp, request.buy.initial_step,
+    ) if request.buy.active else []
 
     all_orders = sell_orders + buy_orders
     all_orders.sort(key=lambda o: (0 if o["side"] == "SELL" else 1, -o["price"]))
@@ -451,8 +463,19 @@ async def apply_new_orders(isin: str, request: ApplyNewOrdersRequest, current_us
     Match = same side + price (2dp) + quantity (ISIN precision) -> left
     alone. Unmatched current orders are cancelled; unmatched new orders are
     created. If new_orders is empty, this wipes ALL current pending orders
-    for the ISIN — requires confirmed_empty_list=true or the endpoint
-    returns requires_empty_confirmation=true without doing anything.
+    for the ISIN (within `active_sides` scope, if provided) — requires
+    confirmed_empty_list=true or the endpoint returns
+    requires_empty_confirmation=true without doing anything.
+
+    Item #28: when `active_sides` is provided (e.g. only ["BUY"] because the
+    user disabled the Sell arm), existing current orders on the side NOT in
+    active_sides are left completely untouched — never cancelled, never
+    considered part of "unchanged" either, simply ignored by this entire
+    operation.
+
+    Item #34: current orders of type STOP/STOP_LIMIT are never cancelled or
+    matched regardless of active_sides — see
+    mo_service.NON_MANAGED_ORDER_TYPES.
     """
     client = _get_t212_client()
 
@@ -465,10 +488,14 @@ async def apply_new_orders(isin: str, request: ApplyNewOrdersRequest, current_us
     for o in isin_orders:
         side = o.get("side", "BUY")
         price = o.get("limitPrice") or 0
-        current_orders.append({"t212_order_id": o.get("id"), "side": side, "price": price, "quantity": abs(o.get("quantity", 0))})
+        current_orders.append({
+            "t212_order_id": o.get("id"), "side": side, "price": price,
+            "quantity": abs(o.get("quantity", 0)), "order_type": o.get("type", "LIMIT"),
+        })
 
     match = mo_service.match_new_orders_against_current(
-        [o.dict() for o in request.new_orders], current_orders, request.quantity_precision, request.price_precision
+        [o.dict() for o in request.new_orders], current_orders, request.quantity_precision, request.price_precision,
+        active_sides=request.active_sides,
     )
 
     results: List[ExecuteResultItem] = []

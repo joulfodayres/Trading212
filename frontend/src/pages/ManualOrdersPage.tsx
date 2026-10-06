@@ -16,6 +16,8 @@ interface CurrentOrder {
   price: number
   quantity: number
   variation_pct: number
+  order_type: string
+  is_protected: boolean
 }
 
 interface CurrentOrderUiState {
@@ -40,6 +42,7 @@ interface ScreenData {
 }
 
 interface SideParamsState {
+  active: boolean
   initialPrice: string
   initialGapBp: string
   priceIntervalBp: string
@@ -52,6 +55,7 @@ interface SideParamsState {
   quantityIntervalPct: string
   accQuantity: 'Y' | 'N'
   step: string
+  initialStep: string
   multiplier: string
   numberOfOrders: string
 }
@@ -63,8 +67,9 @@ interface GeneratedOrder {
 }
 
 const defaultSideParams = (initialPrice: string): SideParamsState => ({
+  active: true,
   initialPrice,
-  initialGapBp: '50',
+  initialGapBp: '0',
   priceIntervalBp: '50',
   accPrice: 'N',
   useAmount: false,
@@ -75,6 +80,7 @@ const defaultSideParams = (initialPrice: string): SideParamsState => ({
   quantityIntervalPct: '0',
   accQuantity: 'N',
   step: '0',
+  initialStep: '1',
   multiplier: '1',
   numberOfOrders: '3'
 })
@@ -89,6 +95,7 @@ const defaultSideParams = (initialPrice: string): SideParamsState => ({
 const sideParamsFromSaved = (saved: Record<string, any>, initialPrice: string): SideParamsState => {
   const d = defaultSideParams(initialPrice)
   return {
+    active: saved.active ?? d.active,
     initialPrice,
     initialGapBp: saved.initial_gap_bp != null ? String(saved.initial_gap_bp) : d.initialGapBp,
     priceIntervalBp: saved.price_interval_bp != null ? String(saved.price_interval_bp) : d.priceIntervalBp,
@@ -101,6 +108,7 @@ const sideParamsFromSaved = (saved: Record<string, any>, initialPrice: string): 
     quantityIntervalPct: saved.quantity_interval_pct != null ? String(saved.quantity_interval_pct) : d.quantityIntervalPct,
     accQuantity: saved.acc_quantity ?? d.accQuantity,
     step: saved.step != null ? String(saved.step) : d.step,
+    initialStep: saved.initial_step != null ? String(saved.initial_step) : d.initialStep,
     multiplier: saved.multiplier != null ? String(saved.multiplier) : d.multiplier,
     numberOfOrders: saved.number_of_orders != null ? String(saved.number_of_orders) : d.numberOfOrders
   }
@@ -193,6 +201,27 @@ export default function ManualOrdersPage() {
     setCoState((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
   }
 
+  // Item #31: confirm edit with Ctrl+Enter, cancel edit with Esc, while editing a row's price/quantity.
+  const confirmEdit = (o: CurrentOrder) => {
+    const s = coState[o.t212_order_id]
+    if (!s) return
+    updateCoState(o.t212_order_id, { mode: s.newPrice === o.price && s.newQuantity === o.quantity ? 'idle' : 'edited' })
+  }
+
+  const cancelEdit = (o: CurrentOrder) => {
+    updateCoState(o.t212_order_id, { mode: 'idle', newPrice: o.price, newQuantity: o.quantity })
+  }
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, o: CurrentOrder) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      confirmEdit(o)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelEdit(o)
+    }
+  }
+
   const handleDiscardCurrent = () => {
     if (!screen) return
     const reset: Record<number, CurrentOrderUiState> = {}
@@ -257,6 +286,7 @@ export default function ManualOrdersPage() {
   // ===== Parameters / generation =====
 
   const buildSideParamsPayload = (p: SideParamsState) => ({
+    active: p.active,
     initial_price: parseFloat(p.initialPrice) || 0,
     initial_gap_bp: parseFloat(p.initialGapBp) || 0,
     price_interval_bp: parseFloat(p.priceIntervalBp) || 0,
@@ -269,6 +299,7 @@ export default function ManualOrdersPage() {
     quantity_interval_pct: !p.useAmount ? parseFloat(p.quantityIntervalPct) || 0 : null,
     acc_quantity: !p.useAmount ? p.accQuantity : null,
     step: parseInt(p.step) || 0,
+    initial_step: parseInt(p.initialStep) || 1,
     multiplier: parseFloat(p.multiplier) || 1,
     number_of_orders: parseInt(p.numberOfOrders) || 1
   })
@@ -335,13 +366,18 @@ export default function ManualOrdersPage() {
     setApplying(true)
     setApplyResultMsg(null)
     try {
+      const activeSides: Side[] = [
+        ...(sellParams.active ? (['SELL'] as Side[]) : []),
+        ...(buyParams.active ? (['BUY'] as Side[]) : [])
+      ]
       const res = await manualOrdersAPI.applyNew(screen.isin, {
         isin: screen.isin,
         ticker: screen.ticker,
         new_orders: newOrders,
         quantity_precision: screen.quantity_precision,
         price_precision: screen.price_precision,
-        confirmed_empty_list: confirmedEmpty
+        confirmed_empty_list: confirmedEmpty,
+        active_sides: activeSides
       })
       const { requires_empty_confirmation, created, deleted, unchanged, errors } = res.data
 
@@ -407,6 +443,12 @@ export default function ManualOrdersPage() {
     cheapestSell != null && priciestBuy != null && priciestBuy !== 0
       ? ((cheapestSell - priciestBuy) / priciestBuy) * 100
       : null
+  // Item #32: distance of each arm from current market price, shown separately
+  // (SELL +x% / BUY -y%) rather than only the combined Sell-vs-Buy gap above.
+  const sellVsMarketPct =
+    cheapestSell != null && screen.current_price ? ((cheapestSell - screen.current_price) / screen.current_price) * 100 : null
+  const buyVsMarketPct =
+    priciestBuy != null && screen.current_price ? ((priciestBuy - screen.current_price) / screen.current_price) * 100 : null
 
   return (
     <div className="page-container">
@@ -473,7 +515,7 @@ export default function ManualOrdersPage() {
       {/* Sell/Buy summary stats */}
       <Card className="mb-6">
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <div className="text-xs uppercase text-t212-muted mb-1">Número de Sells</div>
               <div className="font-semibold">{sellOrders.length}</div>
@@ -486,6 +528,18 @@ export default function ManualOrdersPage() {
               <div className="text-xs uppercase text-t212-muted mb-1">Distância Sell mais barato → Buy mais caro</div>
               <div className={`font-semibold ${sellBuyGapPct != null ? pctClass(sellBuyGapPct) : ''}`}>
                 {sellBuyGapPct != null ? fmtPct(sellBuyGapPct) : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase text-t212-muted mb-1">SELL vs. Mercado</div>
+              <div className={`font-semibold ${sellVsMarketPct != null ? pctClass(sellVsMarketPct) : ''}`}>
+                {sellVsMarketPct != null ? `SELL ${fmtPct(sellVsMarketPct)}` : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase text-t212-muted mb-1">BUY vs. Mercado</div>
+              <div className={`font-semibold ${buyVsMarketPct != null ? pctClass(buyVsMarketPct) : ''}`}>
+                {buyVsMarketPct != null ? `BUY ${fmtPct(buyVsMarketPct)}` : '-'}
               </div>
             </div>
           </div>
@@ -582,6 +636,27 @@ export default function ManualOrdersPage() {
                 {sortedCurrentOrders.map((o) => {
                   const s = coState[o.t212_order_id]
                   if (!s) return null
+
+                  if (o.is_protected) {
+                    return (
+                      <tr key={o.t212_order_id} className="opacity-70">
+                        <td>{o.created_at?.slice(0, 10) || '-'}</td>
+                        <td>
+                          <span className={o.side === 'SELL' ? 'text-t212-error font-bold text-xs' : 'text-t212-success font-bold text-xs'}>
+                            {o.side}
+                          </span>
+                          <span className="ml-1 text-[10px] bg-t212-bg-darker border border-t212-border rounded-full px-2 py-0.5 text-t212-muted">
+                            {o.order_type === 'STOP_LIMIT' ? 'STOP-LIMIT' : 'STOP'} · não gerido aqui
+                          </span>
+                        </td>
+                        <td>{o.price.toFixed(screen.price_precision)}</td>
+                        <td>{o.quantity}</td>
+                        <td className={pctClass(o.variation_pct)}>{fmtPct(o.variation_pct)}</td>
+                        <td className="text-right text-t212-muted text-xs">—</td>
+                      </tr>
+                    )
+                  }
+
                   const rowClass =
                     s.mode === 'editing' ? 'bg-t212-bg-darker' : s.mode === 'edited' ? 'bg-yellow-900/20' : s.mode === 'deleted' ? 'bg-red-900/20' : ''
                   return (
@@ -600,6 +675,7 @@ export default function ManualOrdersPage() {
                             className="w-20 bg-t212-bg-darker border border-t212-primary rounded px-1 py-0.5 text-sm no-spinner"
                             value={s.newPrice}
                             onChange={(e) => updateCoState(o.t212_order_id, { newPrice: parseFloat(e.target.value) || 0 })}
+                            onKeyDown={(e) => handleEditKeyDown(e, o)}
                           />
                         ) : s.mode === 'deleted' ? (
                           <span className="line-through text-t212-muted">{o.price.toFixed(screen.price_precision)}</span>
@@ -614,6 +690,7 @@ export default function ManualOrdersPage() {
                             className="w-20 bg-t212-bg-darker border border-t212-primary rounded px-1 py-0.5 text-sm no-spinner"
                             value={s.newQuantity}
                             onChange={(e) => updateCoState(o.t212_order_id, { newQuantity: parseFloat(e.target.value) || 0 })}
+                            onKeyDown={(e) => handleEditKeyDown(e, o)}
                           />
                         ) : s.mode === 'deleted' ? (
                           <span className="line-through text-t212-muted">{o.quantity}</span>
@@ -629,13 +706,13 @@ export default function ManualOrdersPage() {
                           <>
                             <button
                               className="text-t212-success border border-t212-success rounded px-2 py-0.5 text-xs ml-1"
-                              onClick={() => updateCoState(o.t212_order_id, { mode: s.newPrice === o.price && s.newQuantity === o.quantity ? 'idle' : 'edited' })}
+                              onClick={() => confirmEdit(o)}
                             >
                               ✓
                             </button>
                             <button
                               className="text-t212-error border border-t212-error rounded px-2 py-0.5 text-xs ml-1"
-                              onClick={() => updateCoState(o.t212_order_id, { mode: 'idle', newPrice: o.price, newQuantity: o.quantity })}
+                              onClick={() => cancelEdit(o)}
                             >
                               ✗
                             </button>
@@ -751,9 +828,16 @@ function SideParamsForm({
   const update = (patch: Partial<SideParamsState>) => setParams({ ...params, ...patch })
 
   return (
-    <div className="border border-t212-border rounded-lg p-4 bg-t212-bg-darker">
-      <h3 className={`text-sm font-semibold mb-3 ${colorClass}`}>{label}</h3>
+    <div className={`border border-t212-border rounded-lg p-4 bg-t212-bg-darker ${!params.active ? 'opacity-50' : ''}`}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className={`text-sm font-semibold ${colorClass}`}>{label}</h3>
+        <label className="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="checkbox" checked={params.active} onChange={(e) => update({ active: e.target.checked })} />
+          Ativo
+        </label>
+      </div>
 
+      <div className={!params.active ? 'opacity-50 pointer-events-none' : ''}>
       <div className="mb-3 pb-3 border-b border-dashed border-t212-border">
         <div className="text-[10px] uppercase text-t212-muted mb-2">Zona 1 — Preço</div>
         <FieldRow label="Initial Price">
@@ -835,6 +919,9 @@ function SideParamsForm({
         <FieldRow label="Step">
           <input type="number" className="no-spinner" value={params.step} onChange={(e) => update({ step: e.target.value })} />
         </FieldRow>
+        <FieldRow label="Initial Step">
+          <input type="number" min={1} className="no-spinner" value={params.initialStep} onChange={(e) => update({ initialStep: e.target.value })} />
+        </FieldRow>
         <FieldRow label="Multiplier">
           <input
             type="number"
@@ -856,6 +943,7 @@ function SideParamsForm({
             onChange={(e) => update({ numberOfOrders: e.target.value })}
           />
         </FieldRow>
+      </div>
       </div>
     </div>
   )
