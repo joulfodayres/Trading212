@@ -916,6 +916,17 @@ comportamento anterior (backward-compatible). Default do formulário: `50bp`.
   botões de editar/apagar. Protege contra cancelar sem querer uma ordem de proteção colocada
   manualmente fora da app.
 
+**Correções aos Items #31/#32 (2026-10-06, mesmo dia):**
+- **#32** — `sellOrders`/`buyOrders` (base de "Número de Sells/Buys", gap combinado e "SELL
+  +x%"/"BUY -y%") passaram a filtrar `!is_protected`, excluindo ordens `STOP`/`STOP_LIMIT` das
+  estatísticas — estavam a ser contabilizadas mesmo já estando fora do matching/"APLICAR".
+- **#31** — Esc (ou ✗) ao editar uma linha em "Current Orders" devolvia sempre os valores
+  originais da T212, mesmo que a linha já estivesse marcada como "editado" antes de se iniciar
+  esta 2ª edição — perdia-se a edição anterior. Corrigido com um snapshot `preEditMode` /
+  `preEditPrice` / `preEditQuantity` tirado ao entrar em modo de edição (`startEditing`): se a
+  linha já estava "editado", o Esc restaura esse estado "editado" com os valores que tinha antes
+  desta edição, em vez de voltar ao valor original trazido do T212.
+
 ---
 
 ## ✅ Checklist de Produção

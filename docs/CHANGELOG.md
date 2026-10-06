@@ -1,3 +1,26 @@
+# 📝 CHANGELOG - 2026-10-06 (continuação) — Correções aos Items #31/#32
+
+**Status:** ✅ Shipped (DEMO+PROD)
+
+Duas correções ao ecrã "Gerir Ordens", no mesmo dia da entrega inicial dos Items #26-#34, em
+`ManualOrdersPage.tsx`:
+
+## Item #32 — Excluir ordens Stop/Stop-Limit das estatísticas Sell/Buy
+`sellOrders`/`buyOrders` (alimentam "Número de Sells/Buys", a distância combinada e "SELL +x%" /
+"BUY -y%") estavam a contar ordens `STOP`/`STOP_LIMIT`, apesar de estas já estarem excluídas do
+matching/"APLICAR" desde o Item #34. Corrigido a filtrar `!o.is_protected` nessas duas listas.
+
+## Item #31 — Esc/✗ perdia uma edição anterior
+Ao editar uma linha em "Current Orders" que já estava marcada como "editado", pressionar Esc (ou
+clicar ✗) devolvia sempre os valores originais trazidos da T212 — perdendo a edição anterior em
+vez de simplesmente descartar a edição em curso. Corrigido com um snapshot tirado ao entrar em
+modo de edição (`startEditing`): grava `preEditMode`/`preEditPrice`/`preEditQuantity` com o
+estado da linha nesse momento (que pode já ser "editado" com valores próprios, não
+necessariamente os da T212). `cancelEdit` passou a restaurar esse snapshot em vez de recorrer
+sempre a `o.price`/`o.quantity` (os valores originais da T212).
+
+---
+
 # 📝 CHANGELOG - 2026-10-06 — Items #26, #28, #29, #31, #32, #34: Manual Orders enhancements
 
 **Status:** ✅ Shipped (DEMO+PROD)
