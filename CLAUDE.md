@@ -891,6 +891,31 @@ Interval normalmente a partir daí. `manual_orders_service.py` ganhou `build_pri
 opcional na request — se omitido assume `price_interval_bp`, reproduzindo exatamente o
 comportamento anterior (backward-compatible). Default do formulário: `50bp`.
 
+**Items #26, #28, #29, #31, #32, #34 (Manual Orders, 2026-10-06):** seis melhorias ao ecrã
+"Gerir Ordens", todas em `ManualOrdersPage.tsx` / `manual_orders.py` / `manual_orders_service.py`:
+- **#26** — default de "Initial Gap (bp)" passou de `50` para `0` (Sell e Buy).
+- **#28** — toggle "Ativo" por lado (Sell/Buy): com um lado desativado, esse lado não gera
+  ordens e fica **totalmente fora** do matching/"APLICAR" — `match_new_orders_against_current()`
+  ganhou `active_sides`, e qualquer ordem corrente desse lado é ignorada (nunca cancelada, nunca
+  contada como "unchanged"). Caso degenerado (ambos desativados): sem erro, simplesmente não
+  mexe em nada.
+- **#29** — novo parâmetro "Initial Step" na Zona 4 (Multiplier), independente por lado: adia a
+  partir de que ordem (1-indexed) o padrão Step/Multiplier começa a aplicar-se (ex: Step=3,
+  Initial Step=4 → afeta as ordens 4, 7, 10, ... em vez de 1, 4, 7, ...). Default `0` (clamped
+  a 1 internamente, equivalente ao comportamento antigo). **Nota:** corrigido um bug de
+  `parseInt(...) || 1` em JS que trocava silenciosamente um `0` explícito por `1` (zero é falsy);
+  o `Field` do Pydantic também foi relaxado de `ge=1` para `ge=0` para aceitar o valor.
+- **#31** — Ctrl+Enter confirma e Esc cancela uma edição em curso na lista "Current Orders"
+  (antes só era possível clicar ✓/✗).
+- **#32** — cartão de resumo ganhou "SELL +x%" / "BUY -y%" (distância do Sell mais barato / Buy
+  mais caro face ao preço de mercado atual), mantendo a distância combinada do Item #25. Sem
+  elemento gráfico nesta iteração (decisão explícita — ficou como nice-to-have).
+- **#34** — ordens `STOP`/`STOP_LIMIT` (lidas do campo `type` de `/equity/orders`) nunca são
+  canceladas/recriadas pelo "Gerir Ordens", em nenhum dos dois modos — aparecem na lista
+  "Current Orders" como somente-leitura, com badge `STOP`/`STOP-LIMIT · não gerido aqui`, sem
+  botões de editar/apagar. Protege contra cancelar sem querer uma ordem de proteção colocada
+  manualmente fora da app.
+
 ---
 
 ## ✅ Checklist de Produção
@@ -912,6 +937,7 @@ comportamento anterior (backward-compatible). Default do formulário: `50bp`.
 - ✅ Gestão manual de ordens pendentes por ISIN (Item #22 — fora dos limites de automação, por desenho)
 - ✅ Fix: primeiro ciclo de automação no arranque já não crasha PROD (2026-10-05)
 - ✅ Gerir Ordens: resumo Sell/Buy + parâmetro Initial Gap (bp) (Item #25)
+- ✅ Gerir Ordens: toggle Ativo por lado, Initial Step, atalhos de teclado, SELL/BUY vs. mercado, proteção Stop/Stop-Limit (Items #26/#28/#29/#31/#32/#34)
 - ⏳ Item #24: espera de rate-limit T212 não-bloqueante (diagnosticado, não implementado)
 - ⏳ Testes automatizados (Phase 5)
 - ⏳ Monitoring avançado (Phase 6)
@@ -921,8 +947,8 @@ comportamento anterior (backward-compatible). Default do formulário: `50bp`.
 
 ## 👨‍💻 Desenvolvimento
 
-**Última atualização:** 2026-10-05
-**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos; fix de arranque do scheduler em PROD + Item #23 (contagem de ordens) + Item #25 (resumo Sell/Buy + Initial Gap) concluídos; Item #24 (rate-limit não-bloqueante) diagnosticado e documentado, por implementar
+**Última atualização:** 2026-10-06
+**Status:** DEMO + PROD ambos live; auth (Item #20), PROD environment (Item #15), SMTP alerts (Item #21), Manual Orders / Gerir Ordens (Item #22) concluídos; fix de arranque do scheduler em PROD + Item #23 (contagem de ordens) + Item #25 (resumo Sell/Buy + Initial Gap) + Items #26/#28/#29/#31/#32/#34 (melhorias ao Gerir Ordens) concluídos; Item #24 (rate-limit não-bloqueante) diagnosticado e documentado, por implementar
 **Próximo focus:** Ver `docs/KNOWLEDGE_BASE.md` e `BACKLOG.md` para o estado atualizado do backlog
 
 ---

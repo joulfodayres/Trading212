@@ -1,3 +1,46 @@
+# 📝 CHANGELOG - 2026-10-06 — Items #26, #28, #29, #31, #32, #34: Manual Orders enhancements
+
+**Status:** ✅ Shipped (DEMO+PROD)
+
+Seis melhorias ao ecrã "Gerir Ordens" (Item #22), em `ManualOrdersPage.tsx` /
+`routes/manual_orders.py` / `services/manual_orders_service.py`:
+
+## Item #26 — Default "Initial Gap (bp)" = 0
+Form default mudado de `50` para `0`, para Sell e Buy. Sem mudança de comportamento no backend
+(um `0` explícito sempre significou gap zero, não "omitido").
+
+## Item #28 — Toggle "Ativo" por lado (criar só Buys ou só Sells)
+Checkbox "Ativo" em cada bloco de parâmetros (Sell/Buy). Um lado desativado não gera ordens e
+fica **fora de scope** do "APLICAR": `match_new_orders_against_current()` ganhou um parâmetro
+`active_sides` — ordens correntes desse lado não são candidatas a cancelamento nem contam como
+"unchanged", são simplesmente ignoradas. Caso degenerado (ambos desativados) não dá erro, apenas
+não há nada para aplicar.
+
+## Item #29 — "Initial Step" na Zona 4 (Multiplier)
+Novo campo por lado: adia a partir de que ordem (1-indexed) o padrão Step/Multiplier começa a
+aplicar. Persistido em `last_manual_order_params` (JSONB, sem migração nova). Default inicial
+`1`, ajustado no mesmo dia para `0` (equivalente, só mais intuitivo como "desligado por omissão").
+Durante o ajuste, corrigido um bug `parseInt(p.initialStep) || 1` que convertia silenciosamente
+um `0` explícito em `1` (zero é falsy em JS); `Field` no Pydantic relaxado de `ge=1` para `ge=0`.
+
+## Item #31 — Ctrl+Enter / Esc na edição de ordens correntes
+Ao editar uma linha em "Current Orders", Ctrl+Enter confirma (equivalente a clicar ✓) e Esc
+cancela (equivalente a clicar ✗), sem tirar as mãos do teclado.
+
+## Item #32 — "SELL +x% / BUY -y%" vs. preço de mercado
+Cartão de resumo ganhou duas métricas adicionais: distância do Sell mais barato e do Buy mais
+caro ao preço de mercado atual, mantendo a distância combinada já existente desde o Item #25.
+Sem elemento gráfico nesta entrega (ficou documentado como nice-to-have futuro).
+
+## Item #34 — Nunca mexer em ordens Stop/Stop-Limit
+Ordens pendentes com `type` `STOP` ou `STOP_LIMIT` (campo devolvido por `/equity/orders`) são
+excluídas do matching e do cancelamento em ambos os modos do ecrã. Continuam visíveis na lista
+"Current Orders", mas como linha somente-leitura com badge (`STOP` / `STOP-LIMIT · não gerido
+aqui`), sem botões de editar/apagar — protege contra cancelar sem querer uma ordem de proteção
+colocada manualmente fora da app.
+
+---
+
 # 📝 CHANGELOG - 2026-10-05 (continuação 2) — Item #25: Sell/Buy stats + Initial Gap (bp)
 
 **Status:** ✅ Shipped (DEMO+PROD)
