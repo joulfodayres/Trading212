@@ -80,7 +80,7 @@ const defaultSideParams = (initialPrice: string): SideParamsState => ({
   quantityIntervalPct: '0',
   accQuantity: 'N',
   step: '0',
-  initialStep: '1',
+  initialStep: '0',
   multiplier: '1',
   numberOfOrders: '3'
 })
@@ -299,7 +299,7 @@ export default function ManualOrdersPage() {
     quantity_interval_pct: !p.useAmount ? parseFloat(p.quantityIntervalPct) || 0 : null,
     acc_quantity: !p.useAmount ? p.accQuantity : null,
     step: parseInt(p.step) || 0,
-    initial_step: parseInt(p.initialStep) || 1,
+    initial_step: Number.isNaN(parseInt(p.initialStep)) ? 0 : parseInt(p.initialStep),
     multiplier: parseFloat(p.multiplier) || 1,
     number_of_orders: parseInt(p.numberOfOrders) || 1
   })
@@ -920,7 +920,7 @@ function SideParamsForm({
           <input type="number" className="no-spinner" value={params.step} onChange={(e) => update({ step: e.target.value })} />
         </FieldRow>
         <FieldRow label="Initial Step">
-          <input type="number" min={1} className="no-spinner" value={params.initialStep} onChange={(e) => update({ initialStep: e.target.value })} />
+          <input type="number" min={0} className="no-spinner" value={params.initialStep} onChange={(e) => update({ initialStep: e.target.value })} />
         </FieldRow>
         <FieldRow label="Multiplier">
           <input

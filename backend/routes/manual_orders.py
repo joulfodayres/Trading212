@@ -136,7 +136,7 @@ class SideParams(BaseModel):
     number_of_orders: int = Field(..., ge=1, le=50)
     step: int = Field(0, ge=0)  # Zone 4: 0 = disabled (no-op)
     multiplier: float = Field(1.0, gt=0)  # Zone 4: 1.0 = no-op
-    initial_step: int = Field(1, ge=1)  # Zone 4 (Item #29): multiplier pattern starts at this 1-indexed order
+    initial_step: int = Field(1, ge=0)  # Zone 4 (Item #29): multiplier pattern starts at this 1-indexed order; 0 treated same as 1 (service clamps)
 
 
 class GenerateOrdersRequest(BaseModel):
