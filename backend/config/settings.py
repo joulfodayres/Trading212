@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
     SUPABASE_JWT_SECRET: str
+    # service_role key (legacy JWT format, eyJ...) — distinta da SUPABASE_KEY
+    # (Secret key nova, usada para REST/tabelas). Só a service_role legacy é
+    # aceite pelo GoTrue Admin API (supabase.auth.admin.*), ex: update_user_by_id
+    # usado no Item #33 (mudar password). Opcional por agora para não partir o
+    # arranque se ainda não estiver configurada nalgum ambiente — nesse caso
+    # /auth/change-password falha com um erro claro em vez de crashar o boot.
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
 
     # ===== TRADING 212 =====
     T212_API_KEY: str

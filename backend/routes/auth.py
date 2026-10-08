@@ -479,10 +479,11 @@ async def change_password(request: ChangePasswordRequest, current_user: dict = D
     mesmo padrão de /mfa/disable. Não termina nenhuma sessão ativa (incluindo
     a atual) — decisão explícita do utilizador durante o scoping.
 
-    Nota: `supabase.auth.admin.update_user_by_id` exige SUPABASE_KEY com
-    privilégios de service role/secret key (não a anon key) — já é o caso em
-    produção (ver Item #15, incidente 2026-09-25, onde isto foi confirmado e
-    corrigido).
+    Nota: `supabase.auth.admin.update_user_by_id` é servido pelo GoTrue Admin
+    API, que só aceita a `service_role` key (formato JWT legacy) — a
+    SUPABASE_KEY normal (Secret key nova) dá 403 "User not allowed" aqui,
+    mesmo tendo privilégios totais via REST/tabelas (são APIs diferentes).
+    Por isso usa-se um cliente à parte, construído com SUPABASE_SERVICE_ROLE_KEY.
     """
     if len(request.new_password) < 8:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nova password deve ter mínimo 8 caracteres")
@@ -503,8 +504,13 @@ async def change_password(request: ChangePasswordRequest, current_user: dict = D
     if not auth_response or not auth_response.user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password atual incorreta")
 
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        logger.error("❌ SUPABASE_SERVICE_ROLE_KEY não configurada — não é possível mudar a password via Admin API")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar password")
+
     try:
-        supabase.auth.admin.update_user_by_id(current_user["id"], {"password": request.new_password})
+        admin_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        admin_client.auth.admin.update_user_by_id(current_user["id"], {"password": request.new_password})
     except Exception as e:
         logger.error(f"❌ Erro ao atualizar password ({current_user['email']}): {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar password")
