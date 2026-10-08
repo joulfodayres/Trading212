@@ -20,7 +20,9 @@ import uuid
 import pyotp
 import qrcode
 from jose import JWTError, jwt
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
+from supabase.lib.client_options import SyncClientOptions
+from supabase._sync.client import SyncHttpxClient
 
 from config.settings import settings
 from db.supabase_client import get_supabase_client
@@ -509,7 +511,16 @@ async def change_password(request: ChangePasswordRequest, current_user: dict = D
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar password")
 
     try:
-        admin_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        # Força HTTP/1.1 + timeout generoso: o cliente httpx default do
+        # supabase-py usa HTTP/2 e um timeout curto (5s), que em Render
+        # resultou em httpx.ReadTimeout consistente só nesta chamada
+        # específica ao GoTrue Admin API (confirmado em produção/DEMO,
+        # 2026-10-08) — as outras chamadas Supabase (REST/tabelas, login
+        # normal) nunca mostraram este problema, por isso o fix fica isolado
+        # a este cliente admin dedicado, não ao resto da app.
+        admin_http_client = SyncHttpxClient(http2=False, timeout=30.0)
+        admin_options = SyncClientOptions(httpx_client=admin_http_client)
+        admin_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY, options=admin_options)
         admin_client.auth.admin.update_user_by_id(current_user["id"], {"password": request.new_password})
     except Exception as e:
         logger.error(f"❌ Erro ao atualizar password ({current_user['email']}): {e}", exc_info=True)
