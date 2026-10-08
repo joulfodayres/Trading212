@@ -551,8 +551,32 @@ async def logout_all(response: Response, current_user: dict = Depends(get_curren
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user)):
-    """Informações do utilizador autenticado."""
+async def get_me(req: Request, response: Response):
+    """
+    Informações do utilizador autenticado.
+
+    Item #27 (auto-login completo): se não houver sessão válida mas existir
+    um cookie de dispositivo confiável ainda dentro da janela configurada,
+    autentica diretamente a partir dele — sem pedir password nem MFA. É o
+    único ponto de entrada deste mecanismo, porque /auth/me é sempre chamado
+    no arranque da app (App.tsx -> checkAuth()), antes do ecrã de login.
+    """
+    try:
+        current_user = get_current_user(req)
+    except HTTPException:
+        device_token = req.cookies.get(DEVICE_COOKIE_NAME)
+        user_id = security.resolve_trusted_device(device_token)
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
+
+        user_row = _get_user(user_id)
+        if not user_row:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
+
+        logger.info(f"✅ Auto-login via dispositivo confiável: {user_row['email']}")
+        _finish_login(response, req, user_id, user_row["email"], trust_device=False)
+        current_user = {"id": user_id, "email": user_row["email"]}
+
     user_row = _get_user(current_user["id"]) or {}
     return UserResponse(
         user=UserInfo(

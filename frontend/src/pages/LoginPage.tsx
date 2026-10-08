@@ -158,7 +158,7 @@ export default function LoginPage() {
                   onChange={(e) => setTrustDevice(e.target.checked)}
                   className="rounded border-t212-border"
                 />
-                Confiar neste dispositivo
+                Confiar neste dispositivo (sem pedir password nem MFA da próxima vez)
               </label>
 
               {error && (

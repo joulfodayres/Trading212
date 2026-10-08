@@ -22,7 +22,18 @@ apiClient.interceptors.request.use((config) => {
 
 // Endpoints where a 401 is an *expected* possible outcome, not a sign that
 // an established session died mid-use — never react to a 401 on these.
-const AUTH_FLOW_PATHS = ['/auth/login', '/auth/login/verify-mfa', '/auth/me', '/auth/register']
+// /auth/mfa/disable and /auth/change-password both re-authenticate with a
+// password the user provides inline — a wrong password there returns 401
+// deliberately (bad credentials, not a dead session) and must surface as an
+// inline error in the form, not force a logout.
+const AUTH_FLOW_PATHS = [
+  '/auth/login',
+  '/auth/login/verify-mfa',
+  '/auth/me',
+  '/auth/register',
+  '/auth/mfa/disable',
+  '/auth/change-password',
+]
 
 apiClient.interceptors.response.use(
   (response) => {

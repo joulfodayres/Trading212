@@ -280,8 +280,9 @@ export function SecuritySection() {
       <div className="border-t border-t212-border pt-6">
         <h4 className="text-sm font-semibold text-t212-primary mb-2">📱 Dispositivo confiável</h4>
         <p className="text-xs text-t212-secondary mb-3">
-          Ao fazer login, podes marcar "Confiar neste dispositivo" para saltar o código MFA nas
-          próximas vezes, durante o número de dias abaixo. A password continua sempre a ser pedida.
+          Ao marcar "Confiar neste dispositivo", este browser fica com acesso automático à app
+          durante o número de dias abaixo — sem pedir password nem código MFA. Usa 0 para desativar
+          e exigir sempre login completo.
         </p>
         {loadingTrustedDays ? (
           <div className="flex items-center text-t212-secondary text-sm">
@@ -298,7 +299,7 @@ export function SecuritySection() {
                 max="90"
                 value={trustedDeviceDaysInput}
                 onChange={(e) => setTrustedDeviceDaysInput(e.target.value)}
-                hint="0 = pedir sempre MFA"
+                hint="0 = exigir sempre password + MFA"
               />
             </div>
             <Button variant="primary" onClick={handleSaveTrustedDeviceDays} isLoading={savingTrustedDays}>

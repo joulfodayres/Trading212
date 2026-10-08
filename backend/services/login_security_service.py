@@ -160,6 +160,48 @@ def get_trusted_device_days() -> int:
     return settings.TRUSTED_DEVICE_DAYS
 
 
+def resolve_trusted_device(device_token: Optional[str]) -> Optional[str]:
+    """
+    Resolve um device_token diretamente para o user_id, sem já saber de
+    antemão a quem pertence — usado no auto-login completo (Item #27): o
+    cookie chega sozinho, antes de qualquer password ter sido introduzida.
+    Devolve None se o token não existir, estiver expirado, ou a janela
+    estiver desativada (trusted_device_days == 0).
+    """
+    if not device_token or get_trusted_device_days() == 0:
+        return None
+
+    try:
+        client = get_supabase_client()
+        response = (
+            client.table("trusted_devices")
+            .select("id, user_id, expires_at")
+            .eq("device_token", device_token)
+            .execute()
+        )
+
+        rows = response.data or []
+        if not rows:
+            return None
+
+        expires_at = datetime.fromisoformat(rows[0]["expires_at"].replace("Z", "+00:00")).replace(tzinfo=None)
+        if expires_at < _now():
+            return None
+
+        try:
+            client.table("trusted_devices").update({
+                "last_used_at": _iso(_now())
+            }).eq("id", rows[0]["id"]).execute()
+        except Exception:
+            pass
+
+        return rows[0]["user_id"]
+
+    except Exception as e:
+        logger.error(f"Erro ao resolver trusted device: {e}")
+        return None  # Fail-closed: em caso de dúvida, pedir login completo
+
+
 def is_device_trusted(user_id: str, device_token: Optional[str]) -> bool:
     """Verifica se um device_token está marcado como confiável e ainda válido."""
     if not device_token or get_trusted_device_days() == 0:
@@ -199,7 +241,10 @@ def is_device_trusted(user_id: str, device_token: Optional[str]) -> bool:
 
 
 def trust_device(user_id: str, device_token: str, ip_address: str, user_agent: Optional[str]) -> None:
-    """Marca um dispositivo como confiável (skip MFA até expirar)."""
+    """
+    Marca um dispositivo como confiável — acesso automático (sem password nem
+    MFA) até expirar, dentro da janela configurada em trusted_device_days.
+    """
     trusted_device_days = get_trusted_device_days()
     if trusted_device_days == 0:
         return  # Configuração exige MFA sempre — não guardar nada
