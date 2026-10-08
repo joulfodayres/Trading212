@@ -19,6 +19,7 @@ DEFAULT_ALERT_SETTINGS = {
     "invalid_credentials": True,  # Erro sugere credenciais T212 inválidas/expiradas
     "cycle_errors": True,         # Vários ciclos seguidos com erro
     "deploy_disabled": True,      # Automação desligada automaticamente após deploy
+    "password_changed": True,     # Password da conta alterada (Item #33)
 }
 
 

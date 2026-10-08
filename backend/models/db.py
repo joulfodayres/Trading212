@@ -30,6 +30,10 @@ class AppParameters(Base):
     # Logging configuration
     log_level = Column(String, default='OFF')
 
+    # Trusted device duration (Item #27) - days to skip MFA on a recognized
+    # device, independent per environment. 0 = always require MFA.
+    trusted_device_days = Column(Integer, default=7)
+
     # Manual Orders feature (Item #22) - validation thresholds, independent per environment
     mo_price_max_variation_pct = Column(Float, default=10)      # hard block
     mo_price_alert_variation_pct = Column(Float, default=1)     # soft alert

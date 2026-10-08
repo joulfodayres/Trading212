@@ -54,6 +54,12 @@ class AlertSettingsRequest(BaseModel):
     invalid_credentials: Optional[bool] = None
     cycle_errors: Optional[bool] = None
     deploy_disabled: Optional[bool] = None
+    password_changed: Optional[bool] = None
+
+
+class TrustedDeviceDaysRequest(BaseModel):
+    """Request para atualizar a duração do trusted device (Item #27). 0-90, 0 = sempre pedir MFA."""
+    trusted_device_days: int = Field(..., ge=0, le=90)
 
 
 class SchedulerIntervalRequest(BaseModel):
@@ -628,6 +634,54 @@ async def get_trading_consumption(current_user: dict = Depends(get_current_user)
         }
     except Exception as e:
         logger.error(f"Erro ao obter consumo de trading: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===== TRUSTED DEVICE DAYS (Item #27) =====
+
+@router.get("/config/trusted-device")
+async def get_trusted_device_config(current_user: dict = Depends(get_current_user)):
+    """
+    GET /api/v1/automation/config/trusted-device
+
+    Duração (em dias) durante a qual um dispositivo reconhecido salta o
+    passo de MFA no login. 0 = exige sempre MFA. Independente por ambiente
+    (DEMO/PROD têm cada um a sua app_parameters).
+    """
+    try:
+        from services import login_security_service as security
+        return {"trusted_device_days": security.get_trusted_device_days()}
+    except Exception as e:
+        logger.error(f"Erro ao obter trusted_device_days: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/config/trusted-device")
+async def update_trusted_device_config(request: TrustedDeviceDaysRequest, current_user: dict = Depends(get_current_user)):
+    """
+    PUT /api/v1/automation/config/trusted-device
+    """
+    try:
+        db = _get_db()
+        result = db.client.table("app_parameters").select("id").execute()
+        if not result.data:
+            raise Exception("app_parameters table is empty")
+        param_id = result.data[0]["id"]
+
+        update_result = db.client.table("app_parameters").update({
+            "trusted_device_days": request.trusted_device_days,
+            "updated_at": "now()",
+        }).eq("id", param_id).execute()
+
+        if not update_result.data:
+            raise Exception("Failed to update app_parameters")
+
+        logger.info(f"✅ trusted_device_days atualizado: {request.trusted_device_days} dias")
+        return {"trusted_device_days": request.trusted_device_days}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao atualizar trusted_device_days: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

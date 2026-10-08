@@ -93,6 +93,12 @@ class MfaDisableRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str
+
+
 class UserInfo(BaseModel):
     id: str
     email: str
@@ -221,13 +227,16 @@ def _set_cookies(response: Response, access_token: str, device_token: Optional[s
         path="/",
     )
     if device_token:
+        # Item #27: duração configurável via app_parameters (por ambiente),
+        # não a env var fixa settings.TRUSTED_DEVICE_DAYS.
+        max_age_days = security.get_trusted_device_days()
         response.set_cookie(
             key=DEVICE_COOKIE_NAME,
             value=device_token,
             httponly=True,
             secure=settings.COOKIE_SECURE,
             samesite="none",
-            max_age=settings.TRUSTED_DEVICE_DAYS * 86400,
+            max_age=max_age_days * 86400,
             path="/",
         )
 
@@ -461,6 +470,52 @@ async def mfa_disable(request: MfaDisableRequest, req: Request, current_user: di
         body=f"O MFA foi desativado na conta {current_user['email']}.\n\nSe não foste tu, muda a password e reativa o MFA imediatamente.",
     )
     return {"message": "MFA desativado"}
+
+
+@router.post("/change-password", response_model=dict)
+async def change_password(request: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Muda a password da conta (Item #33) — exige a password atual (re-auth),
+    mesmo padrão de /mfa/disable. Não termina nenhuma sessão ativa (incluindo
+    a atual) — decisão explícita do utilizador durante o scoping.
+
+    Nota: `supabase.auth.admin.update_user_by_id` exige SUPABASE_KEY com
+    privilégios de service role/secret key (não a anon key) — já é o caso em
+    produção (ver Item #15, incidente 2026-09-25, onde isto foi confirmado e
+    corrigido).
+    """
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nova password deve ter mínimo 8 caracteres")
+    if request.new_password != request.new_password_confirm:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords não coincidem")
+    if request.new_password == request.current_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A nova password tem de ser diferente da atual")
+
+    supabase = get_supabase()
+    try:
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": current_user["email"],
+            "password": request.current_password,
+        })
+    except Exception:
+        auth_response = None
+
+    if not auth_response or not auth_response.user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Password atual incorreta")
+
+    try:
+        supabase.auth.admin.update_user_by_id(current_user["id"], {"password": request.new_password})
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar password ({current_user['email']}): {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar password")
+
+    logger.warning(f"🔑 Password alterada: {current_user['email']}")
+    send_alert_if_enabled(
+        "password_changed",
+        subject="🔑 Trading 212 Bot — Password alterada",
+        body=f"A password da conta {current_user['email']} foi alterada.\n\nSe não foste tu, termina todas as sessões ativas (killswitch) imediatamente.",
+    )
+    return {"message": "Password alterada com sucesso"}
 
 
 @router.post("/refresh", response_model=dict)

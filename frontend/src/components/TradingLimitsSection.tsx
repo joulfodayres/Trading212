@@ -18,6 +18,7 @@ interface AlertSettings {
   invalid_credentials: boolean
   cycle_errors: boolean
   deploy_disabled: boolean
+  password_changed: boolean
 }
 
 const ALERT_LABELS: Record<keyof AlertSettings, string> = {
@@ -28,6 +29,7 @@ const ALERT_LABELS: Record<keyof AlertSettings, string> = {
   invalid_credentials: 'Credenciais T212 inválidas',
   cycle_errors: 'Vários ciclos seguidos com erro',
   deploy_disabled: 'Automação desligada após deploy',
+  password_changed: 'Password da conta alterada',
 }
 
 // Empty string in the input == "sem limite" (null enviado ao backend).

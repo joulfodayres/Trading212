@@ -140,9 +140,29 @@ def generate_device_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def get_trusted_device_days() -> int:
+    """
+    Lê a duração configurável do trusted device (Item #27) de app_parameters,
+    por ambiente (DEMO/PROD têm cada um a sua própria base de dados). Faz
+    fallback para settings.TRUSTED_DEVICE_DAYS (env var) se a coluna ainda
+    não existir na BD (migração não corrida) ou em caso de erro — nunca
+    falha silenciosamente para "sempre confiável".
+    """
+    try:
+        client = get_supabase_client()
+        response = client.table("app_parameters").select("trusted_device_days").execute()
+        rows = response.data or []
+        if rows and rows[0].get("trusted_device_days") is not None:
+            value = int(rows[0]["trusted_device_days"])
+            return max(0, min(value, 90))
+    except Exception as e:
+        logger.warning(f"Erro ao ler trusted_device_days de app_parameters, a usar fallback: {e}")
+    return settings.TRUSTED_DEVICE_DAYS
+
+
 def is_device_trusted(user_id: str, device_token: Optional[str]) -> bool:
     """Verifica se um device_token está marcado como confiável e ainda válido."""
-    if not device_token or settings.TRUSTED_DEVICE_DAYS == 0:
+    if not device_token or get_trusted_device_days() == 0:
         return False
 
     try:
@@ -180,12 +200,13 @@ def is_device_trusted(user_id: str, device_token: Optional[str]) -> bool:
 
 def trust_device(user_id: str, device_token: str, ip_address: str, user_agent: Optional[str]) -> None:
     """Marca um dispositivo como confiável (skip MFA até expirar)."""
-    if settings.TRUSTED_DEVICE_DAYS == 0:
+    trusted_device_days = get_trusted_device_days()
+    if trusted_device_days == 0:
         return  # Configuração exige MFA sempre — não guardar nada
 
     try:
         client = get_supabase_client()
-        expires_at = _now() + timedelta(days=settings.TRUSTED_DEVICE_DAYS)
+        expires_at = _now() + timedelta(days=trusted_device_days)
 
         client.table("trusted_devices").insert({
             "user_id": user_id,
